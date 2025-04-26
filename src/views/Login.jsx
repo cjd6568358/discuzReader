@@ -43,13 +43,20 @@ const LoginView = () => {
   };
 
   const handleSettings = () => {
-    console.log('Open settings');
+    console.log('Navigating to Hosts screen');
+    navigation.navigate('Hosts');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
-      <Icon name="setting" size={18} color="#9CA3AF" style={styles.inputIcon} />
+      <TouchableOpacity
+        onPress={handleSettings}
+        style={styles.settingsButton}
+        activeOpacity={0.7}
+      >
+        <Icon name="cog" size={24} color="#9CA3AF" />
+      </TouchableOpacity>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 顶部Logo区域 */}
         <View style={styles.logoContainer}>
@@ -84,7 +91,7 @@ const LoginView = () => {
               placeholderTextColor="#9CA3AF"
             />
             <TouchableOpacity onPress={togglePassword} style={styles.eyeIcon}>
-              <Icon name={showPassword ? "eye-slash" : "eye"} size={18} color="#9CA3AF" />
+              <Icon name={showPassword ? "eye" : "eye-slash"} size={18} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 
@@ -136,7 +143,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   logoContainer: {
-    paddingTop: 24,
+    paddingTop: 80,
     paddingBottom: 24,
     paddingHorizontal: 16,
   },
@@ -192,7 +199,6 @@ const styles = StyleSheet.create({
   rememberContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
   },
   rememberText: {
     marginLeft: 8,
@@ -224,6 +230,18 @@ const styles = StyleSheet.create({
   registerText: {
     fontSize: 14,
     color: '#2563EB',
+  },
+  settingIcon: {
+    position: 'absolute',
+    top: 12,
+    right: 20,
+  },
+  settingsButton: {
+    position: 'absolute',
+    top: 24,
+    right: 12,
+    padding: 12,
+    zIndex: 10,
   },
 });
 
