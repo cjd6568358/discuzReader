@@ -43,8 +43,8 @@ const LoginView = () => {
   };
 
   const handleSettings = () => {
-    console.log('Navigating to Hosts screen');
-    navigation.navigate('Hosts');
+    console.log('Navigating to Nodes screen');
+    navigation.navigate('Nodes');
   };
 
   return (

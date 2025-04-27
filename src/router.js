@@ -2,7 +2,7 @@ import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeView from './views/Home'
 import LoginView from './views/Login'
-import HostsView from './views/Hosts'
+import NodesView from './views/Nodes'
 
 export const defaultConfig = {
     initialRouteName: 'Home',
@@ -18,10 +18,10 @@ export const defaultConfig = {
             options: {
             },
         },
-        Hosts: {
-            screen: HostsView,
+        Nodes: {
+            screen: NodesView,
             options: {
-                title: '站点配置',
+                title: '节点配置',
                 headerShown: true,
                 // headerRight: () => <Icon name="ellipsis-v" size={20} />,
             },

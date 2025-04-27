@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import {
     View,
     Text,
     TextInput,
     ActivityIndicator,
     StyleSheet,
-    ScrollView,
+    FlatList,
     SafeAreaView,
     StatusBar,
     Alert,
@@ -18,22 +18,24 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { storage } from '../utils/index'
 
-const Hosts = () => {
+const Nodes = () => {
     const navigation = useNavigation();
     const [url, setUrl] = useState('https://1s2s3s.com/');
-    const [hosts, setHosts] = useState(() => {
-        const storedHosts = storage.getString('hosts');
-        return storedHosts ? JSON.parse(storedHosts) : [];
+    const [nodes, setNodes] = useState(() => {
+        const storedNodes = storage.getString('nodes');
+        return storedNodes ? JSON.parse(storedNodes) : [];
     });
+    const [selectedNode, setSelectedNode] = useState('');
     const [loading, setLoading] = useState({});
     const [showDropMenuModal, setShowDropMenuModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [newNode, setNewNode] = useState({ name: '', address: '' });
     const headerHeight = useHeaderHeight();
     const [initialHeaderHeight] = useState(headerHeight);
-    // console.log('initialHeaderHeight', initialHeaderHeight)
+    // 移除分页加载相关状态
     const abortControllerRef = useRef(null);
     const timeoutIdsRef = useRef([]);
+    const flatListRef = useRef(null);
     // 组件卸载时的清理函数
     useEffect(() => {
         return () => {
@@ -55,10 +57,16 @@ const Hosts = () => {
             </Pressable>,
         });
     }, [navigation]);
-    // 当hosts状态变化时，保存到本地存储
+    // 当nodes状态变化时，保存到本地存储
     useEffect(() => {
-        storage.set('hosts', JSON.stringify(hosts));
-    }, [hosts]);
+        storage.set('nodes', JSON.stringify(nodes));
+    }, [nodes]);
+    
+    useEffect(() => {
+        storage.set('selectedNode', selectedNode);
+    },[selectedNode])
+    
+    // 移除加载更多节点的函数
 
     const handleUpdate = async () => {
         if (!url.trim()) {
@@ -97,7 +105,7 @@ const Hosts = () => {
                     const linkUrl = match[2];
                     const linkTitle = match[3].trim();
                     console.log('Link:', linkUrl, 'Title:', linkTitle);
-                    if (hosts.some(host => host.url === linkUrl)) {
+                    if (nodes.some(node => node.url === linkUrl)) {
                         return
                     }
                     matches[linkUrl] = linkTitle || `未命名链接 ${Object.keys(matches).length + 1}`;
@@ -117,7 +125,7 @@ const Hosts = () => {
             });
 
             // 更新节点列表
-            setHosts(prev => [...prev, ...newNodes]);
+            setNodes(prev => [...prev, ...newNodes]);
             ToastAndroid.show(`已添加 ${newNodes.length} 个代理节点`, ToastAndroid.SHORT);
         } catch (error) {
             console.error('更新订阅出错:', error);
@@ -148,7 +156,7 @@ const Hosts = () => {
 
             // 执行三次测速
             const testResults = [];
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 2; i++) {
                 try {
                     // 记录开始时间
                     const startTime = Date.now();
@@ -172,7 +180,7 @@ const Hosts = () => {
                     testResults.push(responseTime);
 
                     // 在测试之间添加短暂延迟
-                    if (i < 2) {
+                    if (i < 1) {
                         await new Promise(resolve => {
                             const timeoutId = setTimeout(resolve, 500);
                             timeoutIdsRef.current.push(timeoutId);
@@ -188,7 +196,7 @@ const Hosts = () => {
             const averageLatency = Math.round(testResults.reduce((a, b) => a + b, 0) / testResults.length);
 
             // 更新节点延迟信息
-            setHosts(prev => prev.map(node => {
+            setNodes(prev => prev.map(node => {
                 if (node.url === url) {
                     return {
                         ...node,
@@ -201,7 +209,7 @@ const Hosts = () => {
             console.error('测速失败:', error);
 
             // 更新节点延迟为异常标识
-            setHosts(prev => prev.map(node => {
+            setNodes(prev => prev.map(node => {
                 if (node.url === url) {
                     return {
                         ...node,
@@ -218,19 +226,19 @@ const Hosts = () => {
 
     const handleDelete = (url) => {
         // 直接删除并显示Toast提示
-        setHosts(prev => prev.filter(node => node.url !== url));
-        ToastAndroid.show('已删除站点', ToastAndroid.SHORT);
+        setNodes(prev => prev.filter(node => node.url !== url));
+        ToastAndroid.show('已删除节点', ToastAndroid.SHORT);
     };
 
-    // 批量测试函数，每次最多测试5个站点
+    // 批量测试函数，每次最多测试3个节点，并添加更多延迟以减轻负载
     const handleBatchTest = async (nodeList) => {
         // 如果没有节点，直接返回
         if (nodeList.length === 0) {
-            ToastAndroid.show('没有站点可测试', ToastAndroid.SHORT);
+            ToastAndroid.show('没有节点可测试', ToastAndroid.SHORT);
             return;
         }
 
-        // 将节点列表分组，每组最多5个
+        // 将节点列表分组，每组最多5个，减少并发请求数量
         const batchSize = 5;
         const batches = [];
         for (let i = 0; i < nodeList.length; i += batchSize) {
@@ -238,7 +246,7 @@ const Hosts = () => {
         }
 
         // 显示开始测试的提示
-        ToastAndroid.show(`开始测试，共 ${nodeList.length} 个站点`, ToastAndroid.SHORT);
+        ToastAndroid.show(`开始测试，共 ${nodeList.length} 个节点`, ToastAndroid.SHORT);
 
         // 逐批测试
         for (let i = 0; i < batches.length; i++) {
@@ -248,15 +256,24 @@ const Hosts = () => {
             const testPromises = currentBatch.map(node => handleTest(node.url));
             await Promise.all(testPromises);
 
-            // 如果不是最后一批，添加一个小延迟再测试下一批
+            // 如果不是最后一批，添加一个更长的延迟再测试下一批
             if (i < batches.length - 1) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
 
         // 显示测试完成的提示
-        ToastAndroid.show('所有站点测试完成', ToastAndroid.SHORT);
+        ToastAndroid.show('所有节点测试完成', ToastAndroid.SHORT);
     };
+    
+    // 使用useCallback优化函数引用稳定性
+    const handleTestCallback = useCallback((url) => {
+        handleTest(url);
+    }, []);
+    
+    const handleDeleteCallback = useCallback((url) => {
+        handleDelete(url);
+    }, []);
 
     const handleAdd = () => {
         // 注意：Alert.prompt 在 Android 上不可用，这里仅作为示例
@@ -268,7 +285,7 @@ const Hosts = () => {
         <SafeAreaView style={styles.container}>
             <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
             {/* 主内容区域 */}
-            <ScrollView style={styles.scrollView}>
+            <View style={styles.container}>
                 {/* 输入区域 */}
                 <View style={styles.inputSection}>
                     <View style={styles.urlInputContainer}>
@@ -300,49 +317,43 @@ const Hosts = () => {
                         onPress={() => setShowAddModal(true)}
                     >
                         <Icon name="plus" size={16} color="#6B7280" style={styles.buttonIcon} />
-                        <Text style={styles.addButtonText}>手动添加站点</Text>
+                        <Text style={styles.addButtonText}>手动添加节点</Text>
                     </Pressable>
                 </View>
 
                 {/* 节点列表 */}
-                {hosts.length > 0 ? (
-                    <View style={styles.nodesList}>
-                        {hosts.map(node => (
-                            <View key={node.url} style={styles.nodeCard}>
-                                <View style={styles.nodeContent}>
-                                    <View style={styles.nodeInfo}>
-                                        <Text style={styles.nodeName}>{node.title}</Text>
-                                        <Text style={styles.nodeAddress}>{node.url}</Text>
-                                        <View style={styles.statusContainer}>
-                                            <Text style={[styles.latencyText, node.latency === '异常' ? styles.statusError : styles.statusNormal]}>{node.latency}</Text>
-                                        </View>
-                                    </View>
-                                    <View style={styles.nodeActions}>
-                                        <Pressable
-                                            onPress={() => handleTest(node.url)}
-                                            style={styles.testButton}
-                                        >
-                                            {loading[node.url] ? (
-                                                <ActivityIndicator size="small" color="#9CA3AF" />
-                                            ) : (
-                                                <Icon name="bolt" size={18} color="#9CA3AF" style={styles.buttonIcon} />
-                                            )}
-                                        </Pressable>
-                                        <Pressable
-                                            onPress={() => handleDelete(node.url)}
-                                            style={styles.deleteButton}
-                                        >
-                                            <Icon name="trash" size={18} color="#9CA3AF" />
-                                        </Pressable>
-                                    </View>
-                                </View>
-                            </View>
-                        ))}
-                    </View>
-                ) : null}
-            </ScrollView>
+                {nodes.length > 0 ? (
+                    <FlatList
+                        ref={flatListRef}
+                        data={nodes}
+                        keyExtractor={(item) => item.url}
+                        renderItem={({item}) => (
+                            <NodeItem 
+                                node={item} 
+                                isSelected={selectedNode === item.url}
+                                onSelect={() => setSelectedNode(selectedNode === item.url ? '' : item.url)}
+                                onTest={handleTestCallback}
+                                onDelete={handleDeleteCallback}
+                                loading={loading[item.url]}
+                            />
+                        )}
+                        style={styles.nodesList}
+                        initialNumToRender={10}
+                        maxToRenderPerBatch={5}
+                        windowSize={5}
+                        removeClippedSubviews={true}
+                        updateCellsBatchingPeriod={50}
+                        getItemLayout={(data, index) => (
+                            {length: 100, offset: 100 * index, index}
+                        )}
 
-            {/* 添加站点模态框 */}
+                        ListEmptyComponent={<Text style={styles.emptyText}>暂无节点，请添加或更新订阅</Text>}
+
+                    />
+                ) : null}
+            </View>
+
+            {/* 添加节点模态框 */}
             <Modal
                 visible={showAddModal}
                 transparent={true}
@@ -351,14 +362,14 @@ const Hosts = () => {
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>手动添加站点</Text>
+                        <Text style={styles.modalTitle}>手动添加节点</Text>
 
                         <View style={styles.modalForm}>
                             <View style={styles.formGroup}>
-                                <Text style={styles.inputLabel}>站点名称</Text>
+                                <Text style={styles.inputLabel}>节点名称</Text>
                                 <TextInput
                                     style={styles.modalInput}
-                                    placeholder="请输入站点名称"
+                                    placeholder="请输入节点名称"
                                     placeholderTextColor="#9CA3AF"
                                     value={newNode.name}
                                     onChangeText={(text) => setNewNode(prev => ({ ...prev, name: text }))}
@@ -366,7 +377,7 @@ const Hosts = () => {
                             </View>
 
                             <View style={styles.formGroup}>
-                                <Text style={styles.inputLabel}>站点地址</Text>
+                                <Text style={styles.inputLabel}>节点地址</Text>
                                 <TextInput
                                     style={styles.modalInput}
                                     placeholder="host:port"
@@ -388,7 +399,7 @@ const Hosts = () => {
                                     style={styles.confirmButton}
                                     onPress={() => {
                                         if (newNode.name && newNode.address) {
-                                            setHosts(prev => [...prev, {
+                                            setNodes(prev => [...prev, {
                                                 title: newNode.name,
                                                 url: newNode.address,
                                                 latency: '-'
@@ -418,25 +429,25 @@ const Hosts = () => {
                             style={styles.dropMenuItemButton}
                             onPress={() => {
                                 setShowDropMenuModal(false);
-                                // 删除所有状态为"异常"的站点
-                                const validHosts = hosts.filter(node => node.latency !== '异常');
-                                const removedCount = hosts.length - validHosts.length;
-                                setHosts(validHosts);
-                                ToastAndroid.show(`已删除 ${removedCount} 个无效站点`, ToastAndroid.SHORT);
+                                // 删除所有状态为"异常"的节点
+                                const validNodes = nodes.filter(node => node.latency !== '异常');
+                                const removedCount = nodes.length - validNodes.length;
+                                setNodes(validNodes);
+                                ToastAndroid.show(`已删除 ${removedCount} 个无效节点`, ToastAndroid.SHORT);
                             }}
                         >
-                            <Text style={styles.dropMenuItem}>删除无效站点</Text>
+                            <Text style={styles.dropMenuItem}>删除无效节点</Text>
                         </Pressable>
                         <Pressable
                             android_ripple={{ color: '#9CA3AF' }}
                             style={styles.dropMenuItemButton}
                             onPress={() => {
                                 setShowDropMenuModal(false);
-                                // 确认是否删除全部站点
-                                if (hosts.length > 0) {
+                                // 确认是否删除全部节点
+                                if (nodes.length > 0) {
                                     Alert.alert(
                                         '确认删除',
-                                        '确定要删除全部站点吗？此操作不可恢复。',
+                                        '确定要删除全部节点吗？此操作不可恢复。',
                                         [
                                             {
                                                 text: '取消',
@@ -445,32 +456,32 @@ const Hosts = () => {
                                             {
                                                 text: '确定删除',
                                                 onPress: () => {
-                                                    setHosts([]);
-                                                    ToastAndroid.show('已删除全部站点', ToastAndroid.SHORT);
+                                                    setNodes([]);
+                                                    ToastAndroid.show('已删除全部节点', ToastAndroid.SHORT);
                                                 },
                                                 style: 'destructive'
                                             }
                                         ]
                                     );
                                 } else {
-                                    ToastAndroid.show('没有站点可删除', ToastAndroid.SHORT);
+                                    ToastAndroid.show('没有节点可删除', ToastAndroid.SHORT);
                                 }
                             }}
                         >
-                            <Text style={styles.dropMenuItem}>删除全部站点</Text>
+                            <Text style={styles.dropMenuItem}>删除全部节点</Text>
                         </Pressable>
                         <Pressable
                             android_ripple={{ color: '#9CA3AF' }}
                             style={styles.dropMenuItemButton}
                             onPress={() => {
                                 setShowDropMenuModal(false);
-                                const newHosts = hosts.map(node => ({ ...node, latency: '-' }));
-                                setHosts(newHosts)
-                                // 测试所有站点，每次最多测试5个
-                                handleBatchTest(newHosts);
+                                const newNodes = nodes.map(node => ({ ...node, latency: '-' }));
+                                setNodes(newNodes)
+                                // 测试所有节点，每次最多测试5个
+                                handleBatchTest(newNodes);
                             }}
                         >
-                            <Text style={styles.dropMenuItem}>测试全部站点</Text>
+                            <Text style={styles.dropMenuItem}>测试全部节点</Text>
                         </Pressable>
                         <Pressable
                             android_ripple={{ color: '#9CA3AF' }}
@@ -478,7 +489,7 @@ const Hosts = () => {
                             onPress={() => {
                                 setShowDropMenuModal(false);
                                 // 按测试结果排序
-                                const sortedHosts = [...hosts].sort((a, b) => {
+                                const sortedNodes = [...nodes].sort((a, b) => {
                                     // 处理未测试的节点（latency为'-'）
                                     if (a.latency === '-' && b.latency !== '-') return 1; // 未测试的排在后面
                                     if (a.latency !== '-' && b.latency === '-') return -1; // 已测试的排在前面
@@ -499,7 +510,7 @@ const Hosts = () => {
                                     return 0;
                                 });
 
-                                setHosts(sortedHosts);
+                                setNodes(sortedNodes);
                                 ToastAndroid.show('已按测试结果排序', ToastAndroid.SHORT);
                             }}
                         >
@@ -512,14 +523,79 @@ const Hosts = () => {
     );
 };
 
+// 使用React.memo优化节点组件，避免不必要的重渲染
+const NodeItem = memo(({ node, isSelected, onSelect, onTest, onDelete, loading }) => {
+    return (
+        <Pressable 
+            style={[styles.nodeCard, isSelected && styles.selectedNodeCard]}
+            onPress={onSelect}
+        >
+            <View style={styles.nodeContent}>
+                <View style={styles.nodeInfo}>
+                    <Text style={[styles.nodeName, isSelected && styles.selectedNodeText]}>{node.title}</Text>
+                    <Text style={[styles.nodeAddress, isSelected && styles.selectedNodeText]}>{node.url}</Text>
+                    <View style={styles.statusContainer}>
+                        <Text style={[styles.latencyText, node.latency === '异常' ? styles.statusError : styles.statusNormal, isSelected && styles.selectedNodeText]}>{node.latency}</Text>
+                    </View>
+                </View>
+                <View style={styles.nodeActions}>
+                    <Pressable
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            onTest(node.url);
+                        }}
+                        style={styles.testButton}
+                    >
+                        {loading ? (
+                            <ActivityIndicator size="small" color="#9CA3AF" />
+                        ) : (
+                            <Icon name="bolt" size={18} color={isSelected ? "#FFFFFF" : "#9CA3AF"} style={styles.buttonIcon} />
+                        )}
+                    </Pressable>
+                    <Pressable
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            onDelete(node.url);
+                        }}
+                        style={styles.deleteButton}
+                    >
+                        <Icon name="trash" size={18} color={isSelected ? "#FFFFFF" : "#9CA3AF"} />
+                    </Pressable>
+                </View>
+            </View>
+        </Pressable>
+    );
+}, (prevProps, nextProps) => {
+    // 自定义比较函数，只有在这些属性变化时才重新渲染
+    return (
+        prevProps.isSelected === nextProps.isSelected &&
+        prevProps.loading === nextProps.loading &&
+        prevProps.node.title === nextProps.node.title &&
+        prevProps.node.url === nextProps.node.url &&
+        prevProps.node.latency === nextProps.node.latency
+    );
+});
+
 const styles = StyleSheet.create({
+    // 选中节点的样式
+    selectedNodeCard: {
+        backgroundColor: '#2563EB',
+    },
+    selectedNodeText: {
+        color: '#FFFFFF',
+    },
     container: {
         flex: 1,
         backgroundColor: '#F9FAFB',
     },
-    scrollView: {
-        flex: 1,
+    emptyText: {
+        textAlign: 'center',
+        color: '#9CA3AF',
+        marginTop: 20,
+        fontSize: 16,
+        padding: 16,
     },
+    // 移除分页加载相关样式
     inputSection: {
         padding: 16,
         marginBottom: 8,
@@ -612,6 +688,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 2,
         elevation: 1,
+        overflow: 'hidden',
     },
     nodeContent: {
         flexDirection: 'row',
@@ -780,4 +857,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default Hosts;
+export default Nodes;
