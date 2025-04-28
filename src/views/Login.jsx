@@ -10,36 +10,64 @@ import {
   SafeAreaView,
   Switch,
   StatusBar,
+  ToastAndroid
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import http from '../utils/http';
+import { storage } from '../utils/index'
 
 const LoginView = () => {
   const navigation = useNavigation();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [securityAnswer, setSecurityAnswer] = useState('');
+  const [username, setUsername] = useState('cjd610630890');
+  const [password, setPassword] = useState('cjd110109');
+  const [securityAnswer, setSecurityAnswer] = useState('3,建湖');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
 
-  const logoUrl = 'https://ai-public.mastergo.com/ai/img_res/d1a318758ad74676a8ca6878d44c846d.jpg';
 
   const togglePassword = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleLogin = () => {
-    console.log('Login with:', {
-      username,
-      password,
-      securityAnswer,
-      rememberPassword,
-    });
-    // 重置导航堆栈，使 Home 成为唯一的页面
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Home' }],
-    });
+  const handleLogin = async () => {
+    if (!storage.getString('selectedNode')) {
+      ToastAndroid.show('请先配置节点', ToastAndroid.SHORT);
+      return
+    }
+    try {
+      const [questionid, answer] = securityAnswer.split(",");
+
+      let formData = {
+        formhash: "30b7da0e",
+        cookietime: "315360000",
+        loginfield: "username",
+        referer: 'index.php',
+        loginsubmit: true,
+        questionid,
+        answer,
+        username,
+        password,
+      };
+
+      if (!questionid || !answer) {
+        delete formData.questionid;
+        delete formData.answer;
+      }
+      const res = await http.post(`/bbs/logging.php?action=login`, formData);
+      if (res.data.includes(`欢迎您回来，${username}。现在将转入登录前页面。`)) {
+        ToastAndroid.show('登录成功', ToastAndroid.SHORT);
+      }
+      // 导航到首页
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      });
+    } catch (error) {
+      console.error('Login failed:', error);
+      // 这里可以添加错误提示逻辑
+      ToastAndroid.show('登录失败', ToastAndroid.SHORT);
+    }
   };
 
   const handleSettings = () => {
@@ -61,7 +89,7 @@ const LoginView = () => {
         {/* 顶部Logo区域 */}
         <View style={styles.logoContainer}>
           <View style={styles.logoWrapper}>
-            <Image source={{ uri: logoUrl }} style={styles.logo} />
+            <Image source={require('../../assets/images/ic_launcher.png')} style={styles.logo} />
             <View style={styles.logoOverlay} />
           </View>
           <Text style={styles.appTitle}>Discuz 阅读器</Text>
@@ -246,4 +274,3 @@ const styles = StyleSheet.create({
 });
 
 export default LoginView;
-

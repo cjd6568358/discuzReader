@@ -1,40 +1,49 @@
 import { MMKV } from 'react-native-mmkv';
-// import CookieManager from '@react-native-cookies/cookies';
+import iconv from 'iconv-lite'
+import CookieManager from '@react-native-cookies/cookies';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { Platform } from 'react-native';
 
 export const storage = new MMKV();
-
+export const MMStore = new Map();
 /**
  * 检查用户是否已登录
  * 通过检查cookie中的cdb3_auth字段判断用户登录状态
  * Discuz论坛使用cdb3_auth cookie来标识用户登录状态
  * @returns {Promise<boolean>} 返回用户登录状态，true表示已登录，false表示未登录
  */
-// export const checkLogin = async () => {
-//   try {
-//     // 论坛域名，请替换为实际的Discuz论坛域名
-//     const discuzDomain = await AsyncStorage.getItem('discuzDomain');
+export const checkLogin = async () => {
+    try {
+        const selectedNode = storage.getString('selectedNode');
+        if (!selectedNode) {
+            return false;
+        }
+        // Android平台直接获取指定域名的cookies
+        const cookies = await CookieManager.get(selectedNode);
 
-//     // 根据平台获取cookie
-//     if (Platform.OS === 'ios') {
-//       // iOS平台需要指定useWebKit参数
-//       const useWebKit = true;
-//       const cookies = await CookieManager.getAll(useWebKit);
+        // Android平台返回的是键值对对象，直接检查cdb3_auth属性
+        return Boolean(cookies?.cdb3_auth?.value);
+    } catch (error) {
+        console.error('Cookie读取错误:', error);
+        return false;
+    }
+};
 
-//       // iOS平台返回的是对象数组，需要遍历查找cdb3_auth
-//       return Object.values(cookies).some(cookie =>
-//         cookie.name === 'cdb3_auth' && cookie.value && cookie.value.length > 0
-//       );
-//     } else {
-//       // Android平台直接获取指定域名的cookies
-//       const cookies = await CookieManager.get(discuzDomain);
-
-//       // Android平台返回的是键值对对象，直接检查cdb3_auth属性
-//       return Boolean(cookies?.cdb3_auth?.value);
-//     }
-//   } catch (error) {
-//     console.error('Cookie读取错误:', error);
-//     return false;
-//   }
-// };
+export const UTF8ToGBK = (str) => {
+    let from = iconv.encode(str, 'GBK');
+    var rt = "";
+    for (var i = 0; i < from.length; i++) {
+        var c = from.readUInt8(i);
+        if (c > 127) {
+            i++;
+            var c2 = from.readUInt8(i);
+            rt +=
+                "%" +
+                c.toString(16).toUpperCase() +
+                "%" +
+                c2.toString(16).toUpperCase();
+        } else {
+            rt += String.fromCharCode(c);
+        }
+    }
+    return rt;
+};

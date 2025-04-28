@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { storage } from '../utils/index'
+import http from '../utils/http';
 
 const Nodes = () => {
     const navigation = useNavigation();
@@ -25,23 +26,22 @@ const Nodes = () => {
         const storedNodes = storage.getString('nodes');
         return storedNodes ? JSON.parse(storedNodes) : [];
     });
-    const [selectedNode, setSelectedNode] = useState('');
+    const [selectedNode, setSelectedNode] = useState(storage.getString('selectedNode'));
     const [loading, setLoading] = useState({});
     const [showDropMenuModal, setShowDropMenuModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [newNode, setNewNode] = useState({ name: '', address: '' });
     const headerHeight = useHeaderHeight();
     const [initialHeaderHeight] = useState(headerHeight);
-    // 移除分页加载相关状态
-    const abortControllerRef = useRef(null);
+    const abortControllerRef = useRef({});
     const timeoutIdsRef = useRef([]);
     const flatListRef = useRef(null);
     // 组件卸载时的清理函数
     useEffect(() => {
         return () => {
             // 取消所有正在进行的测速请求
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
+            if (Object.keys(abortControllerRef.current).length) {
+                Object.values(abortControllerRef.current).forEach(item => item.abort())
             }
             // 清除所有定时器
             timeoutIdsRef.current.forEach(timeoutId => {
@@ -61,11 +61,12 @@ const Nodes = () => {
     useEffect(() => {
         storage.set('nodes', JSON.stringify(nodes));
     }, [nodes]);
-    
+
     useEffect(() => {
         storage.set('selectedNode', selectedNode);
-    },[selectedNode])
-    
+        http.defaults.baseURL = selectedNode;
+    }, [selectedNode])
+
     // 移除加载更多节点的函数
 
     const handleUpdate = async () => {
@@ -104,7 +105,6 @@ const Nodes = () => {
                     // 提取链接和标题
                     const linkUrl = match[2];
                     const linkTitle = match[3].trim();
-                    console.log('Link:', linkUrl, 'Title:', linkTitle);
                     if (nodes.some(node => node.url === linkUrl)) {
                         return
                     }
@@ -141,11 +141,11 @@ const Nodes = () => {
         setLoading(prev => ({ ...prev, [url]: true }));
 
         // 如果存在之前的AbortController，先取消它
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
+        if (abortControllerRef.current?.[url]) {
+            abortControllerRef.current[url].abort();
         }
         // 创建新的AbortController
-        abortControllerRef.current = new AbortController();
+        abortControllerRef.current[url] = new AbortController();
 
         try {
             // 格式化URL，确保它是有效的
@@ -154,7 +154,7 @@ const Nodes = () => {
                 testUrl = 'http://' + url;
             }
 
-            // 执行三次测速
+            // 执行2次测速
             const testResults = [];
             for (let i = 0; i < 2; i++) {
                 try {
@@ -169,7 +169,7 @@ const Nodes = () => {
                     // 发送请求并计时
                     const fetchPromise = fetch(testUrl + '/bbs/index.php', {
                         method: 'GET',
-                        signal: abortControllerRef.current.signal
+                        signal: abortControllerRef.current[url].signal
                     });
 
                     // 使用Promise.race来实现超时控制
@@ -207,7 +207,6 @@ const Nodes = () => {
             }));
         } catch (error) {
             console.error('测速失败:', error);
-
             // 更新节点延迟为异常标识
             setNodes(prev => prev.map(node => {
                 if (node.url === url) {
@@ -221,6 +220,7 @@ const Nodes = () => {
         } finally {
             // 无论成功或失败，都需要重置加载状态
             setLoading(prev => ({ ...prev, [url]: false }));
+            delete abortControllerRef.current[url]
         }
     };
 
@@ -265,12 +265,12 @@ const Nodes = () => {
         // 显示测试完成的提示
         ToastAndroid.show('所有节点测试完成', ToastAndroid.SHORT);
     };
-    
+
     // 使用useCallback优化函数引用稳定性
     const handleTestCallback = useCallback((url) => {
         handleTest(url);
     }, []);
-    
+
     const handleDeleteCallback = useCallback((url) => {
         handleDelete(url);
     }, []);
@@ -327,9 +327,9 @@ const Nodes = () => {
                         ref={flatListRef}
                         data={nodes}
                         keyExtractor={(item) => item.url}
-                        renderItem={({item}) => (
-                            <NodeItem 
-                                node={item} 
+                        renderItem={({ item }) => (
+                            <NodeItem
+                                node={item}
                                 isSelected={selectedNode === item.url}
                                 onSelect={() => setSelectedNode(selectedNode === item.url ? '' : item.url)}
                                 onTest={handleTestCallback}
@@ -344,7 +344,7 @@ const Nodes = () => {
                         removeClippedSubviews={true}
                         updateCellsBatchingPeriod={50}
                         getItemLayout={(data, index) => (
-                            {length: 100, offset: 100 * index, index}
+                            { length: 100, offset: 100 * index, index }
                         )}
 
                         ListEmptyComponent={<Text style={styles.emptyText}>暂无节点，请添加或更新订阅</Text>}
@@ -526,7 +526,7 @@ const Nodes = () => {
 // 使用React.memo优化节点组件，避免不必要的重渲染
 const NodeItem = memo(({ node, isSelected, onSelect, onTest, onDelete, loading }) => {
     return (
-        <Pressable 
+        <Pressable
             style={[styles.nodeCard, isSelected && styles.selectedNodeCard]}
             onPress={onSelect}
         >
