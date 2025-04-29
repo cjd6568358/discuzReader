@@ -47,3 +47,9 @@ export const UTF8ToGBK = (str) => {
     }
     return rt;
 };
+
+export const decodeHtmlEntity = (html) => {
+    return html.replace(/&#(\d+);/, function (match, dec) {
+        return String.fromCharCode(+dec);
+    })
+}

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import iconv from 'iconv-lite';
-import { storage, UTF8ToGBK } from './index';
+import { storage, UTF8ToGBK, decodeHtmlEntity } from './index';
 
 /**
  * HTTP客户端封装
@@ -37,6 +37,7 @@ instance.interceptors.response.use(response => {
     console.log(response)
     if (contentType.includes('text/html') && response.config.responseType === 'arraybuffer') {
         response.data = iconv.decode(new Uint8Array(response.data), "GBK");
+        response.data = decodeHtmlEntity(response.data);
     }
     // 对响应数据做点什么
     return response;
