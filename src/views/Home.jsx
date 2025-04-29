@@ -15,6 +15,7 @@ import TabBar from '../components/TabBar';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import http from '../utils/http';
 import temme from '../lib/temme';
+import selectors from '../utils/selectors';
 
 const IndexView = () => {
   const userAvatar = 'https://ai-public.mastergo.com/ai/img_res/332b35288bcbe0b2e07d4a33fad4d3a9.jpg';
@@ -78,18 +79,9 @@ const IndexView = () => {
 
   useEffect(() => {
     http.get(`/bbs/index.php`).then(res => {
-      const data = temme(res.data, `
-  .mainbox.forumlist@areaList{
-      h3 a{$name};
-      tbody@value{
-          h2 a[href=$value]{$name}
-      }
-  };
-  #creditlist_menu>li@creditList{
-      &{$}
-  };
-  #creditlist{$username}
-  `);
+      const t1 = Date.now();
+      const data = temme(res.data, selectors.index);
+      console.log(Date.now() - t1);
       console.log(data);
     });
   })
