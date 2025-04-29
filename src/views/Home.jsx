@@ -83,6 +83,8 @@ const IndexView = () => {
       const data = temme(res.data, selectors.index);
       console.log(Date.now() - t1);
       console.log(data);
+    }).catch(err => {
+      console.log(err)
     });
   })
 
