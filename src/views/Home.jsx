@@ -86,7 +86,7 @@ const IndexView = () => {
     }).catch(err => {
       console.log(err)
     });
-  })
+  }, []) // 添加空依赖数组，防止无限循环调用
 
   const renderSectionItem = ({ item }) => (
     <TouchableOpacity
