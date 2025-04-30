@@ -32,6 +32,15 @@ export const getPMPage = async () => {
             pmList: res.data.pmList,
         }
     } catch (error) {
-        console.log('getIndexPage', error);
+        console.log('getPMPage', error);
+    }
+}
+
+export const getPMBody = async (id) => {
+    try {
+        const res = await http.get(`/bbs/pm.php?action=view&folder=inbox&pmid=${id}&inajax=1`)
+        return res.data.replace(/.*<!\[CDATA\[\s*<br\s*\/?>\s*(.*?)<div class="postactions".*/s, '$1')
+    } catch (error) {
+        console.log('getPMPage', error);
     }
 }

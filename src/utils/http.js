@@ -34,8 +34,7 @@ instance.interceptors.request.use(config => {
 
 // 添加响应拦截器
 instance.interceptors.response.use(response => {
-    const contentType = response.headers['content-type'] || '';
-    if (contentType.includes('text/html') && response.config.responseType === 'arraybuffer') {
+    if (response.config.responseType === 'arraybuffer') {
         response.data = iconv.decode(new Uint8Array(response.data), "GBK");
         response.data = decodeHtmlEntity(response.data);
     }
