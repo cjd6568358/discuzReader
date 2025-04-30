@@ -9,15 +9,18 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  FlatList
+  FlatList,
+  Pressable
 } from 'react-native';
 import TabBar from '../components/TabBar';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { getIndexPage, getPMPage } from '../utils/api';
+import Swiper from 'react-native-swiper';
+import { getIndexPage } from '../utils/api';
 
 const IndexView = () => {
   const userAvatar = 'https://ai-public.mastergo.com/ai/img_res/332b35288bcbe0b2e07d4a33fad4d3a9.jpg';
   const announcement = '欢迎来到论坛社区！新用户注册即送 500 积分，参与互动赢好礼！';
+  const [pageData, setPageData] = useState({});
   const [currentSection, setCurrentSection] = useState(1);
 
   const mainSections = [
@@ -78,11 +81,13 @@ const IndexView = () => {
   useEffect(() => {
     getIndexPage().then(data => {
       console.log(data);
-    })
-    getPMPage().then(data => {
-      console.log(data);
+      setPageData(data);
     })
   }, []) // 添加空依赖数组，防止无限循环调用
+
+  const onAnnouncementPress = (item) => {
+    console.log(item);
+  }
 
   const renderSectionItem = ({ item }) => (
     <TouchableOpacity
@@ -147,16 +152,13 @@ const IndexView = () => {
 
       {/* 顶部导航栏 */}
       <View style={styles.navbar}>
-        <Text style={styles.navTitle}>论坛</Text>
-        <View style={styles.avatarContainer}>
+        <Text style={styles.navTitle}>{pageData.documentTitle}</Text>
+        {/* <View style={styles.avatarContainer}>
           <Image source={{ uri: userAvatar }} style={styles.avatar} />
           <View style={styles.badge}>
             <Text style={styles.badgeText}>3</Text>
           </View>
-        </View>
-      </View>
-
-      <ScrollView style={styles.scrollView}>
+        </View> */}
         {/* 搜索栏 */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
@@ -168,13 +170,33 @@ const IndexView = () => {
             />
           </View>
         </View>
+      </View>
 
+      <ScrollView style={styles.scrollView}>
         {/* 公告栏 */}
-        <View style={styles.announcementContainer}>
-          <View style={styles.announcementBadge}>
-            <Text style={styles.announcementBadgeText}>公告</Text>
-          </View>
-          <Text style={styles.announcementText}>{announcement}</Text>
+        <View style={{ marginVertical: 8 }}>
+          {pageData.announcementList?.length && <Swiper
+            height={56}
+            loop={true}
+            autoplay={true}
+            autoplayTimeout={4}
+            horizontal={false}
+            showsButtons={false}
+            showsPagination={false}
+          >
+            {
+              pageData.announcementList.map((item, index) => (
+                <Pressable key={item.value} onPress={() => onAnnouncementPress(item)}>
+                  <View style={styles.announcementContainer} >
+                    <View style={styles.announcementBadge}>
+                      <Text style={styles.announcementBadgeText}>公告</Text>
+                    </View>
+                    <Text style={styles.announcementText}>{item.name}</Text>
+                  </View>
+                </Pressable>
+              ))
+            }
+          </Swiper>}
         </View>
 
         {/* 主版块导航 */}
@@ -257,9 +279,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    width: '50%',
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -281,10 +301,12 @@ const styles = StyleSheet.create({
   },
   announcementContainer: {
     marginHorizontal: 16,
-    marginBottom: 16,
     backgroundColor: '#EFF6FF',
     borderRadius: 8,
-    padding: 12,
+    paddingHorizontal: 12,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexDirection: 'row',
     alignItems: 'center',
   },
