@@ -1,20 +1,28 @@
 export default {
     index: `
-  head title{$documentTitle};
-  head link[rel=apple-touch-icon][href=$iconUrl];
-  #announcementbody>li@announcementList{
-    a[href=$value]{$name}
-  }
-  .mainbox.forumlist@areaList{
-      h3 a{$name};
-      tbody@value{
-          h2 a[href=$value]{$name}
-      }
-  };
-  #creditlist_menu>li@creditList{
-      &{$}
-  };
-  #creditlist{$username}
+    head title{$documentTitle};
+    head link[rel=apple-touch-icon][href=$iconUrl];
+    #announcementbody>li@announcementList{
+        a[href=$value]{$name}
+    }
+    .mainbox.forumlist@sectionList{
+        h3 a{$name};
+        tbody@value{
+            h2 a[href=$value]{$name}
+        }
+    };
+    #creditlist_menu>li@creditList{
+        &{$}
+    };
+    #nav cite a{$username}
+    `,
+    pm:`
+    #pmlist tr[id]@pmList{
+        td:nth-child(2) a[href=$href]{$title};
+        td:nth-child(2) a[style]{$unread=1};
+        td:nth-child(3) a{$from};
+        td:nth-child(4){$date};
+    }
     `,
     forum: `
     filter MathCeil() {

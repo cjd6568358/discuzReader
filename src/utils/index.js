@@ -49,7 +49,16 @@ export const UTF8ToGBK = (str) => {
 };
 
 export const decodeHtmlEntity = (html) => {
-    return html.replace(/&#(\d+);/, function (match, dec) {
+    if (!html) {
+        return '';
+    }
+    return html.replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "\'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/, function (match, dec) {
         return String.fromCharCode(+dec);
     })
 }

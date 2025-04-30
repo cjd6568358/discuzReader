@@ -1,6 +1,7 @@
 import axios from 'axios';
 import iconv from 'iconv-lite';
 import { storage, UTF8ToGBK, decodeHtmlEntity } from './index';
+import temme from '../lib/temme';
 
 /**
  * HTTP客户端封装
@@ -38,6 +39,11 @@ instance.interceptors.response.use(response => {
     if (contentType.includes('text/html') && response.config.responseType === 'arraybuffer') {
         response.data = iconv.decode(new Uint8Array(response.data), "GBK");
         response.data = decodeHtmlEntity(response.data);
+    }
+    if (response.config.selector) {
+        const t1 = Date.now();
+        response.data = temme(response.data, response.config.selector);
+        console.log('temme time:', Date.now() - t1);
     }
     // 对响应数据做点什么
     return response;

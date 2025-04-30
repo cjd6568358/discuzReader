@@ -13,9 +13,7 @@ import {
 } from 'react-native';
 import TabBar from '../components/TabBar';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import http from '../utils/http';
-import temme from '../lib/temme';
-import selectors from '../utils/selectors';
+import { getIndexPage, getPMPage } from '../utils/api';
 
 const IndexView = () => {
   const userAvatar = 'https://ai-public.mastergo.com/ai/img_res/332b35288bcbe0b2e07d4a33fad4d3a9.jpg';
@@ -78,14 +76,12 @@ const IndexView = () => {
   ];
 
   useEffect(() => {
-    http.get(`/bbs/index.php`).then(res => {
-      const t1 = Date.now();
-      const data = temme(res.data, selectors.index);
-      console.log(Date.now() - t1);
+    getIndexPage().then(data => {
       console.log(data);
-    }).catch(err => {
-      console.log(err)
-    });
+    })
+    getPMPage().then(data => {
+      console.log(data);
+    })
   }, []) // 添加空依赖数组，防止无限循环调用
 
   const renderSectionItem = ({ item }) => (
