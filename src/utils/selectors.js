@@ -19,7 +19,7 @@ export default {
     pm:`
     #pmlist tr[id]@pmList{
         td:nth-child(2) a[href=$href]{$title};
-        td:nth-child(2) a[style]{$unread=1};
+        td:nth-child(2)[style]{$unread = 1};
         td:nth-child(3) a{$from};
         td:nth-child(4){$date};
     }
