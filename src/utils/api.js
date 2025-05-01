@@ -2,6 +2,7 @@
 import http from './http';
 import selectors from './selectors';
 
+const title_regex = new RegExp('^.*?\\|\\s*(.*?)\\s*$', 'g');
 export const getIndexPage = async () => {
     try {
         const res = await http.get(`/bbs/index.php`, { selector: selectors.index })
@@ -13,7 +14,13 @@ export const getIndexPage = async () => {
             // 公告列表
             announcementList: res.data.announcementList,
             // 版块列表
-            sectionList: res.data.sectionList,
+            sectionList: res.data.sectionList.map(item => {
+                return {
+                    name: item.name.replace(title_regex, '$1'),
+                    value: item.value.map(i => ({ ...i, name: i.name.replace(title_regex, '$1') })),
+                    owner: item.owner,
+                }
+            }),
             // 积分列表
             creditList: res.data.creditList,
             // 用户名
