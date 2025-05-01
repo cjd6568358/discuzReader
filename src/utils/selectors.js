@@ -3,12 +3,28 @@ export default {
     head title{$documentTitle};
     head link[rel=apple-touch-icon][href=$iconUrl];
     #announcementbody>li@announcementList{
-        a[href=$value]{$name}
+        a[href=$href]{$name}
     }
     .mainbox.forumlist@sectionList{
         h3 a{$name};
-        tbody@value{
-            h2 a[href=$value]{$name}
+        .headactions .notabs@moderators{
+            &{$}
+        };
+        tbody@children{
+            h2 a[href=$href]{$name}
+            h2 em{$today}
+            h2+p{$desc|replace(/\\n/g, '')}
+            h2+p+p:not(.moderators) a@children{
+                &[href=$href]{$name};
+            };
+            p.moderators .notabs@moderators{
+                &{$}
+            };
+            td.nums:nth-of-type(1){$topic|Number};
+            td.nums:nth-of-type(2){$thread|Number};
+            td.lastpost>a[href=$lastpost_id|replace(/^.*tid=(.*)&goto.*$/g,'$1')|Number]{$lastpost_name}
+            td.lastpost>cite a{$lastpost_author}
+            td.lastpost>cite{$lastpost_date|split(' - ')|slice(1,2)|first}
         }
     };
     #creditlist_menu>li@creditList{

@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
-  Image,
   TextInput,
-  TouchableOpacity,
   ScrollView,
   StyleSheet,
   SafeAreaView,
@@ -18,133 +17,98 @@ import Swiper from 'react-native-swiper';
 import { getIndexPage } from '../utils/api';
 
 const IndexView = () => {
-  const userAvatar = 'https://ai-public.mastergo.com/ai/img_res/332b35288bcbe0b2e07d4a33fad4d3a9.jpg';
-  const announcement = '欢迎来到论坛社区！新用户注册即送 500 积分，参与互动赢好礼！';
+  const [loading, setLoading] = useState(true);
   const [pageData, setPageData] = useState({});
-  const [currentSection, setCurrentSection] = useState(1);
-
-  const mainSections = [
-    { id: 1, name: '综合讨论' },
-    { id: 2, name: '技术交流' },
-    { id: 3, name: '生活闲聊' },
-    { id: 4, name: '求职招聘' },
-    { id: 5, name: '资源分享' },
-    { id: 6, name: '站务公告' }
-  ];
-
-  const forums = [
-    {
-      name: '程序开发',
-      moderator: '技术大牛',
-      todayPosts: '128 帖子',
-      onlineUsers: '234 在线',
-      lastPost: '10 分钟前',
-      subforums: [
-        { name: 'Web 前端', activity: 86 },
-        { name: 'Java 开发', activity: 92 },
-        { name: 'Python', activity: 78 },
-        { name: '算法', activity: 45 },
-        { name: '数据库', activity: 63 }
-      ],
-      icon: 'https://ai-public.mastergo.com/ai/img_res/826bb37382a631f40036f0efee1591a6.jpg'
-    },
-    {
-      name: '职场交流',
-      moderator: '职场导师',
-      todayPosts: '89 帖子',
-      onlineUsers: '156 在线',
-      lastPost: '15 分钟前',
-      subforums: [
-        { name: '求职分享', activity: 56 },
-        { name: '面试经验', activity: 48 },
-        { name: '职场生存', activity: 72 },
-        { name: '跳槽交流', activity: 89 }
-      ],
-      icon: 'https://ai-public.mastergo.com/ai/img_res/f574a41ba001cbd19b4d96f4eb6b5968.jpg'
-    },
-    {
-      name: '生活分享',
-      moderator: '生活家',
-      todayPosts: '256 帖子',
-      onlineUsers: '342 在线',
-      lastPost: '5 分钟前',
-      subforums: [
-        { name: '美食天地', activity: 95 },
-        { name: '旅行攻略', activity: 76 },
-        { name: '运动健康', activity: 68 },
-        { name: '生活妙招', activity: 82 }
-      ],
-      icon: 'https://ai-public.mastergo.com/ai/img_res/cfd5c725bbdc2f4c630d671d6ab832d0.jpg'
-    }
-  ];
+  const [currentSection, setCurrentSection] = useState('');
 
   useEffect(() => {
     getIndexPage().then(data => {
       console.log(data);
       setPageData(data);
-    })
+      setCurrentSection(data.sectionList[0].name);
+    }).catch(error => {
+      console.log(error);
+    }).finally(() => {
+      setLoading(false);
+    });
   }, []) // 添加空依赖数组，防止无限循环调用
 
   const onAnnouncementPress = (item) => {
     console.log(item);
   }
 
-  const renderSectionItem = ({ item }) => (
-    <TouchableOpacity
-      onPress={() => setCurrentSection(item.id)}
+  const onForumPress = (item) => {
+    console.log(item);
+  }
+
+  const onSubForumPress = (item) => {
+    console.log(item);
+  }
+
+  const renderSection = ({ item }) => (
+    <Pressable
+      onPress={() => setCurrentSection(item.name)}
       style={[
         styles.sectionButton,
-        currentSection === item.id ? styles.activeSectionButton : styles.inactiveSectionButton
+        currentSection === item.name ? styles.activeSectionButton : styles.inactiveSectionButton
       ]}
     >
       <Text
         style={[
           styles.sectionButtonText,
-          currentSection === item.id ? styles.activeSectionText : styles.inactiveSectionText
+          currentSection === item.name ? styles.activeSectionText : styles.inactiveSectionText
         ]}
       >
         {item.name}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 
-  const renderSubforum = (subforum, index) => (
-    <View key={index} style={styles.subforumTag}>
-      <Text style={styles.subforumName}>{subforum.name}</Text>
-      <Text style={styles.subforumActivity}>+{subforum.activity}</Text>
-    </View>
-  );
-
-  const renderForumItem = ({ item, index }) => (
-    <View key={index} style={styles.forumCard}>
+  const renderForum = ({ item, index }) => (
+    <Pressable
+      key={item.name}
+      onPress={() => onForumPress(item)}
+      style={styles.forumCard}
+    >
       <View style={styles.forumHeader}>
-        <Image source={{ uri: item.icon }} style={styles.forumIcon} />
         <View style={styles.forumInfo}>
-          <Text style={styles.forumName}>{item.name}</Text>
-          <Text style={styles.moderatorText}>版主：{item.moderator}</Text>
+          <Text style={styles.forumName}>{item.name}{item.today}</Text>
+          <Text style={styles.desc}>{item.desc}</Text>
+
+          {item.children.length > 0 && <View><Text style={{ marginTop: 8, color: '#2563EB' }} >子板块：</Text></View>}
 
           <View style={styles.subforumContainer}>
-            {item.subforums.map(renderSubforum)}
+            {item.children.map(subItem => <Pressable key={subItem.name} onPress={() => onSubForumPress(subItem)} style={styles.subforumTag}>
+              <Text style={styles.subforumName}>{subItem.name}</Text>
+            </Pressable>)}
           </View>
 
           <View style={styles.forumStats}>
             <View style={styles.statItem}>
-              <Icon name="comments" size={12} color="#6B7280" />
-              <Text style={styles.statText}>{item.todayPosts}</Text>
+              <Icon name="hashtag" size={12} color="#2563EB" />
+              <Text style={styles.statText}>{item.topic}</Text>
             </View>
             <View style={styles.statItem}>
-              <Icon name="users" size={12} color="#6B7280" />
-              <Text style={styles.statText}>{item.onlineUsers}</Text>
+              <Icon name="comments" size={12} color="#2563EB" />
+              <Text style={styles.statText}>{item.thread}</Text>
             </View>
-            <View style={styles.statItem}>
-              <Icon name="clock-o" size={12} color="#6B7280" />
-              <Text style={styles.statText}>{item.lastPost}</Text>
-            </View>
+            {item.lastpost_name && <View style={styles.statItem}>
+              <Icon name="clock-o" size={12} color="#2563EB" />
+              <Text numberOfLines={1} ellipsizeMode="middle" style={styles.statText}>{item.lastpost_name}</Text>
+            </View>}
           </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -175,7 +139,7 @@ const IndexView = () => {
       <ScrollView style={styles.scrollView}>
         {/* 公告栏 */}
         <View style={{ marginVertical: 8 }}>
-          {pageData.announcementList?.length && <Swiper
+          <Swiper
             height={56}
             loop={true}
             autoplay={true}
@@ -185,8 +149,8 @@ const IndexView = () => {
             showsPagination={false}
           >
             {
-              pageData.announcementList.map((item, index) => (
-                <Pressable key={item.value} onPress={() => onAnnouncementPress(item)}>
+              pageData.announcementList.map((item) => (
+                <Pressable key={item.href} onPress={() => onAnnouncementPress(item)}>
                   <View style={styles.announcementContainer} >
                     <View style={styles.announcementBadge}>
                       <Text style={styles.announcementBadgeText}>公告</Text>
@@ -196,15 +160,15 @@ const IndexView = () => {
                 </Pressable>
               ))
             }
-          </Swiper>}
+          </Swiper>
         </View>
 
-        {/* 主版块导航 */}
+        {/* 分区导航 */}
         <View style={styles.sectionsContainer}>
           <FlatList
-            data={mainSections}
-            renderItem={renderSectionItem}
-            keyExtractor={(item) => item.id.toString()}
+            data={pageData.sectionList}
+            renderItem={renderSection}
+            keyExtractor={(item) => item.name}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.sectionsList}
@@ -214,9 +178,9 @@ const IndexView = () => {
         {/* 子版块列表 */}
         <View style={styles.forumsContainer}>
           <FlatList
-            data={forums}
-            renderItem={renderForumItem}
-            keyExtractor={(item, index) => index.toString()}
+            data={pageData.sectionList.find((section) => section.name === currentSection).children}
+            renderItem={renderForum}
+            keyExtractor={(item) => item.name}
             scrollEnabled={false}
           />
         </View>
@@ -229,6 +193,12 @@ const IndexView = () => {
 };
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF'
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
@@ -361,7 +331,7 @@ const styles = StyleSheet.create({
   forumCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
-    padding: 16,
+    padding: 12,
     marginBottom: 16,
     elevation: 1,
     shadowColor: '#000',
@@ -373,13 +343,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  forumIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-  },
   forumInfo: {
-    marginLeft: 12,
     flex: 1,
   },
   forumName: {
@@ -387,7 +351,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#1F2937',
   },
-  moderatorText: {
+  desc: {
     fontSize: 14,
     color: '#6B7280',
     marginTop: 4,
@@ -402,19 +366,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F3F4F6',
     borderRadius: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     marginRight: 8,
     marginBottom: 8,
   },
   subforumName: {
     fontSize: 12,
     color: '#4B5563',
-  },
-  subforumActivity: {
-    fontSize: 12,
-    color: '#2563EB',
-    marginLeft: 4,
   },
   forumStats: {
     flexDirection: 'row',
@@ -423,7 +382,7 @@ const styles = StyleSheet.create({
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 8,
   },
   statText: {
     fontSize: 12,

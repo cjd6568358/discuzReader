@@ -17,8 +17,11 @@ export const getIndexPage = async () => {
             sectionList: res.data.sectionList.map(item => {
                 return {
                     name: item.name.replace(title_regex, '$1'),
-                    value: item.value.map(i => ({ ...i, name: i.name.replace(title_regex, '$1') })),
-                    owner: item.owner,
+                    children: item.children.map(i => ({
+                        ...i,
+                        name: i.name.replace(title_regex, '$1'),
+                    })),
+                    moderators: item.moderators,
                 }
             }),
             // 积分列表

@@ -9,3 +9,5 @@ pm
 index
 .headaction .notabs@moderator{$moderator} 无法取到数据
 .notabs@moderator{$moderator} 正常
+
+### 板块支持定制顺序和隐藏

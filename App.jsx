@@ -13,7 +13,7 @@ import { createAppNavigation } from './src/router';
 
 
 const App = () => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ const App = () => {
         setIsLoggedIn(false);
       } finally {
         // 无论成功失败，都结束加载状态
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
@@ -39,7 +39,7 @@ const App = () => {
     initialRouteName: isLoggedIn ? 'Home' : 'Login'
   });
 
-  if (isLoading) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
