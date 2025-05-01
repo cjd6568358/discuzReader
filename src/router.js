@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeView from './views/Home'
 import LoginView from './views/Login'
 import NodesView from './views/Nodes'
+import MessageView from './views/Message'
 
 export const defaultConfig = {
     initialRouteName: 'Home',
@@ -12,6 +13,9 @@ export const defaultConfig = {
     screens: {
         Home: {
             screen: HomeView,
+        },
+        Message: {
+            screen: MessageView,
         },
         Login: {
             screen: LoginView,

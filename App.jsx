@@ -8,6 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { LoadingProvider } from './src/components/Loading';
 import { checkLogin } from './src/utils/index';
 import { createAppNavigation } from './src/router';
 
@@ -47,7 +48,7 @@ const App = () => {
     );
   }
 
-  return <Navigation />;
+  return <LoadingProvider><Navigation /></LoadingProvider>;
 }
 
 const styles = StyleSheet.create({

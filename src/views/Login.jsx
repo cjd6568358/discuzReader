@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   Image,
   StyleSheet,
   ScrollView,
@@ -78,13 +78,13 @@ const LoginView = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
-      <TouchableOpacity
+      <Pressable
         onPress={handleSettings}
         style={styles.settingsButton}
         activeOpacity={0.7}
       >
         <Icon name="cog" size={24} color="#9CA3AF" />
-      </TouchableOpacity>
+      </Pressable>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 顶部Logo区域 */}
         <View style={styles.logoContainer}>
@@ -118,9 +118,9 @@ const LoginView = () => {
               style={styles.input}
               placeholderTextColor="#9CA3AF"
             />
-            <TouchableOpacity onPress={togglePassword} style={styles.eyeIcon}>
+            <Pressable onPress={togglePassword} style={styles.eyeIcon}>
               <Icon name={showPassword ? "eye" : "eye-slash"} size={18} color="#9CA3AF" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.inputWrapper}>
@@ -144,13 +144,13 @@ const LoginView = () => {
             <Text style={styles.rememberText}>记住密码</Text>
           </View>
 
-          <TouchableOpacity
+          <Pressable
             onPress={handleLogin}
             style={styles.loginButton}
             activeOpacity={0.8}
           >
             <Text style={styles.loginButtonText}>登 录</Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <View style={styles.linksContainer}>
             <Text style={styles.forgotPasswordText}>忘记密码？</Text>

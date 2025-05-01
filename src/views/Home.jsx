@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  ActivityIndicator,
+  // ActivityIndicator,
   View,
   Text,
   TextInput,
@@ -11,27 +11,34 @@ import {
   FlatList,
   Pressable
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import TabBar from '../components/TabBar';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Swiper from 'react-native-swiper';
+import { useLoading } from '../components/Loading';
 import { getIndexPage } from '../utils/api';
 
 const IndexView = () => {
-  const [loading, setLoading] = useState(true);
-  const [pageData, setPageData] = useState({});
+  const { showLoading, hideLoading } = useLoading();
+  const [pageData, setPageData] = useState(null);
   const [currentSection, setCurrentSection] = useState('');
-
-  useEffect(() => {
-    getIndexPage().then(data => {
-      console.log(data);
-      setPageData(data);
-      setCurrentSection(data.sectionList[0].name);
-    }).catch(error => {
-      console.log(error);
-    }).finally(() => {
-      setLoading(false);
-    });
-  }, []) // 添加空依赖数组，防止无限循环调用
+  useFocusEffect(
+    useCallback(() => {
+      showLoading()
+      getIndexPage().then(data => {
+        console.log(data);
+        setPageData(data);
+        setCurrentSection(data.sectionList[0].name);
+      }).catch(error => {
+        console.log(error);
+      }).finally(() => {
+        hideLoading();
+      });
+      return () => {
+        // Do something when the screen is unfocused
+        // Useful for cleanup functions
+      };
+    }, []))
 
   const onAnnouncementPress = (item) => {
     console.log(item);
@@ -102,10 +109,9 @@ const IndexView = () => {
     </Pressable>
   );
 
-  if (loading) {
+  if (!pageData) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563EB" />
       </View>
     );
   }
@@ -113,10 +119,9 @@ const IndexView = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
-
       {/* 顶部导航栏 */}
       <View style={styles.navbar}>
-        <Text style={styles.navTitle}>{pageData.documentTitle}</Text>
+        <Text style={styles.navTitle}>{pageData?.documentTitle}</Text>
         {/* <View style={styles.avatarContainer}>
           <Image source={{ uri: userAvatar }} style={styles.avatar} />
           <View style={styles.badge}>

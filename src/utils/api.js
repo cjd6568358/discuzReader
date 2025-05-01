@@ -46,11 +46,11 @@ export const getPMPage = async () => {
     }
 }
 
-export const getPMBody = async (id) => {
+export const getPostMessageContent = async (id) => {
     try {
         const res = await http.get(`/bbs/pm.php?action=view&folder=inbox&pmid=${id}&inajax=1`)
         return res.data.replace(/.*<!\[CDATA\[\s*<br\s*\/?>\s*(.*?)<div class="postactions".*/s, '$1')
     } catch (error) {
-        console.log('getPMPage', error);
+        console.log('getPostMessageContent', error);
     }
 }
