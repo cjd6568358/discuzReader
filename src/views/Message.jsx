@@ -1,0 +1,274 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  SafeAreaView,
+  StatusBar,
+  Pressable,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import TabBar from '../components/TabBar';
+import { useLoading } from '../components/Loading';
+import { getPMPage, getPostMessageContent } from '../utils/api';
+
+// 缺删除/回复
+const MessageScreen = () => {
+  const { showLoading, hideLoading } = useLoading();
+  const [selectedMessages, setSelectedMessages] = useState([]);
+
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    showLoading()
+    getPMPage().then(data => {
+      console.log(data.pmList)
+      setMessages(data.pmList)
+      hideLoading()
+    })
+  }, [])
+
+  const bageCount = messages.reduce((acc, cur) => {
+    if (cur.unread === 1) {
+      acc += 1;
+    }
+    return acc;
+  }, 0)
+
+  const toggleSelect = (index) => {
+    setSelectedMessages(prev => {
+      const existingIndex = prev.indexOf(index);
+      if (existingIndex === -1) {
+        return [...prev, index];
+      }
+      return prev.filter(i => i !== index);
+    });
+  };
+
+  const deleteSelected = () => {
+    if (selectedMessages.length === 0) return;
+
+    setMessages(prev => {
+      const newMessages = [...prev];
+      selectedMessages.sort((a, b) => b - a).forEach(index => {
+        newMessages.splice(index, 1);
+      });
+      return newMessages;
+    });
+    setSelectedMessages([]);
+  };
+
+  const toggleMessage = (index) => {
+    if (messages[index].expanded === true || Reflect.has(messages[index], 'content')) {
+      setMessages(prev => {
+        const newMessages = [...prev];
+        newMessages[index].expanded = !newMessages[index].expanded;
+        return newMessages;
+      });
+    } else {
+      showLoading()
+      getPostMessageContent(messages[index].id).then(content => {
+        setMessages(prev => {
+          const newMessages = [...prev];
+          newMessages[index].expanded = !newMessages[index].expanded;
+          newMessages[index].content = content;
+          return newMessages;
+        });
+        hideLoading()
+      })
+    }
+  };
+
+  const renderMessageItem = ({ item, index }) => (
+    <View key={item.id} style={styles.messageItem}>
+      <View style={styles.selectContainer}>
+        <Pressable
+          style={[styles.checkbox, selectedMessages.includes(index) && styles.checkboxSelected]}
+          onPress={() => toggleSelect(index)}
+        >
+          {selectedMessages.includes(index) && (
+            <Icon name="check" size={12} color="#FFFFFF" />
+          )}
+        </Pressable>
+      </View>
+
+      <View style={styles.messageContent}>
+        <View style={styles.messageHeader}>
+          <Pressable style={{ flex: 1, marginRight: 8, }} onPress={() => toggleMessage(index)}>
+            <Text numberOfLines={2} style={styles.messageName}>{item.title}</Text>
+          </Pressable>
+          <Text style={styles.messageTime}>{item.date}</Text>
+        </View>
+        {item.expanded && <Text style={styles.messageText} ellipsizeMode="tail" >
+          {item.content}
+        </Text>}
+        {item.expanded && (
+          <View style={styles.collapseButtonContainer}>
+            <Text>来自：{item.from}</Text>
+            <Pressable
+              onPress={() => toggleMessage(index)}
+              style={styles.collapseButton}
+            >
+              <Text style={styles.collapseButtonText}>收起</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+      {item.unread === 1 && <View style={styles.unreadIndicator} />}
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyText}>暂无消息</Text>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+      {/* 顶部导航栏 */}
+      <View style={styles.navbar}>
+        <Text style={styles.navTitle}>我的消息{bageCount > 0 && `(${bageCount})`}</Text>
+        <Pressable
+          onPress={deleteSelected}
+          style={[styles.deleteButton, !selectedMessages.length && styles.deleteButtonDisabled]}
+        >
+          <Text style={styles.deleteButtonText}>批量删除</Text>
+        </Pressable>
+      </View>
+
+      {/* 消息列表 */}
+      <FlatList
+        data={messages}
+        renderItem={renderMessageItem}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={styles.messageList}
+        ListEmptyComponent={renderEmptyState}
+      />
+
+      {/* 底部导航栏 */}
+      <TabBar currentTab="Message" />
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  navbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    height: 56,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 2,
+    zIndex: 10,
+  },
+  navTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  deleteButtonText: {
+    fontSize: 14,
+    color: '#EF4444',
+  },
+  deleteButtonDisabled: {
+    opacity: 0.5,
+  },
+  messageList: {
+    paddingTop: 8,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    flexGrow: 1,
+  },
+  messageItem: {
+    flexDirection: 'row',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  selectContainer: {
+    marginRight: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  messageContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  messageHeader: {
+    display: 'flex',
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  messageName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  messageTime: {
+    flexShrink: 0,
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  messageText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    lineHeight: 20,
+  },
+  collapseButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  collapseButton: {
+    padding: 4,
+  },
+  collapseButtonText: {
+    fontSize: 12,
+    color: '#3B82F6',
+  },
+  unreadIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+});
+
+export default MessageScreen;
