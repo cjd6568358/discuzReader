@@ -5,7 +5,7 @@ import selectors from './selectors';
 const title_regex = new RegExp('^.*?\\|\\s*(.*?)\\s*$', 'g');
 export const getIndexPage = async () => {
     try {
-        const res = await http.get(`/bbs/index.php`, { selector: selectors.index })
+        const res = await http.get(`index.php`, { selector: selectors.index })
         return {
             // 网站标题
             documentTitle: res.data.documentTitle,
@@ -36,7 +36,7 @@ export const getIndexPage = async () => {
 
 export const getPMPage = async () => {
     try {
-        const res = await http.get(`/bbs/pm.php`, { selector: selectors.pm })
+        const res = await http.get(`pm.php`, { selector: selectors.pm })
         return {
             // 消息列表
             pmList: res.data.pmList,
@@ -49,21 +49,50 @@ export const getPMPage = async () => {
 export const postMessageAction = async (action = 'view', id) => {
     try {
         if (action === 'view') {
-            const res = await http.get(`/bbs/pm.php?action=${action}&folder=inbox&pmid=${id}&inajax=1`)
+            const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}&inajax=1`)
             return res.data.replace(/.*<!\[CDATA\[\s*<br\s*\/?>\s*(.*?)<div class="postactions".*/s, '$1')
         } else if (action === 'delete') {
             if (Array.isArray(id)) {
-                const res = await http.post(`/bbs/pm.php?action=${action}&folder=inbox`, `formhash=24cbfa84&${id.map(key => `delete%5B%5D=${key}`).join('&')}&pmsend=true`)
+                const res = await http.post(`pm.php?action=${action}&folder=inbox`, `formhash=24cbfa84&${id.map(key => `delete%5B%5D=${key}`).join('&')}&pmsend=true`)
             } else {
-                const res = await http.get(`/bbs/pm.php?action=${action}&folder=inbox&pmid=${id}`)
+                const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}`)
             }
         } else if (action === 'markunread') {
-            const res = await http.get(`/bbs/pm.php?action=${action}&folder=inbox&pmid=${id}`)
+            const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}`)
         } else if (action === 'reply') {
-            const res = await http.get(`/bbs/pm.php?action=send&do=${action}&pmid=${id}`)
+            const res = await http.get(`pm.php?action=send&do=${action}&pmid=${id}`)
         }
 
     } catch (error) {
         console.log('getPostMessageContent', error);
+    }
+}
+
+export const getForumPage = async (href) => {
+    try {
+        const res = await http.get(href, { selector: selectors.forum })
+        return res.data
+    } catch (error) {
+        console.log('getForumPage', error);
+    }
+}
+
+export const favoriteAction = async (type, href) => {
+    try {
+        if (type === 'add') {
+            await http.get(href)
+        } else if (type === 'delete') {
+            const id = href.split('-')[1]
+            if (href.includes('forum-')) {
+                await http.post(`my.php?item=favorites&type=forum`, `formhash=24cbfa84&delete%5B%5D=${id}&favsubmit=true`)
+            } else {
+                await http.post(`my.php?item=favorites&type=thread`, `formhash=24cbfa84&delete%5B%5D=${id}&favsubmit=true`)
+            }
+        } else if (type === 'view') {
+            const res = await http.get(href, { selector: selectors.favorites })
+            return res.data
+        }
+    } catch (error) {
+        console.log('favoriteAction', error);
     }
 }

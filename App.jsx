@@ -9,8 +9,9 @@ import {
   View,
 } from 'react-native';
 import { LoadingProvider } from './src/components/Loading';
-import { checkLogin } from './src/utils/index';
+import { checkLogin, MMStore } from './src/utils/index';
 import { createAppNavigation } from './src/router';
+import { favoriteAction } from './src/utils/api';
 
 
 const App = () => {
@@ -34,6 +35,21 @@ const App = () => {
 
     checkUserLogin();
   }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      // 初始化收藏数据
+      Promise.all([
+        favoriteAction('view', 'my.php?item=favorites&type=thread'),
+        favoriteAction('view', 'my.php?item=favorites&type=forum')
+      ]).then(([thread, forum]) => {
+        MMStore['favorites_thread'] = thread
+        MMStore['favorites_forum'] = forum
+      }).catch(err => {
+        console.log('初始化收藏数据', err)
+      })
+    }
+  }, [isLoggedIn]);
 
   // 根据登录状态创建导航
   const Navigation = createAppNavigation({

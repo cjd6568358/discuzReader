@@ -4,7 +4,10 @@ import CookieManager from '@react-native-cookies/cookies';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const storage = new MMKV();
-export const MMStore = new Map();
+export const MMStore = {
+    'favorites_thread': [],
+    'favorites_forum': []
+};
 /**
  * 检查用户是否已登录
  * 通过检查cookie中的cdb3_auth字段判断用户登录状态
@@ -53,12 +56,12 @@ export const decodeHtmlEntity = (html) => {
         return '';
     }
     return html.replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, "\"")
-    .replace(/&#39;/g, "\'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&#(\d+);/, function (match, dec) {
-        return String.fromCharCode(+dec);
-    })
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, "\"")
+        .replace(/&#39;/g, "\'")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&#(\d+);/, function (match, dec) {
+            return String.fromCharCode(+dec);
+        })
 }

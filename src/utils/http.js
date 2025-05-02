@@ -11,7 +11,7 @@ const selectedNode = storage.getString('selectedNode');
 
 // 默认配置
 const defaultConfig = {
-    baseURL: selectedNode,
+    baseURL: selectedNode + '/bbs/',
     headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
     },

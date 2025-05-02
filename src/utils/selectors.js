@@ -20,8 +20,8 @@ export default {
             p.moderators .notabs@moderators{
                 &{$}
             };
-            td.nums:nth-of-type(1){$topic|Number};
-            td.nums:nth-of-type(2){$thread|Number};
+            td.nums:nth-of-type(1){$thread|Number};
+            td.nums:nth-of-type(2){$post|Number};
             td.lastpost>a[href=$lastpost_id|replace(/^.*tid=(.*)&goto.*$/g,'$1')|Number]{$lastpost_name}
             td.lastpost>cite a{$lastpost_author}
             td.lastpost>cite{$lastpost_date|split(' - ')|slice(1,2)|first}
@@ -40,31 +40,38 @@ export default {
         td:nth-child(4){$date};
     }
     `,
+    favorites: `
+    .mainbox form tbody tr@{
+        td:nth-child(2) a[href=$tid|split('-')|slice(1,2)|first];
+    }
+    `,
     forum: `
-    filter MathCeil() {
-      return Math.ceil(this/38)
+    .mainbox.threadlist h1 a{$documentTitle};
+    #newpmnum{$newMessage|Number};
+    #nav p:first-child a@breadcrumb{
+        &[href=$href]{$name}
     };
-    head title{$documentTitle};
-    .mainbox.forumlist tbody:has(.lastpost a)@forumList{
-        h2 a[href=$href]{$name}
-    }
-    .mainbox.threadlist table:has(thead.separation)@threadList{
-        thead.separation td b{$name};
-        tbody:has(th)@value{
-            th span[id^=thread_] a[href=$href]{$title};
-            .nums{$nums};
-            td.icon img[alt=$type];
-            span.bold{$permission|Number}
-            .author cite{html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
-            .author em{$date}
-        }
-    };
-    .mainbox.threadlist+.pages_btns .pages@pageInfo|pack{
-        $pageNum = 1;
-        $pageCount = 1;
-        strong{$pageNum|Number};
-        em{$pageCount|Number|MathCeil};
-    }
+    #ajax_favorite[href=$favorite_href];
+    // .mainbox.forumlist tbody:has(.lastpost a)@forumList{
+    //     h2 a[href=$href]{$name}
+    // }
+    // .mainbox.threadlist table:has(thead.separation)@threadList{
+    //     thead.separation td b{$name};
+    //     tbody:has(th)@value{
+    //         th span[id^=thread_] a[href=$href]{$title};
+    //         .nums{$nums};
+    //         td.icon img[alt=$type];
+    //         span.bold{$permission|Number}
+    //         .author cite{html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
+    //         .author em{$date}
+    //     }
+    // };
+    // .mainbox.threadlist+.pages_btns .pages@pageInfo|pack{
+    //     $pageNum = 1;
+    //     $pageCount = 1;
+    //     strong{$pageNum|Number};
+    //     em{$pageCount|Number|MathCeil};
+    // }
     `,
     thread: `
     filter MathCeil() {

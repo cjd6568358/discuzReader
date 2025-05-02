@@ -64,7 +64,7 @@ const NodesView = () => {
 
     useEffect(() => {
         storage.set('selectedNode', selectedNode);
-        http.defaults.baseURL = selectedNode;
+        http.defaults.baseURL = selectedNode + '/bbs/';
     }, [selectedNode])
 
     // 移除加载更多节点的函数

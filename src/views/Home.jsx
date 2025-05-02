@@ -11,7 +11,7 @@ import {
   FlatList,
   Pressable
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import TabBar from '../components/TabBar';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Swiper from 'react-native-swiper';
@@ -19,6 +19,7 @@ import { useLoading } from '../components/Loading';
 import { getIndexPage } from '../utils/api';
 
 const IndexView = () => {
+  const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
   const [pageData, setPageData] = useState(null);
   const [currentSection, setCurrentSection] = useState('');
@@ -46,10 +47,9 @@ const IndexView = () => {
 
   const onForumPress = (item) => {
     console.log(item);
-  }
-
-  const onSubForumPress = (item) => {
-    console.log(item);
+    navigation.navigate('Forum', {
+      href: item.href,
+    })
   }
 
   const renderSection = ({ item }) => (
@@ -85,7 +85,7 @@ const IndexView = () => {
           {item.children.length > 0 && <View><Text style={{ marginTop: 8, color: '#2563EB' }} >子板块：</Text></View>}
 
           <View style={styles.subforumContainer}>
-            {item.children.map(subItem => <Pressable key={subItem.name} onPress={() => onSubForumPress(subItem)} style={styles.subforumTag}>
+            {item.children.map(subItem => <Pressable key={subItem.name} onPress={() => onForumPress(subItem)} style={styles.subforumTag}>
               <Text style={styles.subforumName}>{subItem.name}</Text>
             </Pressable>)}
           </View>
@@ -93,11 +93,11 @@ const IndexView = () => {
           <View style={styles.forumStats}>
             <View style={styles.statItem}>
               <Icon name="hashtag" size={12} color="#2563EB" />
-              <Text style={styles.statText}>{item.topic}</Text>
+              <Text style={styles.statText}>{item.thread}</Text>
             </View>
             <View style={styles.statItem}>
               <Icon name="comments" size={12} color="#2563EB" />
-              <Text style={styles.statText}>{item.thread}</Text>
+              <Text style={styles.statText}>{item.post}</Text>
             </View>
             {item.lastpost_name && <View style={styles.statItem}>
               <Icon name="clock-o" size={12} color="#2563EB" />
