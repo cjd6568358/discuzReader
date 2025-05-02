@@ -19,7 +19,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { storage } from '../utils/index'
 import http from '../utils/http';
 
-const Nodes = () => {
+const NodesView = () => {
     const navigation = useNavigation();
     const [url, setUrl] = useState('https://1s2s3s.com/');
     const [nodes, setNodes] = useState(() => {
@@ -857,4 +857,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default Nodes;
+export default NodesView;

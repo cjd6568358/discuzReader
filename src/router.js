@@ -4,6 +4,11 @@ import HomeView from './views/Home'
 import LoginView from './views/Login'
 import NodesView from './views/Nodes'
 import MessageView from './views/Message'
+import ForumView from './views/Forum'
+import ThreadView from './views/Thread'
+import PostView from './views/Post'
+import ProfileView from './views/Profile'
+import SearchView from './views/Search'
 
 export const defaultConfig = {
     initialRouteName: 'Home',
@@ -16,6 +21,21 @@ export const defaultConfig = {
         },
         Message: {
             screen: MessageView,
+        },
+        Forum: {
+            screen: ForumView,
+        },
+        Thread: {
+            screen: ThreadView,
+        },
+        Post: {
+            screen: PostView,
+        },
+        Profile: {
+            screen: ProfileView,
+        },
+        Search: {
+            screen: SearchView,
         },
         Login: {
             screen: LoginView,

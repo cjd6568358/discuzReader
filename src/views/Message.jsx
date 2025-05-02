@@ -14,7 +14,7 @@ import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
 import { getPMPage, postMessageAction } from '../utils/api';
 
-const MessageScreen = () => {
+const MessageView = () => {
   const { showLoading, hideLoading } = useLoading();
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState([]); // 存储选中的消息索引
@@ -334,4 +334,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MessageScreen;
+export default MessageView;
