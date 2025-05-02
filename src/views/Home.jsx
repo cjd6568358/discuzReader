@@ -181,14 +181,14 @@ const IndexView = () => {
         </View>
 
         {/* 子版块列表 */}
-        <View style={styles.forumsContainer}>
+        {currentSection && <View style={styles.forumsContainer}>
           <FlatList
             data={pageData.sectionList.find((section) => section.name === currentSection).children}
             renderItem={renderForum}
             keyExtractor={(item) => item.name}
             scrollEnabled={false}
           />
-        </View>
+        </View>}
       </ScrollView>
 
       {/* 底部导航栏 */}

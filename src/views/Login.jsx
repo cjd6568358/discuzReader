@@ -17,7 +17,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import http from '../utils/http';
 import { storage } from '../utils/index'
 
-const LoginView = () => {
+const LoginScreen = () => {
   const navigation = useNavigation();
   const [username, setUsername] = useState('cjd610630890');
   const [password, setPassword] = useState('cjd110109');
@@ -273,4 +273,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginView;
+export default LoginScreen;

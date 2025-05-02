@@ -46,10 +46,23 @@ export const getPMPage = async () => {
     }
 }
 
-export const getPostMessageContent = async (id) => {
+export const postMessageAction = async (action = 'view', id) => {
     try {
-        const res = await http.get(`/bbs/pm.php?action=view&folder=inbox&pmid=${id}&inajax=1`)
-        return res.data.replace(/.*<!\[CDATA\[\s*<br\s*\/?>\s*(.*?)<div class="postactions".*/s, '$1')
+        if (action === 'view') {
+            const res = await http.get(`/bbs/pm.php?action=${action}&folder=inbox&pmid=${id}&inajax=1`)
+            return res.data.replace(/.*<!\[CDATA\[\s*<br\s*\/?>\s*(.*?)<div class="postactions".*/s, '$1')
+        } else if (action === 'delete') {
+            if (Array.isArray(id)) {
+                const res = await http.post(`/bbs/pm.php?action=${action}&folder=inbox`, `formhash=24cbfa84&${id.map(key => `delete%5B%5D=${key}`).join('&')}&pmsend=true`)
+            } else {
+                const res = await http.get(`/bbs/pm.php?action=${action}&folder=inbox&pmid=${id}`)
+            }
+        } else if (action === 'markunread') {
+            const res = await http.get(`/bbs/pm.php?action=${action}&folder=inbox&pmid=${id}`)
+        } else if (action === 'reply') {
+            const res = await http.get(`/bbs/pm.php?action=send&do=${action}&pmid=${id}`)
+        }
+
     } catch (error) {
         console.log('getPostMessageContent', error);
     }

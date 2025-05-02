@@ -10,15 +10,23 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import TabBar from '../components/TabBar';
+import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
-import { getPMPage, getPostMessageContent } from '../utils/api';
+import { getPMPage, postMessageAction } from '../utils/api';
 
-// 缺删除/回复
 const MessageScreen = () => {
   const { showLoading, hideLoading } = useLoading();
-  const [selectedMessages, setSelectedMessages] = useState([]);
-
+  const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState([]); // 存储选中的消息索引
+  const [batchMode, setBatchMode] = useState(false)
   const [messages, setMessages] = useState([]);
+  const [longPressKey, setLongPressKey] = useState(null);
+  const actionSheetOptions = [
+    { text: '回复', onPress: () => handleActionSheetItemPress('reply') },
+    { text: '标为未读', onPress: () => handleActionSheetItemPress('markunread') },
+    { text: '删除', destructive: true, onPress: handleActionSheetItemPress('delete') },
+    { text: '批量删除', destructive: true, onPress: () => handleActionSheetItemPress('batchDelete') }
+  ];
 
   useEffect(() => {
     showLoading()
@@ -46,9 +54,9 @@ const MessageScreen = () => {
     });
   };
 
-  const deleteSelected = () => {
+  const deleteSelected = async () => {
     if (selectedMessages.length === 0) return;
-
+    await postMessageAction('batchdelete', selectedMessages.map(index => messages[index].id));
     setMessages(prev => {
       const newMessages = [...prev];
       selectedMessages.sort((a, b) => b - a).forEach(index => {
@@ -57,6 +65,11 @@ const MessageScreen = () => {
       return newMessages;
     });
     setSelectedMessages([]);
+  };
+
+  const cancelSelected = () => {
+    setSelectedMessages([]);
+    setBatchMode(false)
   };
 
   const toggleMessage = (index) => {
@@ -68,7 +81,7 @@ const MessageScreen = () => {
       });
     } else {
       showLoading()
-      getPostMessageContent(messages[index].id).then(content => {
+      postMessageAction('view', messages[index].id).then(content => {
         setMessages(prev => {
           const newMessages = [...prev];
           newMessages[index].expanded = !newMessages[index].expanded;
@@ -80,24 +93,57 @@ const MessageScreen = () => {
     }
   };
 
+  const handleLongPress = (key) => {
+    setLongPressKey(key);
+    setActionSheetVisible(true)
+  };
+
+  const handleActionSheetItemPress = async (action) => {
+    if (action === 'batchDelete') {
+      setBatchMode(true);
+    } else if (action === 'delete') {
+      await postMessageAction('delete', longPressKey);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const index = newMessages.findIndex(item => item.id === key);
+        if (index !== -1) {
+          newMessages.splice(index, 1);
+        }
+        return newMessages;
+      });
+    } else if (action === 'markunread') {
+      await postMessageAction('markunread', longPressKey);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const index = newMessages.findIndex(item => item.id === key);
+        newMessages[index].unread = 1;
+        return newMessages;
+      });
+    } else if (action === 'reply') {
+      console.log('回复')
+    }
+    setLongPressKey(null)
+  }
+
   const renderMessageItem = ({ item, index }) => (
     <View key={item.id} style={styles.messageItem}>
-      <View style={styles.selectContainer}>
-        <Pressable
-          style={[styles.checkbox, selectedMessages.includes(index) && styles.checkboxSelected]}
-          onPress={() => toggleSelect(index)}
-        >
-          {selectedMessages.includes(index) && (
-            <Icon name="check" size={12} color="#FFFFFF" />
-          )}
-        </Pressable>
-      </View>
-
-      <View style={styles.messageContent}>
-        <View style={styles.messageHeader}>
-          <Pressable style={{ flex: 1, marginRight: 8, }} onPress={() => toggleMessage(index)}>
-            <Text numberOfLines={2} style={styles.messageName}>{item.title}</Text>
+      {
+        batchMode && <View style={styles.selectContainer}>
+          <Pressable
+            style={[styles.checkbox, selectedMessages.includes(index) && styles.checkboxSelected]}
+            onPress={() => toggleSelect(index)}
+          >
+            {selectedMessages.includes(index) && (
+              <Icon name="check" size={12} color="#FFFFFF" />
+            )}
           </Pressable>
+        </View>
+      }
+      <Pressable style={styles.messageContent} onPress={() => toggleMessage(index)} onLongPress={() => handleLongPress(item.id)} >
+        <View style={styles.messageHeader}>
+          <View style={{ flex: 1, marginRight: 8 }} >
+            <Text numberOfLines={2} style={styles.messageName}>{item.title}</Text>
+          </View>
           <Text style={styles.messageTime}>{item.date}</Text>
         </View>
         {item.expanded && <Text style={styles.messageText} ellipsizeMode="tail" >
@@ -114,7 +160,7 @@ const MessageScreen = () => {
             </Pressable>
           </View>
         )}
-      </View>
+      </Pressable>
       {item.unread === 1 && <View style={styles.unreadIndicator} />}
     </View>
   );
@@ -131,12 +177,23 @@ const MessageScreen = () => {
       {/* 顶部导航栏 */}
       <View style={styles.navbar}>
         <Text style={styles.navTitle}>我的消息{bageCount > 0 && `(${bageCount})`}</Text>
-        <Pressable
-          onPress={deleteSelected}
-          style={[styles.deleteButton, !selectedMessages.length && styles.deleteButtonDisabled]}
-        >
-          <Text style={styles.deleteButtonText}>批量删除</Text>
-        </Pressable>
+        {
+          batchMode &&
+          <>
+            <Pressable
+              onPress={cancelSelected}
+              style={[styles.deleteButton]}
+            >
+              <Text>取消</Text>
+            </Pressable>
+            <Pressable
+              onPress={deleteSelected}
+              style={[styles.deleteButton, !selectedMessages.length && styles.deleteButtonDisabled]}
+            >
+              <Text style={styles.deleteButtonText}>批量删除</Text>
+            </Pressable>
+          </>
+        }
       </View>
 
       {/* 消息列表 */}
@@ -147,7 +204,12 @@ const MessageScreen = () => {
         contentContainerStyle={styles.messageList}
         ListEmptyComponent={renderEmptyState}
       />
-
+      <ActionSheet
+        visible={actionSheetVisible}
+        options={actionSheetOptions}
+        onClose={() => setActionSheetVisible(false)}
+        cancelText="取消"
+      />
       {/* 底部导航栏 */}
       <TabBar currentTab="Message" />
     </SafeAreaView>
@@ -177,6 +239,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
+    marginRight: 'auto'
   },
   deleteButton: {
     padding: 8,
