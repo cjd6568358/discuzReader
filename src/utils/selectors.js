@@ -9,7 +9,7 @@ export default {
     #creditlist_menu>li@creditList{
         &{$}
     };
-    #menu ul li:first-child cite a[href=$uid|replace(/\D/g,'')]{$username};
+    #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
     #announcementbody>li@announcementList{
         a[href=$href]{$name}
     }
@@ -20,8 +20,8 @@ export default {
         };
         tbody:has(.lastpost a)@children{
             h2 a[href=$href]{$name}
-            h2 em{$today}
-            h2+p{$desc|replace(/\\n/g, '')}
+            h2 em{$today|replace(/\\D/g, '')|Number}
+            h2+p{$desc|replace(/\\s/g, '')}
             h2+p+p:not(.moderators) a@children{
                 &[href=$href]{$name};
             };
@@ -40,7 +40,7 @@ export default {
     `,
     pm: `
     input[name=formhash][value=$formhash];
-    #menu ul li:first-child cite a[href=$uid|replace(/\D/g,'')]{$username};
+    #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
     #pmlist tr[id]@pmList{
         td:nth-child(2) a[id=$id|replace('pm_view_','')|Number]{$title};
         td:nth-child(2)[style]{$unread = 1};
@@ -50,14 +50,14 @@ export default {
     `,
     favorites: `
     input[name=formhash][value=$formhash];
-    #menu ul li:first-child cite a[href=$uid|replace(/\D/g,'')]{$username};
+    #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
     .mainbox form tbody tr@{
         td:nth-child(2) a[href=$tid|split('-')|slice(1,2)|first];
     }
     `,
     forum: `
     input[name=formhash][value=$formhash];
-    #menu ul li:first-child cite a[href=$uid|replace(/\D/g,'')]{$username};
+    #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
     .mainbox.threadlist h1 a{$title};
     #newpmnum{$newMessage|Number};
     #nav p:first-child a@breadcrumb{
@@ -67,7 +67,7 @@ export default {
     .mainbox.threadlist+.pages_btns .pages@pagination|pack{
         em{$total|Number};
         strong{$current|Number};
-        a.last{$last|replace(/\D/g,'')|Number}
+        a.last{$last|replace(/\\D/g,'')|Number}
         a:not(.prev,.next,.last)@siblings{
             &[href=$href]{$page|Number}
         }
@@ -80,19 +80,19 @@ export default {
     };
     .mainbox.threadlist table@category{
         $name = "公告";
-        thead.separation td:nth-child(3){$name|replace(/\s/g,'')};
+        thead.separation td:nth-child(3){$name|replace(/\\s/g,'')};
         tbody tr:not(.category)@threads{
-            th a[href=$href]{$title}
-            th span[id^=thread_] a[href=$href]{$title}
-            th img[src*=attachicons]{$attach=1}
-            td.author cite a{$author}
-            td.author cite{html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
-            td.author em{$date}
-            td.nums strong{$reply}
-            td.nums em{$view}
-            td.lastpost@lastPost|pack{
-            em a[href=$href]{$date}
-            cite a{$author}
+                th a[href=$href]{$title}
+                th span[id^=thread_] a[href=$href]{$title}
+                th img[src*=attachicons]{$attach=1}
+                td.author cite a{$author}
+                td.author cite{html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
+                td.author em{$date}
+                td.nums strong{$reply|Number}
+                td.nums em{$view|Number}
+                td.lastpost@lastPost|pack{
+                em a[href=$href]{$date}
+                cite a{$author}
             }
         }
     }
@@ -110,16 +110,19 @@ export default {
     thread: `
     input[name=formhash][value=$formhash];
     head title{$title};
+    #nav a@breadcrumb{
+        &[href=$href]{$name}
+    };
     #postform[action=$replyUrl];
     #ajax_favorite[href=$favoriteUrl];
     form .mainbox.viewthread@posts{
         .postauthor@author|pack{
-            >cite a[href=$uid|replace(/\D/g,'')|Number]{$name};
+            >cite a[href=$uid|replace(/\\D/g,'')|Number]{$name};
             >.avatar>img:first-child[src=$avatar];
             >p:nth-of-type(1){$level};
             dl.profile{$profile|split(' ')|compact}
         }
-        >table[id=$pid|replace(/\D/g,'')];
+        >table[id=$pid|replace(/\\D/g,'')];
         .postcontent .postinfo strong{$floor}
         .postcontent .postinfo{$date|match(/(\d{4}.*\d{2})/)|first}
         .postcontent .postmessage .t_msgfont{html($content)}
@@ -127,7 +130,7 @@ export default {
     form+.pages_btns .pages@pagination|pack{
         em{$total|Number};
         strong{$current|Number};
-        a.last{$last|replace(/\D/g,'')|Number}
+        a.last{$last|replace(/\\D/g,'')|Number}
         a:not(.prev,.next,.last)@siblings{
             &[href=$href]{$page|Number}
         }
@@ -147,7 +150,7 @@ export default {
             &[href=$href]{$name}
         }
         td:nth-child(3) cite@lastPost{
-            a:first-child[href=$tid|replace(/\D/g,'')|Number]{$date}
+            a:first-child[href=$tid|replace(/\\D/g,'')|Number]{$date}
             a:last-child{$author}
         }
         td:nth-child(4){$status}
@@ -159,7 +162,7 @@ export default {
             &[href=$href]{$name}
         }
         td:nth-child(3) cite@lastPost{
-            a:first-child[href=$tid|replace(/\D/g,'')|Number]{$date}
+            a:first-child[href=$tid|replace(/\\D/g,'')|Number]{$date}
             a:last-child{$author}
         }
         td:nth-child(4){$status}
@@ -175,11 +178,11 @@ export default {
             a[href=$href]{$name}
         }
         td.author@author{
-            a[href=$uid|replace(/\D/g,'')]{$name}
+            a[href=$uid|replace(/\\D/g,'')]{$name}
         }
         td.author em{$date}
-        td.nums strong{$reply}
-        td.nums em{$view}
+        td.nums strong{$reply|Number}
+        td.nums em{$view|Number}
         td.lastpost@lastPost{
             em a[href=$href]{$date}
             cite a{$username}
@@ -191,7 +194,7 @@ export default {
         a:not(.prev,.next,.last)@siblings{
             &[href=$href]{$page|Number}
         }
-        a.last{$last|replace(/\D/g,'')|Number}
+        a.last{$last|replace(/\\D/g,'')|Number}
     }
     `
 }

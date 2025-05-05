@@ -24,6 +24,9 @@ export const defaultConfig = {
         },
         Forum: {
             screen: ForumView,
+            options: {
+                headerShown: true,
+            },
         },
         Thread: {
             screen: ThreadView,

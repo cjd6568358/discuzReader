@@ -71,7 +71,30 @@ export const postMessageAction = async (action = 'view', id) => {
 export const getForumPage = async (href) => {
     try {
         const res = await http.get(href, { selector: selectors.forum })
-        return res.data
+        return {
+            ...res.data,
+            title: res.data.title.replace(title_regex, '$1'),
+            breadcrumb: res.data.breadcrumb.map(item => ({
+                ...item,
+                name: item.name.replace(title_regex, '$1'),
+            })),
+        }
+    } catch (error) {
+        console.log('getForumPage', error);
+    }
+}
+
+export const getThreadPage = async (href) => {
+    try {
+        const res = await http.get(href, { selector: selectors.thread })
+        return {
+            ...res.data,
+            title: res.data.title.replace(title_regex, '$1'),
+            breadcrumb: res.data.breadcrumb.map(item => ({
+                ...item,
+                name: item.name.replace(title_regex, '$1'),
+            })),
+        }
     } catch (error) {
         console.log('getForumPage', error);
     }
