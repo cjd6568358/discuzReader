@@ -3,12 +3,12 @@ import http from './http';
 import selectors from './selectors';
 
 const title_regex = new RegExp('^.*?\\|\\s*(.*?)\\s*$', 'g');
-export const getIndexPage = async () => {
+export const getHomePage = async () => {
     try {
-        const res = await http.get(`index.php`, { selector: selectors.index })
+        const res = await http.get(`index.php`, { selector: selectors.home })
         return {
             // 网站标题
-            documentTitle: res.data.documentTitle,
+            title: res.data.title,
             // 网站logo
             iconUrl: res.data.iconUrl,
             // 公告列表
@@ -30,7 +30,7 @@ export const getIndexPage = async () => {
             username: res.data.username,
         }
     } catch (error) {
-        console.log('getIndexPage', error);
+        console.log('getHomePage', error);
     }
 }
 

@@ -16,7 +16,7 @@ import TabBar from '../components/TabBar';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Swiper from 'react-native-swiper';
 import { useLoading } from '../components/Loading';
-import { getIndexPage } from '../utils/api';
+import { getHomePage } from '../utils/api';
 
 const IndexView = () => {
   const navigation = useNavigation();
@@ -26,7 +26,7 @@ const IndexView = () => {
   useFocusEffect(
     useCallback(() => {
       showLoading()
-      getIndexPage().then(data => {
+      getHomePage().then(data => {
         console.log(data);
         setPageData(data);
         setCurrentSection(data.sectionList[0].name);
@@ -121,7 +121,7 @@ const IndexView = () => {
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
       {/* 顶部导航栏 */}
       <View style={styles.navbar}>
-        <Text style={styles.navTitle}>{pageData?.documentTitle}</Text>
+        <Text style={styles.navTitle}>{pageData?.title}</Text>
         {/* <View style={styles.avatarContainer}>
           <Image source={{ uri: userAvatar }} style={styles.avatar} />
           <View style={styles.badge}>

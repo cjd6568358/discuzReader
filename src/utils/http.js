@@ -1,5 +1,6 @@
 import axios from 'axios';
 import iconv from 'iconv-lite';
+import { ToastAndroid } from 'react-native';
 import { storage, UTF8ToGBK, decodeHtmlEntity } from './index';
 import temme from '../lib/temme';
 
@@ -35,10 +36,23 @@ instance.interceptors.request.use(config => {
 // 添加响应拦截器
 instance.interceptors.response.use(response => {
     if (response.config.responseType === 'arraybuffer') {
-        response.data = iconv.decode(new Uint8Array(response.data), "GBK");
-        response.data = decodeHtmlEntity(response.data);
+        response.data = decodeHtmlEntity(iconv.decode(new Uint8Array(response.data), "GBK"));
     }
-    if (response.config.selector) {
+    if (response.headers['content-Length'] < 500) {
+        const errorStack = response.data
+            // 合并 <br> 和 <br/> 的处理，并去掉多余空格
+            .replace(/<br\s*\/?>\s*/g, '<br/>')
+            // 将连续的 <br/> 替换为一个
+            .replace(/(<br\/>){2}/g, '<br/>')
+            // 移除 <b> 标签
+            .replace(/<\/?b>/g, '')
+            // 按 <br/> 分割
+            .split('<br/>')
+        if (errorStack) {
+            ToastAndroid.show(errorStack[0], ToastAndroid.SHORT);
+        }
+        throw new Error(errorStack);
+    } else if (response.config.selector) {
         const t1 = Date.now();
         response.data = temme(response.data, response.config.selector);
         console.log('temme time:', Date.now() - t1);

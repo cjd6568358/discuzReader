@@ -1,7 +1,15 @@
 export default {
-    index: `
-    head title{$documentTitle};
+    login: `
+    input[name=formhash][value=$formhash];
+    `,
+    home: `
+    head title{$title};
     head link[rel=apple-touch-icon][href=$iconUrl];
+    a.notabs[href=$formhash|replace(/^.*formhash=/,'')];
+    #creditlist_menu>li@creditList{
+        &{$}
+    };
+    #menu ul li:first-child cite a[href=$uid|replace(/\D/g,'')]{$username};
     #announcementbody>li@announcementList{
         a[href=$href]{$name}
     }
@@ -10,7 +18,7 @@ export default {
         .headactions .notabs@moderators{
             &{$}
         };
-        tbody@children{
+        tbody:has(.lastpost a)@children{
             h2 a[href=$href]{$name}
             h2 em{$today}
             h2+p{$desc|replace(/\\n/g, '')}
@@ -22,17 +30,17 @@ export default {
             };
             td.nums:nth-of-type(1){$thread|Number};
             td.nums:nth-of-type(2){$post|Number};
-            td.lastpost>a[href=$lastpost_id|replace(/^.*tid=(.*)&goto.*$/g,'$1')|Number]{$lastpost_name}
-            td.lastpost>cite a{$lastpost_author}
-            td.lastpost>cite{$lastpost_date|split(' - ')|slice(1,2)|first}
+            td.lastpost@lastPost|pack{
+                a[href=$id|replace(/^.*tid=(.*)&goto.*$/g,'$1')|Number]{$name}
+                cite a{$author}
+                cite{$date|split(' - ')|slice(1,2)|first}
+            }
         }
     };
-    #creditlist_menu>li@creditList{
-        &{$}
-    };
-    #nav cite a{$username}
     `,
     pm: `
+    input[name=formhash][value=$formhash];
+    #menu ul li:first-child cite a[href=$uid|replace(/\D/g,'')]{$username};
     #pmlist tr[id]@pmList{
         td:nth-child(2) a[id=$id|replace('pm_view_','')|Number]{$title};
         td:nth-child(2)[style]{$unread = 1};
@@ -41,105 +49,149 @@ export default {
     }
     `,
     favorites: `
+    input[name=formhash][value=$formhash];
+    #menu ul li:first-child cite a[href=$uid|replace(/\D/g,'')]{$username};
     .mainbox form tbody tr@{
         td:nth-child(2) a[href=$tid|split('-')|slice(1,2)|first];
     }
     `,
     forum: `
-    .mainbox.threadlist h1 a{$documentTitle};
+    input[name=formhash][value=$formhash];
+    #menu ul li:first-child cite a[href=$uid|replace(/\D/g,'')]{$username};
+    .mainbox.threadlist h1 a{$title};
     #newpmnum{$newMessage|Number};
     #nav p:first-child a@breadcrumb{
         &[href=$href]{$name}
     };
     #ajax_favorite[href=$favorite_href];
-    // .mainbox.forumlist tbody:has(.lastpost a)@forumList{
-    //     h2 a[href=$href]{$name}
-    // }
-    // .mainbox.threadlist table:has(thead.separation)@threadList{
-    //     thead.separation td b{$name};
-    //     tbody:has(th)@value{
-    //         th span[id^=thread_] a[href=$href]{$title};
-    //         .nums{$nums};
-    //         td.icon img[alt=$type];
-    //         span.bold{$permission|Number}
-    //         .author cite{html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
-    //         .author em{$date}
-    //     }
-    // };
-    // .mainbox.threadlist+.pages_btns .pages@pageInfo|pack{
-    //     $pageNum = 1;
-    //     $pageCount = 1;
-    //     strong{$pageNum|Number};
-    //     em{$pageCount|Number|MathCeil};
-    // }
+    .mainbox.threadlist+.pages_btns .pages@pagination|pack{
+        em{$total|Number};
+        strong{$current|Number};
+        a.last{$last|replace(/\D/g,'')|Number}
+        a:not(.prev,.next,.last)@siblings{
+            &[href=$href]{$page|Number}
+        }
+    }
+    #headfilter ul li a@filter_tags{
+        &[href=$href]{$name}
+    };
+    .mainbox.threadlist .headactions a@action_tags{
+        &[href=$href]{$name}
+    };
+    .mainbox.threadlist table@category{
+        $name = "公告";
+        thead.separation td:nth-child(3){$name|replace(/\s/g,'')};
+        tbody tr:not(.category)@threads{
+            th a[href=$href]{$title}
+            th span[id^=thread_] a[href=$href]{$title}
+            th img[src*=attachicons]{$attach=1}
+            td.author cite a{$author}
+            td.author cite{html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
+            td.author em{$date}
+            td.nums strong{$reply}
+            td.nums em{$view}
+            td.lastpost@lastPost|pack{
+            em a[href=$href]{$date}
+            cite a{$author}
+            }
+        }
+    }
+    .mainbox.forumlist tbody tr@children{
+        th.new h2 a[href=$href]{$name}
+        th.new p{$desc}
+        td.nums:nth-of-type(1){$thread}
+        td.nums:nth-of-type(2){$post}
+        td.lastpost@lastPost|pack{
+            >a[href=$href]{$name}
+            cite a{$author}
+        }
+    }
     `,
     thread: `
-    filter MathCeil() {
-        return Math.ceil(this/10)
-    };
-    form input[name=formhash][value=$formhash];
+    input[name=formhash][value=$formhash];
+    head title{$title};
     #postform[action=$replyUrl];
-    form+.pages_btns .threadflow a:nth-of-type(1)[href=$prevTopicUrl];
-    form+.pages_btns .threadflow a:nth-of-type(2)[href=$nextTopicUrl];
     #ajax_favorite[href=$favoriteUrl];
-    #newspecial_menu li:nth-of-type(1) a[href=$newThreadUrl];
-    head title{$documentTitle};
-    form .mainbox.viewthread@postList{
-        .postauthor cite a[id^=userinfo]{$authorName};
-        .postauthor p:nth-of-type(1){$authorLevel};
-        .postcontent .postinfo strong[id=$pid|replace(/postnum_/g,'')][onclick=$absPostUrl|replace(/',.*/g,'')|match(/viewth.*/g)|first]{$postFloor}
-        .postcontent .postinfo{find('小',$postTime|replace(/^.*发表于 /g,''), '只看该作者')}
-        .postcontent .postmessage>h2{html($postTitle)}
-        .postcontent .postmessage .notice{html($content|replace(/border(.*)alt=""/g,""))}
-        .postcontent .postmessage .t_msgfont{html($content|replace(/border(.*)alt=""/g,""))}
+    form .mainbox.viewthread@posts{
+        .postauthor@author|pack{
+            >cite a[href=$uid|replace(/\D/g,'')|Number]{$name};
+            >.avatar>img:first-child[src=$avatar];
+            >p:nth-of-type(1){$level};
+            dl.profile{$profile|split(' ')|compact}
+        }
+        >table[id=$pid|replace(/\D/g,'')];
+        .postcontent .postinfo strong{$floor}
+        .postcontent .postinfo{$date|match(/(\d{4}.*\d{2})/)|first}
+        .postcontent .postmessage .t_msgfont{html($content)}
     };
-    form+.pages_btns .pages@pageInfo|pack{
-        $pageNum = 1;
-        $pageCount = 1;
-        $total = 1;
-        strong{$pageNum|Number};
-        em{$pageCount|Number|MathCeil};
+    form+.pages_btns .pages@pagination|pack{
         em{$total|Number};
+        strong{$current|Number};
+        a.last{$last|replace(/\D/g,'')|Number}
+        a:not(.prev,.next,.last)@siblings{
+            &[href=$href]{$page|Number}
+        }
     }
     `,
     my: `
     .credits_info ul>li@creditList{
         &{$|trim()}
     };
-    #wrapper #menu ul li:nth-child(2) a[href=$formhash|split('formhash=')|slice(1,2)|first];
+    a.notabs[href=$formhash|replace(/^.*formhash=/,'')];
+
     #menu li cite a{$username};
-    .mainbox table:nth-of-type(1) tbody tr@recentTopics{
+    .mainbox table:nth-of-type(1) tbody tr@recentTopics|compact{
         td:nth-child(1) a[href=$href]{$title}
         td:nth-child(1) a[href=$tid|split('-')|slice(1,2)|first];
-        td:nth-child(2){$forum}
-        td:nth-child(3) a[href=$lastPostUrl]{$lastPost}
+        td:nth-child(2) a@forum|pack{
+            &[href=$href]{$name}
+        }
+        td:nth-child(3) cite@lastPost{
+            a:first-child[href=$tid|replace(/\D/g,'')|Number]{$date}
+            a:last-child{$author}
+        }
         td:nth-child(4){$status}
     };
-    .mainbox table:nth-of-type(2) tbody tr@recentReply{
+    .mainbox table:nth-of-type(2) tbody tr@recentReplys|compact{
         td:nth-child(1) a[href=$href]{$title}
-        td:nth-child(1) a[href=$tid|replace(/^redirect.*ptid=/g,'')];
-        td:nth-child(2){$forum}
-        td:nth-child(3){$lastPost}
+        td:nth-child(1) a[href=$tid|replace(/^redirect.*ptid=/g,'')|Number];
+        td:nth-child(2) a@forum|pack{
+            &[href=$href]{$name}
+        }
+        td:nth-child(3) cite@lastPost{
+            a:first-child[href=$tid|replace(/\D/g,'')|Number]{$date}
+            a:last-child{$author}
+        }
         td:nth-child(4){$status}
     }
     `,
     search: `
-    filter MathCeil() {
-      return Math.ceil(this/38)
+    .mainbox.threadlist tbody@threads{
+        th a[href=$href]{$title};
+        th a[href=$tid|split('-')|slice(1,2)|first|Number];
+        th img[src*=attachicons]{$attach=1}
+        th img[src*=digest]{$digest=1}
+        td.forum@forum|pack{
+            a[href=$href]{$name}
+        }
+        td.author@author{
+            a[href=$uid|replace(/\D/g,'')]{$name}
+        }
+        td.author em{$date}
+        td.nums strong{$reply}
+        td.nums em{$view}
+        td.lastpost@lastPost{
+            em a[href=$href]{$date}
+            cite a{$username}
+        }
     };
-    .mainbox.threadlist tbody@threadList{
-        th a[href=$href];
-        th a[href=$tid|replace('viewthread.php?tid=','')|replace(/&highlight=.*$/g,'')]{$title};
-        td.author em{$date};
-        td.nums{$nums};
-    };
-    .mainbox.threadlist[class=$searchHref]{
-        $pageCount = 1;
-    };
-    .mainbox.threadlist tbody th[colspan="6"]{
-        $pageCount = 0;
-    };
-    .mainbox.threadlist+.pages_btns .pages em{$pageCount|Number|MathCeil};
-    .mainbox.threadlist+.pages_btns .pages a:nth-of-type(1)[href=$searchHref];
+    .pages_btns .pages@pagination|pack{
+        em{$total|Number};
+        strong{$current|Number};
+        a:not(.prev,.next,.last)@siblings{
+            &[href=$href]{$page|Number}
+        }
+        a.last{$last|replace(/\D/g,'')|Number}
+    }
     `
 }

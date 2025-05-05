@@ -8,7 +8,7 @@ const TabBar = ({ currentTab }) => {
   const navigation = useNavigation();
   const [tabs, setTabs] = useState([
     { id: 'Home', name: '首页', icon: 'home' },
-    { id: 'Post', name: '发帖', icon: 'plus-circle' },
+    // { id: 'Post', name: '发帖', icon: 'plus-circle' },
     { id: 'Message', name: '消息', icon: 'comment', badge: 0 },
     { id: 'Profile', name: '我的', icon: 'user' }
   ])
@@ -21,20 +21,20 @@ const TabBar = ({ currentTab }) => {
     if (currentTab === `Message`) {
       return
     }
-    getPMPage().then(data => {
-      console.log(data.pmList)
-      const bageCount = data.pmList.reduce((acc, cur) => {
-        if (cur.unread === 1) {
-          acc += 1;
-        }
-        return acc;
-      }, 0)
-      setTabs(prevTabs => {
-        const newTabs = [...prevTabs];
-        newTabs[2].badge = bageCount;
-        return newTabs;
-      })
-    })
+    // getPMPage().then(data => {
+    //   console.log(data.pmList)
+    //   const bageCount = data.pmList.reduce((acc, cur) => {
+    //     if (cur.unread === 1) {
+    //       acc += 1;
+    //     }
+    //     return acc;
+    //   }, 0)
+    //   setTabs(prevTabs => {
+    //     const newTabs = [...prevTabs];
+    //     newTabs[2].badge = bageCount;
+    //     return newTabs;
+    //   })
+    // })
   }, [])
 
   return (

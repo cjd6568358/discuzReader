@@ -35,39 +35,42 @@ const LoginView = () => {
       ToastAndroid.show('请先配置节点', ToastAndroid.SHORT);
       return
     }
-    try {
-      const [questionid, answer] = securityAnswer.split(",");
+    const [questionid, answer] = securityAnswer.split(",");
+    http.get('logging.php?action=login', { selector: selectors.login }).then(async res => {
+      const formhash = res.data.formhash;
+      try {
 
-      let formData = {
-        formhash: "30b7da0e",
-        cookietime: "315360000",
-        loginfield: "username",
-        referer: 'index.php',
-        loginsubmit: true,
-        questionid,
-        answer,
-        username,
-        password,
-      };
+        let formData = {
+          cookietime: "315360000",
+          loginfield: "username",
+          referer: 'index.php',
+          loginsubmit: true,
+          formhash,
+          questionid,
+          answer,
+          username,
+          password,
+        };
 
-      if (!questionid || !answer) {
-        delete formData.questionid;
-        delete formData.answer;
+        if (!questionid || !answer) {
+          delete formData.questionid;
+          delete formData.answer;
+        }
+        const res = await http.post(`logging.php?action=login`, formData);
+        if (res.data.includes(`欢迎您回来，${username}。现在将转入登录前页面。`)) {
+          ToastAndroid.show('登录成功', ToastAndroid.SHORT);
+        }
+        // 导航到首页
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      } catch (error) {
+        console.error('Login failed:', error);
+        // 这里可以添加错误提示逻辑
+        ToastAndroid.show('登录失败', ToastAndroid.SHORT);
       }
-      const res = await http.post(`/bbs/logging.php?action=login`, formData);
-      if (res.data.includes(`欢迎您回来，${username}。现在将转入登录前页面。`)) {
-        ToastAndroid.show('登录成功', ToastAndroid.SHORT);
-      }
-      // 导航到首页
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
-    } catch (error) {
-      console.error('Login failed:', error);
-      // 这里可以添加错误提示逻辑
-      ToastAndroid.show('登录失败', ToastAndroid.SHORT);
-    }
+    });
   };
 
   const handleSettings = () => {
