@@ -59,7 +59,7 @@ const ForumView = ({ route }) => {
   const [tags, setTags] = useState([])
   const [threads, setThreads] = useState([]);
   const [blockThreads, setBlockThreads] = useState(() => {
-    return storage.getString('blockThreads').split(',') || [];
+    return (storage.getString('blockThreads') || '').split(',') || [];
   })
 
   useFocusEffect(useCallback(() => {
@@ -72,7 +72,7 @@ const ForumView = ({ route }) => {
 
   const actionSheetOptions = [
     { text: '清除缓存', onPress: () => handleActionSheetItemPress('clearCache') },
-    { text: '加入黑名单', destructive: true, onPress: handleActionSheetItemPress('block') },
+    { text: '加入黑名单', destructive: true, onPress: () => handleActionSheetItemPress('block') },
   ];
 
   const handleLongPress = (key) => {
@@ -307,7 +307,7 @@ const ForumView = ({ route }) => {
 
       {/* 悬浮分页控制器 */}
       {pageData?.pagination && <Pagination {...pageData.pagination} onPrevPress={onPrevPress} onNextPress={onNextPress} ></Pagination>}
-      
+
       <ActionSheet
         visible={actionSheetVisible}
         options={actionSheetOptions}
