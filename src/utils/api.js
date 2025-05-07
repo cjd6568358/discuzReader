@@ -70,20 +70,36 @@ export const postMessageAction = async (action = 'view', id) => {
 export const getForumPage = async (href) => {
     try {
         const res = await http.get(href, { selector: selectors.forum })
-        return {
+        const { title, breadcrumb, pagination } = res.data
+        const newData = {
             ...res.data,
-            title: res.data.title.replace(title_regex, '$1'),
-            breadcrumb: res.data.breadcrumb.map(item => ({
+            title: title.replace(title_regex, '$1'),
+            breadcrumb: breadcrumb.map(item => ({
                 ...item,
                 name: item.name.replace(title_regex, '$1'),
             })),
         }
+        if (pagination) {
+            newData.pagination = {
+                ...pagination,
+                last: pagination.last || pagination.siblings.at(-1)?.page,
+            }
+        }
+        return newData
     } catch (error) {
         console.log('getForumPage', error);
     }
 }
 
 export const getThreadPage = async (href) => {
+    // 参与缓存的url
+    // thread-6379736-1-1.html /thread-(\d.*)-(\d.*)-(\d.*)(.html$)/g.test(url)
+    // viewthread.php?tid=6369158&page=1#pid110991881 /(^.*tid=)(\d.*)&page=(\d.*)#pid(\d.*)/g.test(url)
+    // viewthread.php?tid=6369158&page=1 /(^.*tid=)(\d.*)&page=(\d.*)/g.test(url)
+    // viewthread.php?tid=4182257 /(^.*tid=)(\d.*)/g.test(url)
+    // 不参与缓存的url
+    // redirect.php?tid=12089380&goto=lastpost#lastpost
+
     try {
         const res = await http.get(href, { selector: selectors.thread })
         return {

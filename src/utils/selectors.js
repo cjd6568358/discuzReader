@@ -82,7 +82,7 @@ export default {
         &[href=$href]{$name}
         &[href=$id|replace(/^.*typeid=/,'')];
     };
-    .mainbox.threadlist table@category{
+    .mainbox.threadlist table@categorys{
         $name = "公告";
         thead.separation td:nth-child(3){$name|trim|replace(/\\s/g,'')};
         tbody tr:not(.category)@threads{

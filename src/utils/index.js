@@ -5,8 +5,13 @@ import CookieManager from '@react-native-cookies/cookies';
 
 export const storage = new MMKV();
 export const MMStore = {
-    'favorites_thread': [],
-    'favorites_forum': []
+    'favorites': {
+        forums: [],
+        threads: [],
+    },
+    'cached': {
+        threads: {},
+    },
 };
 /**
  * 检查用户是否已登录

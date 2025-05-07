@@ -37,7 +37,7 @@ const MessageView = () => {
     })
   }, [])
 
-  const bageCount = messages.reduce((acc, cur) => {
+  const badgeCount = messages.reduce((acc, cur) => {
     if (cur.unread === 1) {
       acc += 1;
     }
@@ -176,7 +176,7 @@ const MessageView = () => {
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
       {/* 顶部导航栏 */}
       <View style={styles.navbar}>
-        <Text style={styles.navTitle}>我的消息{bageCount > 0 && `(${bageCount})`}</Text>
+        <Text style={styles.navTitle}>我的消息{badgeCount > 0 && `(${badgeCount})`}</Text>
         {
           batchMode &&
           <>

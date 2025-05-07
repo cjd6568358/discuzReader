@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  Image,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -12,9 +11,11 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import Pagination from '../components/Pagination';
+import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
 import { getForumPage, favoriteAction } from '../utils/api'
-import { MMStore } from '../utils/index';
+import { MMStore, storage } from '../utils/index';
 
 const tagColors = [
   {
@@ -52,42 +53,86 @@ const tagColors = [
 const ForumView = ({ route }) => {
   const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
+  const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const [longPressKey, setLongPressKey] = useState(null);
   const [pageData, setPageData] = useState(null);
-  const [activeCategory, setActiveCategory] = useState('');
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [tagColorMap, setTagColorMap] = useState({})
-
-  const activeThreads = pageData?.category?.find(item => item.name === activeCategory)?.threads || [];
-
-  const handleScroll = (event) => {
-    const scrollY = event.nativeEvent.contentOffset.y;
-    setIsScrolled(scrollY > 0);
-  };
+  const [tags, setTags] = useState([])
+  const [threads, setThreads] = useState([]);
+  const [blockThreads, setBlockThreads] = useState(() => {
+    return storage.getString('blockThreads').split(',') || [];
+  })
 
   useFocusEffect(useCallback(() => {
+    renderPage(route.params.href)
+  }, []))
+
+  useEffect(() => {
+    pageData && updateHeader()
+  }, [pageData])
+
+  const actionSheetOptions = [
+    { text: '清除缓存', onPress: () => handleActionSheetItemPress('clearCache') },
+    { text: '加入黑名单', destructive: true, onPress: handleActionSheetItemPress('block') },
+  ];
+
+  const handleLongPress = (key) => {
+    setLongPressKey(key);
+    setActionSheetVisible(true)
+  };
+
+  const handleActionSheetItemPress = async (action) => {
+    if (action === 'clearCache') {
+      delete MMStore.cached.threads[longPressKey]
+    } else if (action === 'block') {
+      setBlockThreads(prev => {
+        const newBlockThreads = [...prev, longPressKey];
+        storage.setString('blockThreads', newBlockThreads.join(','));
+        return newBlockThreads;
+      })
+    }
+    setLongPressKey(null)
+  }
+
+  const renderPage = useCallback((href) => {
     showLoading()
-    getForumPage(route.params.href).then(data => {
+    getForumPage(href).then(data => {
       console.log(data);
       setPageData(data);
-      setActiveCategory(data.category[0].name);
-      const { filter_tags, action_tags } = data
-      const newMap = {}
-      filter_tags.concat(action_tags).forEach((item, index) => {
-        newMap[item.id] = tagColors[index % tagColors.length]
+      const { filter_tags, action_tags, categorys, pagination } = data
+      let tmpTagColors = [...tagColors]
+      const colorMap = {}
+      const tags = filter_tags.concat(action_tags).map((item) => {
+        colorMap[item.id] = tmpTagColors.shift()
+        return {
+          ...item,
+          colors: colorMap[item.id]
+        }
       })
-      setTagColorMap(newMap)
+      setTags(tags)
+      const threadMap = new Map();
+      categorys.forEach((item) => {
+        item.threads.forEach((thread) => {
+          const tid = thread.href.split('-')[1];
+          if (blockThreads.includes(tid)) {
+            return;
+          }
+          if (thread.tag?.id && !colorMap[thread.tag.id]) {
+            colorMap[thread.tag.id] = tmpTagColors.shift()
+          }
+          threadMap.set(thread.href, ({ ...thread, colors: colorMap[thread.tag?.id] }));
+        });
+      }, [])
+      setThreads(Array.from(threadMap.values()))
+      ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
     }).catch(error => {
       console.log(error);
     }).finally(() => {
       hideLoading();
     });
-  }, []))
+  })
 
-  useEffect(() => {
-    if (!pageData) {
-      return
-    }
-    const isFavorite = MMStore.favorites_forum.includes(pageData.fid);
+  const updateHeader = useCallback(() => {
+    const isFavorite = MMStore.favorites.forums.includes(pageData.fid);
     navigation.setOptions({
       headerTitle: () => <View style={styles.breadcrumb}>
         {
@@ -112,17 +157,17 @@ const ForumView = ({ route }) => {
         </View>
       ),
     })
-  }, [pageData])
+  })
 
   const toggleFavorite = async () => {
     console.log('toggleFavorite');
-    if (MMStore.favorites_forum.includes(pageData.fid)) {
+    if (MMStore.favorites.forums.includes(pageData.fid)) {
       await favoriteAction('del', pageData.favorite_href, pageData.formhash)
-      MMStore.favorites_forum = MMStore.favorites_forum.filter(item => item !== pageData.fid);
+      MMStore.favorites.forums = MMStore.favorites.forums.filter(item => item !== pageData.fid);
       ToastAndroid.show('取消收藏', ToastAndroid.SHORT);
     } else {
       await favoriteAction('add', pageData.favorite_href)
-      MMStore.favorites_forum.push(pageData.fid);
+      MMStore.favorites.forums.push(pageData.fid);
       ToastAndroid.show('收藏成功', ToastAndroid.SHORT);
     }
     setPageData(prevData => ({
@@ -131,9 +176,40 @@ const ForumView = ({ route }) => {
   }
 
   const onForumPress = (item) => {
-    console.log(item);
+    console.log('onForumPress', item);
     navigation.navigate('Forum', {
       href: item.href,
+    })
+  }
+
+  const onTagPress = (item) => {
+    renderPage(item.href)
+  }
+
+  const onThreadPress = (item) => {
+    console.log('onThreadPress', item);
+    navigation.navigate('Thread', {
+      href: item.href,
+    })
+  }
+
+  const onPrevPress = () => {
+    console.log('onPrevPress');
+    const { current, siblings } = pageData.pagination;
+    siblings.forEach((item) => {
+      if (item.page === current - 1) {
+        renderPage(item.href)
+      }
+    })
+  }
+
+  const onNextPress = () => {
+    console.log('onNextPress');
+    const { current, siblings } = pageData.pagination;
+    siblings.forEach((item) => {
+      if (item.page === current + 1) {
+        renderPage(item.href)
+      }
     })
   }
 
@@ -149,40 +225,22 @@ const ForumView = ({ route }) => {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsScrollView}>
       <View style={styles.tagsContainer}>
         {
-          tags.map((tag) => <Pressable key={tag.name} style={[styles.tagButton, tagColorMap[tag.id]]}>
-            <Text style={[styles.tagText, { color: tagColorMap[tag.id].color }]}>#{tag.name}</Text>
+          tags.map((tag) => <Pressable key={tag.name} onPress={() => onTagPress(tag)} style={[styles.tagButton, tag.colors]}>
+            <Text style={[styles.tagText, { color: tag.colors?.color }]}>#{tag.name}</Text>
           </Pressable>)
         }
       </View>
     </ScrollView>
   );
 
-  const renderCategory = (category = []) => (
-    <View style={[styles.categoryContainer, isScrolled && styles.categoryContainerShadow]}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScrollView}>
-        {category.map(item => (
-          <Pressable
-            key={item.name}
-            style={styles.categoryButton}
-            onPress={() => setActiveCategory(item.name)}
-          >
-            <Text style={[styles.categoryText, activeCategory === item.name && styles.activeCategoryText]}>
-              {item.name}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </View>
-  );
-
   const renderThreads = () => {
     return (
-      <View>
-        {activeThreads.map(thread => (
-          <Pressable key={thread.href} style={styles.forumThreadCard}>
+      <>
+        {threads.map(thread => (
+          <Pressable key={thread.href} onPress={() => onThreadPress(thread)} onLongPress={() => handleLongPress(thread.href)} style={styles.forumThreadCard}>
             <View style={styles.tagContainer}>
-              {thread.tag && <View style={[styles.tagBadge, tagColorMap[thread.tag.id]]}>
-                <Text style={[styles.tagBadgeText, { color: tagColorMap[thread.tag.id].color }]}>{thread.tag.name}</Text>
+              {thread.tag && <View style={[styles.tagBadge, thread.colors]}>
+                <Text style={[styles.tagBadgeText, { color: thread.colors?.color }]}>{thread.tag.name}</Text>
               </View>}
               {thread.attach && <Icon style={{ marginRight: 8 }} name="file" size={12} color="#2563EB" />}
               {thread.digest && <Icon style={{ marginRight: 8 }} name="diamond" size={12} color="#2563EB" />}
@@ -215,7 +273,7 @@ const ForumView = ({ route }) => {
             </View>
           </Pressable>
         ))}
-      </View>
+      </>
     );
   };
 
@@ -227,8 +285,6 @@ const ForumView = ({ route }) => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
       >
         {/* 子版块 */}
         {pageData?.children?.length > 0 && <View style={styles.sectionContainer}>
@@ -237,17 +293,27 @@ const ForumView = ({ route }) => {
 
         {/* 主题标签分类 */}
         <View style={styles.sectionContainer}>
-          {pageData && renderTags(pageData.filter_tags.concat(pageData.action_tags))}
+          {tags.length > 0 && renderTags(tags)}
         </View>
 
-        {/* 分类导航 */}
-        {renderCategory(pageData?.category)}
-
         {/* 主题内容区域 */}
-        {activeThreads.length > 0 && <View style={styles.threadContainer}>
+        {threads.length > 0 && <View style={styles.threadContainer}>
           {renderThreads()}
         </View>}
+        {pageData?.pagination && <View style={styles.pageContainer}>
+          <Text style={styles.pageCount}>{pageData.pagination.current} / {pageData.pagination.last}</Text>
+        </View>}
       </ScrollView>
+
+      {/* 悬浮分页控制器 */}
+      {pageData?.pagination && <Pagination {...pageData.pagination} onPrevPress={onPrevPress} onNextPress={onNextPress} ></Pagination>}
+      
+      <ActionSheet
+        visible={actionSheetVisible}
+        options={actionSheetOptions}
+        onClose={() => setActionSheetVisible(false)}
+        cancelText="取消"
+      />
     </SafeAreaView>
   );
 };
@@ -355,33 +421,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  categoryContainer: {
-    backgroundColor: '#FFFFFF',
-    marginBottom: 12,
-    zIndex: 10,
-  },
-  categoryContainerShadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  categoryScrollView: {
-    flexGrow: 0,
-  },
-  categoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  categoryText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  activeCategoryText: {
-    color: '#2563EB',
-    fontWeight: '500',
-  },
   threadContainer: {
     paddingHorizontal: 16,
   },
@@ -484,6 +523,15 @@ const styles = StyleSheet.create({
   lastPostText: {
     fontSize: 12,
     color: '#6B7280',
+    marginLeft: 4,
+  },
+  pageContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 16,
+  },
+  pageCount: {
+    fontSize: 16,
     marginLeft: 4,
   },
 });

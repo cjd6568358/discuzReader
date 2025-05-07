@@ -43,8 +43,8 @@ const App = () => {
         favoriteAction('view', 'my.php?item=favorites&type=thread'),
         favoriteAction('view', 'my.php?item=favorites&type=forum')
       ]).then(([thread, forum]) => {
-        MMStore['favorites_thread'] = thread
-        MMStore['favorites_forum'] = forum
+        MMStore.favorites.thread = thread
+        MMStore.favorites.forums = forum
       }).catch(err => {
         console.log('初始化收藏数据', err)
       })
