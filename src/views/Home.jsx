@@ -122,12 +122,6 @@ const IndexView = () => {
       {/* 顶部导航栏 */}
       <View style={styles.navbar}>
         <Text style={styles.navTitle}>{pageData?.title}</Text>
-        {/* <View style={styles.avatarContainer}>
-          <Image source={{ uri: userAvatar }} style={styles.avatar} />
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>3</Text>
-          </View>
-        </View> */}
         {/* 搜索栏 */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>

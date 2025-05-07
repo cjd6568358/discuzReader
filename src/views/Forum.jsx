@@ -1,206 +1,173 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   Image,
   ScrollView,
-  FlatList,
   Pressable,
   StyleSheet,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  ToastAndroid,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useLoading } from '../components/Loading';
-import { getForumPage } from '../utils/api'
+import { getForumPage, favoriteAction } from '../utils/api'
+import { MMStore } from '../utils/index';
+
+const tagColors = [
+  {
+    color: '#2563EB',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#DBEAFE',
+  },
+  {
+    color: '#059669',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#D1FAE5',
+  },
+  {
+    color: '#7C3AED',
+    backgroundColor: '#F5F3FF',
+    borderColor: '#EDE9FE',
+  },
+  {
+    color: '#D97706',
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FEF3C7',
+  },
+  {
+    color: '#DC2626',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FEE2E2',
+  },
+  {
+    color: '#DB2777',
+    backgroundColor: '#FDF2F8',
+    borderColor: '#FCE7F3',
+  }
+]
 
 const ForumView = ({ route }) => {
   const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
   const [pageData, setPageData] = useState(null);
-  const [activeTab, setActiveTab] = useState('forum');
+  const [activeCategory, setActiveCategory] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [tagColorMap, setTagColorMap] = useState({})
+
+  const activeThreads = pageData?.category?.find(item => item.name === activeCategory)?.threads || [];
 
   const handleScroll = (event) => {
     const scrollY = event.nativeEvent.contentOffset.y;
     setIsScrolled(scrollY > 0);
   };
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     showLoading()
     getForumPage(route.params.href).then(data => {
       console.log(data);
       setPageData(data);
-      navigation.setOptions({
-        headerTitle: () => <View style={styles.breadcrumb}>
-          {
-            data?.breadcrumb.slice(1).map((item, index) =>
-              <>
-                <Pressable>
-                  <Text style={styles.breadcrumbText}>{item.name}</Text>
-                </Pressable>
-                <Icon name="chevron-right" size={12} color="#9CA3AF" style={styles.breadcrumbIcon} />
-              </>
-            )
-          }
-          <Text style={styles.breadcrumbActiveText}>{data?.title}</Text>
-        </View>,
-        headerRight: () => (
-          <View style={styles.navbarRight}>
-            <Pressable style={styles.starButton}>
-              <Icon name="star-o" size={16} color="#9CA3AF" />
-            </Pressable>
-            <Pressable style={styles.avatarButton}>
-              <Image
-                source={{ uri: 'https://ai-public.mastergo.com/ai/img_res/ae4cca99cabea5edbc86467d60714c68.jpg' }}
-                style={styles.navAvatar}
-              />
-            </Pressable>
-          </View>
-        ),
+      setActiveCategory(data.category[0].name);
+      const { filter_tags, action_tags } = data
+      const newMap = {}
+      filter_tags.concat(action_tags).forEach((item, index) => {
+        newMap[item.id] = tagColors[index % tagColors.length]
       })
+      setTagColorMap(newMap)
     }).catch(error => {
       console.log(error);
     }).finally(() => {
       hideLoading();
     });
-  }, [])
+  }, []))
 
-  const tabs = [
-    { id: 'sticky', name: '固定主题' },
-    { id: 'important', name: '重要主题' },
-    { id: 'recommend', name: '推荐主题' },
-    { id: 'forum', name: '本板块主题' },
-  ];
-
-  const subForums = [
-    { id: 1, name: '攻略心得' },
-    { id: 2, name: '组队交友' },
-    { id: 3, name: '资源分享' },
-    { id: 4, name: '问题反馈' }
-  ];
-
-  const pinnedTopics = [
-    {
-      id: 1,
-      title: '【公告】发帖规范及板块管理规则',
-      author: '版主小助手',
-      authorAvatar: 'https://ai-public.mastergo.com/ai/img_res/ab1e4c1cabd038f48cf5ce350c327906.jpg',
-      date: '2024-01-15',
-      replies: 2890,
-    },
-    {
-      id: 2,
-      title: '【置顶】新手玩家必读攻略合集',
-      author: '游戏管理员',
-      authorAvatar: 'https://ai-public.mastergo.com/ai/img_res/5add537ac4f4371c019121c9ab3270fa.jpg',
-      date: '2024-01-14',
-      replies: 1567,
+  useEffect(() => {
+    if (!pageData) {
+      return
     }
-  ];
-
-  const topics = [
-    {
-      id: 1,
-      type: '精华',
-      title: '《守望先锋2》第8赛季最强英雄选择指南',
-      author: '电竞解说张宇',
-      authorAvatar: 'https://ai-public.mastergo.com/ai/img_res/5aaacb0e8c103a97c5b0a6e733666af6.jpg',
-      date: '2024-01-15',
-      views: 3421,
-      replies: 89,
-    },
-    {
-      id: 2,
-      type: '讨论',
-      title: '新版本平衡性改动详细分析',
-      author: '资深玩家李明',
-      authorAvatar: 'https://ai-public.mastergo.com/ai/img_res/41c7efc309f37fb3120c64f0ffd01050.jpg',
-      date: '2024-01-15',
-      views: 2156,
-      replies: 67,
-    },
-    {
-      id: 3,
-      type: '分享',
-      title: '团队配合技巧分享：如何提升胜率',
-      author: '战队队长王强',
-      authorAvatar: 'https://ai-public.mastergo.com/ai/img_res/68de63458729d7f0df26947c12a0e6d3.jpg',
-      date: '2024-01-15',
-      views: 1890,
-      replies: 45,
-    },
-    {
-      id: 4,
-      type: '讨论',
-      title: '关于新英雄平衡性的讨论',
-      author: '游戏设计师陈静',
-      authorAvatar: 'https://ai-public.mastergo.com/ai/img_res/4ddb65285c2535f4dc880468708fc8d7.jpg',
-      date: '2024-01-15',
-      views: 1567,
-      replies: 78,
-    },
-    {
-      id: 5,
-      type: '建议',
-      title: '游戏优化建议收集帖',
-      author: '资深测试工程师',
-      authorAvatar: 'https://ai-public.mastergo.com/ai/img_res/97dcc53db0b91e09bfc9cadccc8f8347.jpg',
-      date: '2024-01-15',
-      views: 987,
-      replies: 34,
-    }
-  ];
-
-  const renderSubForums = () => (
-    <View style={styles.subForumsGrid}>
-      {subForums.map(forum => (
-        <View key={forum.id} style={styles.subForumItem}>
-          <Pressable style={styles.subForumButton}>
-            <Text style={styles.subForumText}>{forum.name}</Text>
+    const isFavorite = MMStore.favorites_forum.includes(pageData.fid);
+    navigation.setOptions({
+      headerTitle: () => <View style={styles.breadcrumb}>
+        {
+          pageData.breadcrumb.slice(1).map((item) => (
+            <View key={item.name} style={styles.breadcrumbItem}>
+              <Text style={styles.breadcrumbText}>{item.name}</Text>
+              <Icon name="chevron-right" size={10} color="#9CA3AF" style={styles.navIcon} />
+            </View>
+          ))
+        }
+        <Text style={styles.navTitle} numberOfLines={1}>{pageData.title}</Text>
+      </View>,
+      headerRight: () => (
+        <View style={styles.navbarRight}>
+          <Pressable style={styles.starButton} onPress={toggleFavorite}>
+            <Icon name={isFavorite ? "star" : "star-o"} size={18} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
+          </Pressable>
+          <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Message')}>
+            <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
+            {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
           </Pressable>
         </View>
-      ))}
+      ),
+    })
+  }, [pageData])
+
+  const toggleFavorite = async () => {
+    console.log('toggleFavorite');
+    if (MMStore.favorites_forum.includes(pageData.fid)) {
+      await favoriteAction('del', pageData.favorite_href, pageData.formhash)
+      MMStore.favorites_forum = MMStore.favorites_forum.filter(item => item !== pageData.fid);
+      ToastAndroid.show('取消收藏', ToastAndroid.SHORT);
+    } else {
+      await favoriteAction('add', pageData.favorite_href)
+      MMStore.favorites_forum.push(pageData.fid);
+      ToastAndroid.show('收藏成功', ToastAndroid.SHORT);
+    }
+    setPageData(prevData => ({
+      ...prevData,
+    }))
+  }
+
+  const onForumPress = (item) => {
+    console.log(item);
+    navigation.navigate('Forum', {
+      href: item.href,
+    })
+  }
+
+  const renderSubForums = (forums = []) => (
+    <View style={styles.subForumContainer}>
+      {forums.map(subItem => <Pressable key={subItem.name} onPress={() => onForumPress(subItem)} style={styles.subForumTag}>
+        <Text style={styles.subForumName}>{subItem.name}</Text>
+      </Pressable>)}
     </View>
   );
 
-  const renderTagButtons = () => (
+  const renderTags = (tags = []) => (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsScrollView}>
       <View style={styles.tagsContainer}>
-        <Pressable style={[styles.tagButton, styles.blueTag]}>
-          <Text style={styles.blueTagText}>#最新</Text>
-        </Pressable>
-        <Pressable style={[styles.tagButton, styles.greenTag]}>
-          <Text style={styles.greenTagText}>#热门</Text>
-        </Pressable>
-        <Pressable style={[styles.tagButton, styles.purpleTag]}>
-          <Text style={styles.purpleTagText}>#攻略</Text>
-        </Pressable>
-        <Pressable style={[styles.tagButton, styles.yellowTag]}>
-          <Text style={styles.yellowTagText}>#视频</Text>
-        </Pressable>
-        <Pressable style={[styles.tagButton, styles.redTag]}>
-          <Text style={styles.redTagText}>#赛事</Text>
-        </Pressable>
-        <Pressable style={[styles.tagButton, styles.pinkTag]}>
-          <Text style={styles.pinkTagText}>#同人</Text>
-        </Pressable>
+        {
+          tags.map((tag) => <Pressable key={tag.name} style={[styles.tagButton, tagColorMap[tag.id]]}>
+            <Text style={[styles.tagText, { color: tagColorMap[tag.id].color }]}>#{tag.name}</Text>
+          </Pressable>)
+        }
       </View>
     </ScrollView>
   );
 
-  const renderTabButtons = () => (
-    <View style={[styles.tabsContainer, isScrolled && styles.tabsContainerShadow]}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScrollView}>
-        {tabs.map(tab => (
+  const renderCategory = (category = []) => (
+    <View style={[styles.categoryContainer, isScrolled && styles.categoryContainerShadow]}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScrollView}>
+        {category.map(item => (
           <Pressable
-            key={tab.id}
-            style={styles.tabButton}
-            onPress={() => setActiveTab(tab.id)}
+            key={item.name}
+            style={styles.categoryButton}
+            onPress={() => setActiveCategory(item.name)}
           >
-            <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>
-              {tab.name}
+            <Text style={[styles.categoryText, activeCategory === item.name && styles.activeCategoryText]}>
+              {item.name}
             </Text>
           </Pressable>
         ))}
@@ -208,122 +175,48 @@ const ForumView = ({ route }) => {
     </View>
   );
 
-  const renderTopicContent = () => {
-    if (activeTab === 'sticky') {
-      return (
-        <View>
-          {pinnedTopics.map(topic => (
-            <Pressable key={topic.id} style={styles.stickyTopicCard}>
-              <View style={styles.topicHeader}>
-                <View style={styles.stickyBadge}>
-                  <Text style={styles.stickyBadgeText}>固定</Text>
-                </View>
-                <Text style={styles.topicTitle}>{topic.title}</Text>
+  const renderThreads = () => {
+    return (
+      <View>
+        {activeThreads.map(thread => (
+          <Pressable key={thread.href} style={styles.forumThreadCard}>
+            <View style={styles.tagContainer}>
+              {thread.tag && <View style={[styles.tagBadge, tagColorMap[thread.tag.id]]}>
+                <Text style={[styles.tagBadgeText, { color: tagColorMap[thread.tag.id].color }]}>{thread.tag.name}</Text>
+              </View>}
+              {thread.attach && <Icon style={{ marginRight: 8 }} name="file" size={12} color="#2563EB" />}
+              {thread.digest && <Icon style={{ marginRight: 8 }} name="diamond" size={12} color="#2563EB" />}
+              <View style={styles.statsContainer}>
+                {thread.thanks > 0 && <View style={styles.statItem}>
+                  <Icon name="heart" size={12} color="#FF0000" />
+                  <Text style={styles.statsText}>{thread.thanks}</Text>
+                </View>}
+                {thread.reply > 0 && <View style={styles.statItem}>
+                  <Icon name="comments" size={12} color="#2563EB" />
+                  <Text style={styles.statsText}>{thread.reply}</Text>
+                </View>}
+                {thread.view > 0 && <View style={styles.statItem}>
+                  <Icon name="eye" size={12} color="#2563EB" />
+                  <Text style={styles.statsText}>{thread.view}</Text>
+                </View>}
               </View>
-              <View style={styles.topicFooter}>
-                <Image source={{ uri: topic.authorAvatar }} style={styles.authorAvatar} />
-                <Text style={styles.authorNameBlue}>{topic.author}</Text>
-                <Text style={styles.dateText}>{topic.date}</Text>
-                <View style={styles.statsContainer}>
-                  <Icon name="comment-o" size={12} color="#6B7280" />
-                  <Text style={styles.statsText}>{topic.replies}</Text>
-                </View>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-      );
-    } else if (activeTab === 'important') {
-      return (
-        <View>
-          {topics.filter(t => t.type === '精华').map(topic => (
-            <Pressable key={topic.id} style={styles.importantTopicCard}>
-              <View style={styles.topicHeader}>
-                <View style={styles.importantBadge}>
-                  <Text style={styles.importantBadgeText}>重要</Text>
-                </View>
-                <Text style={styles.topicTitle}>{topic.title}</Text>
-              </View>
-              <View style={styles.topicFooter}>
-                <Image source={{ uri: topic.authorAvatar }} style={styles.authorAvatar} />
-                <Text style={styles.authorNameYellow}>{topic.author}</Text>
-                <Text style={styles.dateText}>{topic.date}</Text>
-                <View style={styles.statsContainer}>
-                  <View style={styles.statItem}>
-                    <Icon name="eye" size={12} color="#6B7280" />
-                    <Text style={styles.statsText}>{topic.views}</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Icon name="comment-o" size={12} color="#6B7280" />
-                    <Text style={styles.statsText}>{topic.replies}</Text>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-      );
-    } else if (activeTab === 'recommend') {
-      return (
-        <View>
-          {topics.filter(t => t.type === '分享').map(topic => (
-            <Pressable key={topic.id} style={styles.recommendTopicCard}>
-              <View style={styles.topicHeader}>
-                <View style={styles.recommendBadge}>
-                  <Text style={styles.recommendBadgeText}>推荐</Text>
-                </View>
-                <Text style={styles.topicTitle}>{topic.title}</Text>
-              </View>
-              <View style={styles.topicFooter}>
-                <Image source={{ uri: topic.authorAvatar }} style={styles.authorAvatar} />
-                <Text style={styles.authorNameGreen}>{topic.author}</Text>
-                <Text style={styles.dateText}>{topic.date}</Text>
-                <View style={styles.statsContainer}>
-                  <View style={styles.statItem}>
-                    <Icon name="eye" size={12} color="#6B7280" />
-                    <Text style={styles.statsText}>{topic.views}</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Icon name="comment-o" size={12} color="#6B7280" />
-                    <Text style={styles.statsText}>{topic.replies}</Text>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-      );
-    } else {
-      return (
-        <View>
-          {topics.filter(t => t.type === '讨论' || t.type === '建议').map(topic => (
-            <Pressable key={topic.id} style={styles.forumTopicCard}>
-              <View style={styles.topicHeader}>
-                <View style={styles.typeBadge}>
-                  <Text style={styles.typeBadgeText}>{topic.type}</Text>
-                </View>
-                <Text style={styles.topicTitle}>{topic.title}</Text>
-              </View>
-              <View style={styles.topicFooter}>
-                <Image source={{ uri: topic.authorAvatar }} style={styles.authorAvatar} />
-                <Text style={styles.authorName}>{topic.author}</Text>
-                <Text style={styles.dateText}>{topic.date}</Text>
-                <View style={styles.statsContainer}>
-                  <View style={styles.statItem}>
-                    <Icon name="eye" size={12} color="#6B7280" />
-                    <Text style={styles.statsText}>{topic.views}</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Icon name="comment-o" size={12} color="#6B7280" />
-                    <Text style={styles.statsText}>{topic.replies}</Text>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-      );
-    }
+            </View>
+            <View style={styles.threadHeader}>
+              <Text numberOfLines={1} ellipsizeMode="tail" style={styles.threadTitle}>{thread.title}{thread.permission && `[阅读${thread.permission}]`}</Text>
+            </View>
+            <View style={styles.threadFooter}>
+              <Text style={styles.authorName}>{thread.author}</Text>
+              <Text style={styles.dateText}>{thread.date}</Text>
+              <Text style={styles.permissionText}>{thread.permission && `[阅读权限${thread.permission}]`}</Text>
+              {thread.lastPost && <View style={styles.lastPost}>
+                <Text style={{ fontSize: 12 }}>最后回复:</Text>
+                <Text style={styles.lastPostText}>{thread.lastPost.date}</Text>
+              </View>}
+            </View>
+          </Pressable>
+        ))}
+      </View>
+    );
   };
 
   return (
@@ -338,22 +231,22 @@ const ForumView = ({ route }) => {
         scrollEventThrottle={16}
       >
         {/* 子版块 */}
-        <View style={styles.sectionContainer}>
-          {renderSubForums()}
-        </View>
+        {pageData?.children?.length > 0 && <View style={styles.sectionContainer}>
+          {renderSubForums(pageData.children)}
+        </View>}
 
         {/* 主题标签分类 */}
         <View style={styles.sectionContainer}>
-          {renderTagButtons()}
+          {pageData && renderTags(pageData.filter_tags.concat(pageData.action_tags))}
         </View>
 
         {/* 分类导航 */}
-        {renderTabButtons()}
+        {renderCategory(pageData?.category)}
 
         {/* 主题内容区域 */}
-        <View style={styles.topicsContainer}>
-          {renderTopicContent()}
-        </View>
+        {activeThreads.length > 0 && <View style={styles.threadContainer}>
+          {renderThreads()}
+        </View>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -365,7 +258,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   breadcrumb: {
-    height: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  breadcrumbItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -373,11 +269,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#9CA3AF',
   },
-  breadcrumbIcon: {
+  navIcon: {
     marginHorizontal: 4,
   },
-  breadcrumbActiveText: {
+  navTitle: {
     fontSize: 16,
+    fontWeight: '500',
     color: '#2563EB',
   },
   navbarRight: {
@@ -392,53 +289,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 8,
   },
-  avatarButton: {
+  messageButton: {
+    position: 'relative',
     width: 32,
     height: 32,
     borderRadius: 16,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  navAvatar: {
-    width: '100%',
-    height: '100%',
+  messageBage: {
+    position: 'absolute',
+    fontSize: 8,
+    right: 0,
+    top: 4,
+    color: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: 'red'
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 16,
     paddingBottom: 16,
   },
   sectionContainer: {
     marginBottom: 16,
     paddingHorizontal: 16,
   },
-  subForumsGrid: {
+  subForumContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -8,
+    marginTop: 8,
   },
-  subForumItem: {
-    width: '25%',
-    paddingHorizontal: 8,
-  },
-  subForumButton: {
-    aspectRatio: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
+  subForumTag: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    marginBottom: 8,
   },
-  subForumText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
+  subForumName: {
+    fontSize: 12,
+    color: '#4B5563',
   },
   tagsScrollView: {
     flexGrow: 0,
@@ -454,130 +351,41 @@ const styles = StyleSheet.create({
     marginRight: 8,
     borderWidth: 1,
   },
-  blueTag: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#DBEAFE',
-  },
-  blueTagText: {
-    color: '#2563EB',
+  tagText: {
     fontSize: 14,
     fontWeight: '500',
   },
-  greenTag: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#D1FAE5',
-  },
-  greenTagText: {
-    color: '#059669',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  purpleTag: {
-    backgroundColor: '#F5F3FF',
-    borderColor: '#EDE9FE',
-  },
-  purpleTagText: {
-    color: '#7C3AED',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  yellowTag: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FEF3C7',
-  },
-  yellowTagText: {
-    color: '#D97706',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  redTag: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FEE2E2',
-  },
-  redTagText: {
-    color: '#DC2626',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  pinkTag: {
-    backgroundColor: '#FDF2F8',
-    borderColor: '#FCE7F3',
-  },
-  pinkTagText: {
-    color: '#DB2777',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  tabsContainer: {
+  categoryContainer: {
     backgroundColor: '#FFFFFF',
     marginBottom: 12,
     zIndex: 10,
   },
-  tabsContainerShadow: {
+  categoryContainerShadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 1,
     elevation: 1,
   },
-  tabsScrollView: {
+  categoryScrollView: {
     flexGrow: 0,
   },
-  tabButton: {
+  categoryButton: {
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  tabText: {
+  categoryText: {
     fontSize: 14,
     color: '#6B7280',
   },
-  activeTabText: {
+  activeCategoryText: {
     color: '#2563EB',
     fontWeight: '500',
   },
-  topicsContainer: {
+  threadContainer: {
     paddingHorizontal: 16,
   },
-  stickyTopicCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  importantTopicCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#FEF3C7',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  recommendTopicCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#D1FAE5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  forumTopicCard: {
+  forumThreadCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 12,
@@ -590,70 +398,36 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
     elevation: 1,
   },
-  topicHeader: {
+  tagContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  threadHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 8,
   },
-  stickyBadge: {
-    backgroundColor: '#2563EB',
-    borderRadius: 9999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 8,
-  },
-  stickyBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-  },
-  importantBadge: {
-    backgroundColor: '#F59E0B',
-    borderRadius: 9999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 8,
-  },
-  importantBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-  },
-  recommendBadge: {
-    backgroundColor: '#10B981',
-    borderRadius: 9999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 8,
-  },
-  recommendBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-  },
-  typeBadge: {
+  tagBadge: {
     backgroundColor: '#6B7280',
     borderRadius: 9999,
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginRight: 8,
   },
-  typeBadgeText: {
+  tagBadgeText: {
     color: '#FFFFFF',
     fontSize: 12,
   },
-  topicTitle: {
+  threadTitle: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
     color: '#111827',
   },
-  topicFooter: {
+  threadFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  authorAvatar: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 4,
   },
   authorName: {
     fontSize: 12,
@@ -682,6 +456,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
   },
+  permissionText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 8,
+  },
   statsContainer: {
     flexDirection: 'row',
     marginLeft: 'auto',
@@ -690,9 +469,19 @@ const styles = StyleSheet.create({
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 12,
+    marginLeft: 6,
   },
   statsText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  lastPost: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 'auto',
+  },
+  lastPostText: {
     fontSize: 12,
     color: '#6B7280',
     marginLeft: 4,

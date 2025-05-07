@@ -1,4 +1,3 @@
-
 import http from './http';
 import selectors from './selectors';
 
@@ -100,20 +99,17 @@ export const getThreadPage = async (href) => {
     }
 }
 
-export const favoriteAction = async (type, href) => {
+export const favoriteAction = async (type, href, formhash) => {
     try {
         if (type === 'add') {
             await http.get(href)
-        } else if (type === 'delete') {
-            const id = href.split('-')[1]
-            if (href.includes('forum-')) {
-                await http.post(`my.php?item=favorites&type=forum`, `formhash=24cbfa84&delete%5B%5D=${id}&favsubmit=true`)
-            } else {
-                await http.post(`my.php?item=favorites&type=thread`, `formhash=24cbfa84&delete%5B%5D=${id}&favsubmit=true`)
-            }
+        } else if (type === 'del') {
+            const id = href.replace(/\D/g, '')
+            const url = href.includes('fid') ? `my.php?item=favorites&type=forum` : `my.php?item=favorites&type=thread`
+            await http.post(url, { formhash, 'delete%5B%5D': id, favsubmit: true })
         } else if (type === 'view') {
             const res = await http.get(href, { selector: selectors.favorites })
-            return res.data
+            return res.data.ids
         }
     } catch (error) {
         console.log('favoriteAction', error);

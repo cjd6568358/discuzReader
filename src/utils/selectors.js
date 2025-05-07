@@ -20,7 +20,7 @@ export default {
         };
         tbody:has(.lastpost a)@children{
             h2 a[href=$href]{$name}
-            h2 em{$today|replace(/\\D/g, '')|Number}
+            h2 em{$today}
             h2+p{$desc|replace(/\\s/g, '')}
             h2+p+p:not(.moderators) a@children{
                 &[href=$href]{$name};
@@ -51,8 +51,8 @@ export default {
     favorites: `
     input[name=formhash][value=$formhash];
     #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
-    .mainbox form tbody tr@{
-        td:nth-child(2) a[href=$tid|split('-')|slice(1,2)|first];
+    .mainbox form tbody tr@ids{
+        td:nth-child(2) a[href=$|split('-')|slice(1,2)|first|Number];
     }
     `,
     forum: `
@@ -64,6 +64,7 @@ export default {
         &[href=$href]{$name}
     };
     #ajax_favorite[href=$favorite_href];
+    #ajax_favorite[href=$fid|replace(/\\D/g,'')|Number];
     .mainbox.threadlist+.pages_btns .pages@pagination|pack{
         em{$total|Number};
         strong{$current|Number};
@@ -73,24 +74,32 @@ export default {
         }
     }
     #headfilter ul li a@filter_tags{
-        &[href=$href]{$name}
+        $id="all";
+        &[href=$href]{$name};
+        &[href^=forumdisplay][href=$id|replace(/^.*filter=/,'')];
     };
     .mainbox.threadlist .headactions a@action_tags{
         &[href=$href]{$name}
+        &[href=$id|replace(/^.*typeid=/,'')];
     };
     .mainbox.threadlist table@category{
         $name = "公告";
-        thead.separation td:nth-child(3){$name|replace(/\\s/g,'')};
+        thead.separation td:nth-child(3){$name|trim|replace(/\\s/g,'')};
         tbody tr:not(.category)@threads{
-                th a[href=$href]{$title}
-                th span[id^=thread_] a[href=$href]{$title}
-                th img[src*=attachicons]{$attach=1}
-                td.author cite a{$author}
-                td.author cite{html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
-                td.author em{$date}
-                td.nums strong{$reply|Number}
-                td.nums em{$view|Number}
-                td.lastpost@lastPost|pack{
+            th em a@tag|pack{
+                &[href=$id|replace(/^.*typeid=/,'')]{$name}
+            }
+            th a[href=$href]{$title}
+            th span[id^=thread_] a[href=$href]{$title}
+            th span[id^=thread_]+span.bold {$permission}
+            th img[src*=attachicons]{$attach=1}
+            th img[src*=digest]{$digest=1}
+            td.author cite a{$author}
+            td.author cite{html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
+            td.author em{$date}
+            td.nums strong{$reply|Number}
+            td.nums em{$view|Number}
+            td.lastpost@lastPost|pack{
                 em a[href=$href]{$date}
                 cite a{$author}
             }

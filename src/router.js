@@ -48,7 +48,7 @@ export const defaultConfig = {
         Nodes: {
             screen: NodesView,
             options: {
-                title: '节点配置',
+                headerTitle: '节点配置',
                 headerShown: true,
                 // headerRight: () => <Icon name="ellipsis-v" size={20} />,
             },

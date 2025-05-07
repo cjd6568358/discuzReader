@@ -24,7 +24,7 @@ const defaultConfig = {
 const instance = axios.create(defaultConfig);
 // 添加请求拦截器
 instance.interceptors.request.use(config => {
-    if ('POST,PUT,PATCH'.includes(config.method.toUpperCase()) && typeof config.data === 'object') {
+    if ('POST,PUT,PATCH'.includes(config.method.toUpperCase())) {
         config.data = UTF8ToGBK(decodeURIComponent(new URLSearchParams(config.data).toString()));
     }
     return config;

@@ -9,7 +9,7 @@ const TabBar = ({ currentTab }) => {
   const [tabs, setTabs] = useState([
     { id: 'Home', name: '首页', icon: 'home' },
     // { id: 'Post', name: '发帖', icon: 'plus-circle' },
-    { id: 'Message', name: '消息', icon: 'comment', badge: 0 },
+    { id: 'Message', name: '消息', icon: 'envelope', badge: 0 },
     { id: 'Profile', name: '我的', icon: 'user' }
   ])
 
