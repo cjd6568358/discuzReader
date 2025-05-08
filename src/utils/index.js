@@ -9,9 +9,7 @@ export const MMStore = {
         forums: [],
         threads: [],
     },
-    'cached': {
-        threads: {},
-    },
+    'cached': {},
 };
 /**
  * 检查用户是否已登录

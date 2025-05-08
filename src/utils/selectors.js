@@ -118,12 +118,14 @@ export default {
     `,
     thread: `
     input[name=formhash][value=$formhash];
-    head title{$title};
+    head title{$title|split(' - ')|first};
+    #newpmnum{$newMessage|Number};
     #nav a@breadcrumb{
         &[href=$href]{$name}
     };
     #postform[action=$replyUrl];
     #ajax_favorite[href=$favoriteUrl];
+    #ajax_favorite[href=$tid|replace(/\\D/g,'')|Number];
     form .mainbox.viewthread@posts{
         .postauthor@author|pack{
             >cite a[href=$uid|replace(/\\D/g,'')|Number]{$name};

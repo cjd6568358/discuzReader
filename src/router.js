@@ -30,6 +30,9 @@ export const defaultConfig = {
         },
         Thread: {
             screen: ThreadView,
+            options: {
+                headerShown: true,
+            },
         },
         Post: {
             screen: PostView,

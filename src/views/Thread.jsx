@@ -10,14 +10,15 @@ import {
   FlatList,
   Pressable,
   ScrollView,
+  Alert,
   ToastAndroid,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Pagination from '../components/Pagination';
 import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
-import { getForumPage } from '../utils/api'
+import { getThreadPage, favoriteAction } from '../utils/api'
 import { MMStore, storage } from '../utils/index';
 
 const Thread = () => {
@@ -26,16 +27,85 @@ const Thread = () => {
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [longPressKey, setLongPressKey] = useState(null);
   const [pageData, setPageData] = useState(null);
-  const authorAvatar = 'https://ai-public.mastergo.com/ai/img_res/6318212c8a4babf6dde0bae414594b63.jpg';
-  const contentImage = 'https://ai-public.mastergo.com/ai/img_res/21460918cb4ed61b904dc2d2eff5333b.jpg';
+
+  useFocusEffect(useCallback(() => {
+    // renderPage(route.params.href)
+    renderPage('thread-11332239-1-1.html')
+  }, []))
+
+  useEffect(() => {
+    pageData && renderHeader()
+  }, [pageData])
+
+  const renderHeader = useCallback(() => {
+    const isFavorite = MMStore.favorites.threads.includes(pageData.tid);
+    navigation.setOptions({
+      headerTitle: () => <View style={styles.navTitleContainer}>
+        <Text style={styles.navTitle} numberOfLines={1}>{pageData.title}</Text>
+        <View style={styles.navSubtitle}>
+          {pageData.breadcrumb.slice(1)
+            .map((item, i, arr) => <View key={item.name} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.navSubtitleText}>{item.name}</Text>
+              {i < arr.length - 1 && <Icon name="chevron-right" size={10} color="#9CA3AF" style={styles.navIcon} />}
+            </View>)
+          }
+        </View>
+      </View>,
+      headerRight: () => (
+        <View style={styles.navbarRight}>
+          <Pressable style={styles.starButton} onPress={toggleFavorite}>
+            <Icon name={isFavorite ? "star" : "star-o"} size={18} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
+          </Pressable>
+          <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Message')}>
+            <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
+            {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
+          </Pressable>
+          {pageData.cached && <Pressable style={styles.starButton} onPress={clearCache}>
+            <Icon name="paint-brush" size={18} color="#9CA3AF" />
+          </Pressable>}
+          <Pressable style={styles.starButton} onPress={block}>
+            <Icon name="ban" size={18} color="#9CA3AF" />
+          </Pressable>
+        </View>
+      ),
+    })
+  })
+
+  const clearCache = useCallback(() => {
+    delete MMStore.cached[`thread-${pageData.tid}-${pageData.pagination.current}-1.html`]
+    setTimeout(() => {
+      renderPage(`thread-${pageData.tid}-${pageData.pagination.current}-1.html`)
+    }, ToastAndroid.SHORT);
+    ToastAndroid.show('缓存已清除', ToastAndroid.SHORT);
+  })
+
+  const block = useCallback(() => {
+    Alert.alert('提示', '确定要屏蔽此贴吗？', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '确定', style: 'destructive', onPress: () => {
+          const newBlockThreads = (storage.getString('blockThreads') || '').split(',') || [];
+          if (!newBlockThreads.includes(pageData.tid)) {
+            newBlockThreads.push(pageData.tid);
+          }
+          storage.setString('blockThreads', newBlockThreads.join(','));
+          ToastAndroid.show('已屏蔽', ToastAndroid.SHORT);
+        }
+      },
+      { cancelable: true }
+    ])
+
+  })
 
   const renderPage = useCallback((href) => {
     showLoading()
-    getForumPage(href).then(data => {
+    getThreadPage(href).then(data => {
       console.log(data);
       setPageData(data);
       const { pagination } = data
-      ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+      if (pagination) {
+        ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+      }
     }).catch(error => {
       console.log(error);
     }).finally(() => {
@@ -44,14 +114,14 @@ const Thread = () => {
   })
 
   const actionSheetOptions = [
-    { text: '查看历史发言', onPress: () => handleActionSheetItemPress('searchUid') },
-    // { text: '加入黑名单', destructive: true, onPress: handleActionSheetItemPress('block') },
+    { text: '查看历史发帖', onPress: () => handleActionSheetItemPress('searchByUid') },
+    { text: '回复', destructive: true, onPress: () => handleActionSheetItemPress('reply') },
   ];
 
   const handleActionSheetItemPress = async (action) => {
-    if (action === 'clearCache') {
-    } else if (action === 'block') {
-      
+    if (action === 'searchByUid') {
+    } else if (action === 'reply') {
+
     }
     setLongPressKey(null)
   }
@@ -60,6 +130,22 @@ const Thread = () => {
     setLongPressKey(key);
     setActionSheetVisible(true)
   };
+
+  const toggleFavorite = async () => {
+    console.log('toggleFavorite');
+    if (MMStore.favorites.threads.includes(pageData.tid)) {
+      await favoriteAction('del', pageData.favorite_href, pageData.formhash)
+      MMStore.favorites.threads = MMStore.favorites.threads.filter(item => item !== pageData.tid);
+      ToastAndroid.show('取消收藏', ToastAndroid.SHORT);
+    } else {
+      await favoriteAction('add', pageData.favorite_href)
+      MMStore.favorites.threads.push(pageData.tid);
+      ToastAndroid.show('收藏成功', ToastAndroid.SHORT);
+    }
+    setPageData(prevData => ({
+      ...prevData,
+    }))
+  }
 
   const onPrevPress = () => {
     console.log('onPrevPress');
@@ -118,30 +204,6 @@ const Thread = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
-      {/* 顶部导航栏 */}
-      <View style={styles.navbar}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={18} color="#6B7280" />
-        </Pressable>
-        <View style={styles.navTitleContainer}>
-          <Text style={styles.navTitle} numberOfLines={1}>热门话题讨论区</Text>
-          <View style={styles.navSubtitle}>
-            <Text style={styles.navSubtitleText}>社区讨论</Text>
-            <Icon name="chevron-right" size={10} color="#9CA3AF" style={styles.navIcon} />
-            <Text style={styles.navSubtitleHighlight}>热门话题</Text>
-          </View>
-        </View>
-        <View style={styles.navActions}>
-          <Pressable style={styles.bookmarkButton}>
-            <Icon name="bookmark" size={18} color="#6B7280" />
-          </Pressable>
-          <Image
-            source={{ uri: 'https://ai-public.mastergo.com/ai/img_res/e7b203c4536f10fe9ff12728eea37141.jpg' }}
-            style={styles.userAvatar}
-          />
-        </View>
-      </View>
-
       {/* 主要内容区域 */}
       <ScrollView style={styles.scrollView}>
         {/* 帖子标题 */}
@@ -149,7 +211,7 @@ const Thread = () => {
           <Text style={styles.postTitle}>2024 年互联网行业发展趋势分析与讨论</Text>
 
           {/* 作者信息 */}
-          <View style={styles.authorContainer}>
+          {/* <View style={styles.authorContainer}>
             <Image source={{ uri: authorAvatar }} style={styles.authorAvatar} />
             <View style={styles.authorInfo}>
               <View style={styles.authorNameContainer}>
@@ -160,19 +222,19 @@ const Thread = () => {
               </View>
               <Text style={styles.postTime}>2024 年 1 月 15 日 14:30</Text>
             </View>
-          </View>
+          </View> */}
 
           {/* 帖子内容 */}
-          <View style={styles.postContent}>
+          {/* <View style={styles.postContent}>
             <Text style={styles.postText}>随着人工智能技术的快速发展，2024 年互联网行业将迎来新的变革。以下是我对几个重要领域的观察和思考：</Text>
             <Image source={{ uri: contentImage }} style={styles.postImage} />
             <Text style={styles.postPoint}>1. AI 应用将进一步普及，更多传统行业将开始数字化转型</Text>
             <Text style={styles.postPoint}>2. 元宇宙概念将逐渐落地，AR/VR 技术将有重大突破</Text>
             <Text style={styles.postPoint}>3. 数据安全和隐私保护将成为重中之重</Text>
-          </View>
+          </View> */}
 
           {/* 帖子数据 */}
-          <View style={styles.postStats}>
+          {/* <View style={styles.postStats}>
             <View style={styles.statItem}>
               <Icon name="eye-slash" size={14} color="#6B7280" style={styles.statIcon} />
               <Text style={styles.statText}>1,234 浏览</Text>
@@ -182,7 +244,7 @@ const Thread = () => {
               <Icon name="comment-o" size={14} color="#6B7280" style={styles.statIcon} />
               <Text style={styles.statText}>89 回复</Text>
             </View>
-          </View>
+          </View> */}
         </View>
 
         {/* 回复列表 */}
@@ -232,19 +294,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  navbar: {
-    height: 56,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    elevation: 2,
-  },
-  backButton: {
-    padding: 8,
-  },
   navTitleContainer: {
     flex: 1,
     marginLeft: 16,
@@ -266,22 +315,36 @@ const styles = StyleSheet.create({
   navIcon: {
     marginHorizontal: 4,
   },
-  navSubtitleHighlight: {
-    fontSize: 12,
-    color: '#2563EB',
-  },
-  navActions: {
+  navbarRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
-  bookmarkButton: {
-    padding: 8,
-  },
-  userAvatar: {
+  starButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  messageButton: {
+    position: 'relative',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  messageBage: {
+    position: 'absolute',
+    fontSize: 8,
+    right: 0,
+    top: 4,
+    color: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: 'red'
   },
   scrollView: {
     flex: 1,

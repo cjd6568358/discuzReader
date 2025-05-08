@@ -67,7 +67,7 @@ const ForumView = ({ route }) => {
   }, []))
 
   useEffect(() => {
-    pageData && updateHeader()
+    pageData && renderHeader()
   }, [pageData])
 
   const actionSheetOptions = [
@@ -82,7 +82,7 @@ const ForumView = ({ route }) => {
 
   const handleActionSheetItemPress = async (action) => {
     if (action === 'clearCache') {
-      delete MMStore.cached.threads[longPressKey]
+      delete MMStore.cached[longPressKey]
     } else if (action === 'block') {
       setBlockThreads(prev => {
         const newBlockThreads = [...prev, longPressKey];
@@ -123,7 +123,9 @@ const ForumView = ({ route }) => {
         });
       }, [])
       setThreads(Array.from(threadMap.values()))
-      ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+      if (pagination) {
+        ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+      }
     }).catch(error => {
       console.log(error);
     }).finally(() => {
@@ -131,7 +133,7 @@ const ForumView = ({ route }) => {
     });
   })
 
-  const updateHeader = useCallback(() => {
+  const renderHeader = useCallback(() => {
     const isFavorite = MMStore.favorites.forums.includes(pageData.fid);
     navigation.setOptions({
       headerTitle: () => <View style={styles.breadcrumb}>
@@ -234,47 +236,43 @@ const ForumView = ({ route }) => {
   );
 
   const renderThreads = () => {
-    return (
-      <>
-        {threads.map(thread => (
-          <Pressable key={thread.href} onPress={() => onThreadPress(thread)} onLongPress={() => handleLongPress(thread.href)} style={styles.forumThreadCard}>
-            <View style={styles.tagContainer}>
-              {thread.tag && <View style={[styles.tagBadge, thread.colors]}>
-                <Text style={[styles.tagBadgeText, { color: thread.colors?.color }]}>{thread.tag.name}</Text>
-              </View>}
-              {thread.attach && <Icon style={{ marginRight: 8 }} name="file" size={12} color="#2563EB" />}
-              {thread.digest && <Icon style={{ marginRight: 8 }} name="diamond" size={12} color="#2563EB" />}
-              <View style={styles.statsContainer}>
-                {thread.thanks > 0 && <View style={styles.statItem}>
-                  <Icon name="heart" size={12} color="#FF0000" />
-                  <Text style={styles.statsText}>{thread.thanks}</Text>
-                </View>}
-                {thread.reply > 0 && <View style={styles.statItem}>
-                  <Icon name="comments" size={12} color="#2563EB" />
-                  <Text style={styles.statsText}>{thread.reply}</Text>
-                </View>}
-                {thread.view > 0 && <View style={styles.statItem}>
-                  <Icon name="eye" size={12} color="#2563EB" />
-                  <Text style={styles.statsText}>{thread.view}</Text>
-                </View>}
-              </View>
-            </View>
-            <View style={styles.threadHeader}>
-              <Text numberOfLines={1} ellipsizeMode="tail" style={styles.threadTitle}>{thread.title}{thread.permission && `[阅读${thread.permission}]`}</Text>
-            </View>
-            <View style={styles.threadFooter}>
-              <Text style={styles.authorName}>{thread.author}</Text>
-              <Text style={styles.dateText}>{thread.date}</Text>
-              <Text style={styles.permissionText}>{thread.permission && `[阅读权限${thread.permission}]`}</Text>
-              {thread.lastPost && <View style={styles.lastPost}>
-                <Text style={{ fontSize: 12 }}>最后回复:</Text>
-                <Text style={styles.lastPostText}>{thread.lastPost.date}</Text>
-              </View>}
-            </View>
-          </Pressable>
-        ))}
-      </>
-    );
+    return threads.map(thread => (
+      <Pressable key={thread.href} onPress={() => onThreadPress(thread)} onLongPress={() => handleLongPress(thread.href)} style={styles.forumThreadCard}>
+        <View style={styles.tagContainer}>
+          {thread.tag && <View style={[styles.tagBadge, thread.colors]}>
+            <Text style={[styles.tagBadgeText, { color: thread.colors?.color }]}>{thread.tag.name}</Text>
+          </View>}
+          {thread.attach && <Icon style={{ marginRight: 8 }} name="chain" size={12} color="#2563EB" />}
+          {thread.digest && <Icon style={{ marginRight: 8 }} name="diamond" size={12} color="#2563EB" />}
+          <View style={styles.statsContainer}>
+            {thread.thanks > 0 && <View style={styles.statItem}>
+              <Icon name="heart" size={12} color="#FF0000" />
+              <Text style={styles.statsText}>{thread.thanks}</Text>
+            </View>}
+            {thread.reply > 0 && <View style={styles.statItem}>
+              <Icon name="comments" size={12} color="#2563EB" />
+              <Text style={styles.statsText}>{thread.reply}</Text>
+            </View>}
+            {thread.view > 0 && <View style={styles.statItem}>
+              <Icon name="eye" size={12} color="#2563EB" />
+              <Text style={styles.statsText}>{thread.view}</Text>
+            </View>}
+          </View>
+        </View>
+        <View style={styles.threadHeader}>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={styles.threadTitle}>{thread.title}{thread.permission && `[阅读${thread.permission}]`}</Text>
+        </View>
+        <View style={styles.threadFooter}>
+          <Text style={styles.authorName}>{thread.author}</Text>
+          <Text style={styles.dateText}>{thread.date}</Text>
+          <Text style={styles.permissionText}>{thread.permission && `[阅读权限${thread.permission}]`}</Text>
+          {thread.lastPost && <View style={styles.lastPost}>
+            <Text style={{ fontSize: 12 }}>最后回复:</Text>
+            <Text style={styles.lastPostText}>{thread.lastPost.date}</Text>
+          </View>}
+        </View>
+      </Pressable>
+    ));
   };
 
   return (

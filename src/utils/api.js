@@ -1,5 +1,6 @@
 import http from './http';
 import selectors from './selectors';
+import { MMStore } from './index';
 
 const title_regex = new RegExp('^.*?\\|\\s*(.*?)\\s*$', 'g');
 export const getHomePage = async () => {
@@ -92,23 +93,45 @@ export const getForumPage = async (href) => {
 }
 
 export const getThreadPage = async (href) => {
-    // 参与缓存的url
-    // thread-6379736-1-1.html /thread-(\d.*)-(\d.*)-(\d.*)(.html$)/g.test(url)
-    // viewthread.php?tid=6369158&page=1#pid110991881 /(^.*tid=)(\d.*)&page=(\d.*)#pid(\d.*)/g.test(url)
-    // viewthread.php?tid=6369158&page=1 /(^.*tid=)(\d.*)&page=(\d.*)/g.test(url)
-    // viewthread.php?tid=4182257 /(^.*tid=)(\d.*)/g.test(url)
-    // 不参与缓存的url
-    // redirect.php?tid=12089380&goto=lastpost#lastpost
-
+    // thread-6379736-1-1.html(#pid110991881) 不需要解析
+    // /thread-\d*-\d*-\d*.html/.test(href)
+    if (/viewthread\.php\?tid=(\d+)(?:&page=(\d+))?(?:#(\d+))?/.test(href)) {
+        // viewthread.php?tid=6369158(&page=1(#pid110991881))
+        const [, tid, page = 1, anchor] = url.match(/viewthread\.php\?tid=(\d+)(?:&page=(\d+))?(?:#(\d+))?/)
+        href = `thread-${tid}-${page}-1.html${anchor ? `#${anchor}` : ''}}`
+    }
+    if (MMStore.cached[href]) {
+        return {
+            ...MMStore.cached[href],
+            cached: true,
+            anchor: href.split('#')[1]
+        }
+    }
     try {
         const res = await http.get(href, { selector: selectors.thread })
-        return {
+        const { title, breadcrumb, pagination } = res.data
+        const newData = {
             ...res.data,
-            title: res.data.title.replace(title_regex, '$1'),
-            breadcrumb: res.data.breadcrumb.map(item => ({
+            title: title.replace(title_regex, '$1'),
+            breadcrumb: breadcrumb.map(item => ({
                 ...item,
                 name: item.name.replace(title_regex, '$1'),
             })),
+        }
+        if (pagination) {
+            newData.pagination = {
+                ...pagination,
+                last: pagination.last || pagination.siblings.at(-1)?.page,
+            }
+        }
+        // redirect.php?tid=6379736(&goto=lastpost(#pid110991881)) 不参与缓存 
+        // 第一页和最后一页不参与缓存
+        if (!/^redirect\.php\?tid=\d*&goto=lastpost/.test(href) || !pagination || newData.pagination.current === newData.pagination.last) {
+            MMStore.cached[href] = newData
+        }
+        return {
+            ...newData,
+            anchor: href.split('#')[1]
         }
     } catch (error) {
         console.log('getForumPage', error);

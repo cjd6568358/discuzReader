@@ -275,12 +275,6 @@ const NodesView = () => {
         handleDelete(url);
     }, []);
 
-    const handleAdd = () => {
-        // 注意：Alert.prompt 在 Android 上不可用，这里仅作为示例
-        // 实际应用中应使用 Modal 或第三方库实现输入对话框
-        setShowAddModal(true);
-    };
-
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
