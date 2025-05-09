@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,15 @@ import {
   ScrollView,
   Alert,
   ToastAndroid,
-  useWindowDimensions,
 } from 'react-native';
-import RenderHtml from 'react-native-render-html';
+import WebView from 'react-native-webview';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Pagination from '../components/Pagination';
 import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
 import { getThreadPage, favoriteAction } from '../utils/api'
-import { MMStore, storage, decodeHtmlEntity, downloadFile } from '../utils/index';
+import { MMStore, storage, decodeHtmlEntity } from '../utils/index';
 
 const Thread = () => {
   const navigation = useNavigation();
@@ -29,7 +28,7 @@ const Thread = () => {
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [longPressKey, setLongPressKey] = useState(null);
   const [pageData, setPageData] = useState(null);
-  const { width } = useWindowDimensions();
+  const [webViewHeight, setWebViewHeight] = useState(300);
 
   useFocusEffect(useCallback(() => {
     // renderPage(route.params.href)
@@ -100,6 +99,120 @@ const Thread = () => {
 
   })
 
+  const generateHtmlContent = (content) => {
+    if (!content) return '<div>无内容</div>';
+    
+    // 解码HTML实体
+    const decodedContent = decodeHtmlEntity(content);
+    
+    // 添加基本样式
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #374151;
+            padding: 0;
+            margin: 0;
+          }
+          img {
+            max-width: 100%;
+            height: auto;
+          }
+          a {
+            color: #2563EB;
+            text-decoration: none;
+          }
+          table {
+            border-collapse: collapse;
+            width: 100%;
+          }
+          table, th, td {
+            border: 1px solid #E5E7EB;
+          }
+          th, td {
+            padding: 8px;
+            text-align: left;
+          }
+          pre, code {
+            background-color: #F3F4F6;
+            padding: 8px;
+            border-radius: 4px;
+            overflow-x: auto;
+          }
+          blockquote {
+            border-left: 4px solid #E5E7EB;
+            margin-left: 0;
+            padding-left: 16px;
+            color: #6B7280;
+          }
+        </style>
+      </head>
+      <body>
+        ${decodedContent}
+      </body>
+      </html>
+    `;
+  };
+
+  const handleWebViewMessage = (event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      
+      if (data.type === 'contentHeight') {
+        setWebViewHeight(data.height);
+      } else if (data.type === 'linkClicked') {
+        handleLinkClick(data.href, data.text);
+      }
+    } catch (error) {
+      console.error('WebView消息解析错误:', error);
+    }
+  };
+
+  const handleNavigationStateChange = (navState) => {
+    // 监控WebView导航状态变化
+    console.log('WebView导航状态:', navState);
+  };
+
+  const handleShouldStartLoadWithRequest = (request) => {
+    // 拦截WebView的链接请求
+    const { url } = request;
+    
+    // 如果是内部链接（相对路径或者同域名），允许WebView加载
+    if (url.startsWith('about:blank') || url === 'about:srcdoc') {
+      return true;
+    }
+    
+    // 如果是外部链接，拦截并用系统浏览器打开
+    if (url.startsWith('http')) {
+      handleLinkClick(url);
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleLinkClick = (url, text) => {
+    console.log('链接被点击:', url, text);
+    
+    // 判断是否是帖子链接
+    if (url.includes('thread-') && url.includes('.html')) {
+      // 是帖子链接，使用内部导航
+      navigation.navigate('Thread', { href: url });
+    } else if (url.includes('forum-') && url.includes('.html')) {
+      // 是版块链接，使用内部导航
+      navigation.navigate('Forum', { href: url });
+    } else {
+      // 其他链接输出日志
+      console.log('其他链接:', url);
+    }
+  };
+
   const renderPage = useCallback((href) => {
     showLoading()
     getThreadPage(href).then(data => {
@@ -127,20 +240,6 @@ const Thread = () => {
 
     }
     setLongPressKey(null)
-  }
-
-  const handleLinkPress = (href) => {
-    if (href.startsWith('thread-') || href.startsWith('viewthread') || href.startsWith('redirect.php?tid=')) {
-      navigation.navigate('Thread', { href });
-    } else if (href.startsWith('forum-') || href.startsWith('forumdisplay')) {
-      navigation.navigate('Forum', { href });
-    } else if (href.startsWith('attachment.php')) {
-      downloadFile(href)
-    } else {
-      // 其他类型的链接
-      console.log('未处理的链接类型:', href);
-      ToastAndroid.show('未支持的链接类型', ToastAndroid.SHORT);
-    }
   }
 
   const handleLongPress = (key) => {
@@ -219,10 +318,7 @@ const Thread = () => {
   if (!pageData) {
     return null
   }
-  let firstPost = null;
-  if (!pageData.pagination || pageData.pagination.current === 1) {
-    firstPost = pageData.posts.shift();
-  }
+  const firstPost = pageData.posts.shift();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -231,7 +327,7 @@ const Thread = () => {
       {/* 主要内容区域 */}
       <ScrollView style={styles.scrollView}>
         {/* 帖子标题 */}
-        {firstPost && <View style={styles.postContainer}>
+        <View style={styles.postContainer}>
           <Text style={styles.postTitle}>{pageData?.title}</Text>
 
           {/* 作者信息 */}
@@ -251,23 +347,38 @@ const Thread = () => {
 
           {/* 帖子内容 */}
           <View style={styles.postContent}>
-            {firstPost.content && (
-              <RenderHtml
-                contentWidth={width}
-                source={{ html: decodeHtmlEntity(firstPost.content) }}
-                tagsStyles={htmlStyles}
-                renderersProps={{
-                  a: {
-                    onPress: (event, href) => handleLinkPress(href)
-                  },
-                  img: {
-                    enableExperimentalPercentWidth: true
-                  }
-                }}
-                baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
-                defaultViewProps={{ style: { marginVertical: 8 } }}
-              />
-            )}
+            <WebView
+              originWhitelist={['*']}
+              source={{ 
+                html: generateHtmlContent(firstPost.content),
+                baseUrl: storage.getString('selectedNode')
+              }}
+              style={[styles.webView, { height: webViewHeight }]}
+              scrollEnabled={false}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              onMessage={handleWebViewMessage}
+              onNavigationStateChange={handleNavigationStateChange}
+              onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
+              injectedJavaScript={`
+                (function() {
+                  const height = Math.max(document.body.scrollHeight, document.body.offsetHeight);
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'contentHeight', height }));
+                  
+                  document.addEventListener('click', function(e) {
+                    if(e.target && e.target.tagName === 'A') {
+                      e.preventDefault();
+                      window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                        type: 'linkClicked', 
+                        href: e.target.href,
+                        text: e.target.innerText
+                      }));
+                      return false;
+                    }
+                  }, true);
+                })();
+              `}
+            />
           </View>
 
           {/* 帖子数据 */}
@@ -282,7 +393,7 @@ const Thread = () => {
               <Text style={styles.statText}>89 回复</Text>
             </View>
           </View> */}
-        </View>}
+        </View>
 
         {/* 回复列表 */}
         <FlatList
@@ -326,85 +437,12 @@ const Thread = () => {
   );
 };
 
-// HTML内容样式
-const htmlStyles = {
-  p: {
-    marginVertical: 8,
-  },
-  a: {
-    color: '#2563EB',
-    textDecorationLine: 'none',
-  },
-  img: {
-    marginVertical: 8,
-    maxWidth: '100%',
-    height: 'auto',
-  },
-  blockquote: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#E5E7EB',
-    paddingLeft: 16,
-    marginLeft: 0,
-    color: '#6B7280',
-  },
-  pre: {
-    backgroundColor: '#F3F4F6',
-    padding: 8,
-    borderRadius: 4,
-  },
-  code: {
-    backgroundColor: '#F3F4F6',
-    padding: 2,
-    borderRadius: 4,
-    fontFamily: 'monospace',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 4,
-    marginVertical: 8,
-  },
-  th: {
-    backgroundColor: '#F9FAFB',
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  td: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  // 添加.t_msgfont及其子节点的样式
-  '.t_msgfont': {
-    fontSize: 20,
-    lineHeight: 1.6,
-  },
-  '.t_msgfont td': {
-    fontSize: 20,
-    lineHeight: 1.6,
-  },
-  '.t_msgfont li': {
-    marginLeft: 16, // 对应HTML中的2em
-  },
-  '.t_msgfont a': {
-    color: '#2563EB',
-  },
-  '.t_bigfont': {
-    fontSize: 24,
-    lineHeight: 1.6,
-  },
-  '.t_smallfont': {
-    fontSize: 16,
-    lineHeight: 1.6,
-  },
-  // 添加div样式，因为帖子内容通常在div中
-  div: {
-    marginVertical: 4,
-  },
-};
-
 const styles = StyleSheet.create({
+  webView: {
+    width: '100%',
+    backgroundColor: 'transparent',
+    marginVertical: 8,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',

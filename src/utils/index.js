@@ -1,6 +1,8 @@
 import { MMKV } from 'react-native-mmkv';
 import iconv from 'iconv-lite'
 import CookieManager from '@react-native-cookies/cookies';
+import RNFS from 'react-native-fs';
+import axios from 'axios';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const storage = new MMKV();
@@ -68,3 +70,25 @@ export const decodeHtmlEntity = (html) => {
             return String.fromCharCode(+dec);
         })
 }
+
+const getFileNameFromUrl = (url) => {
+    const regex = /\/([^\/?#]+)(?:[?#]|$)/; // 匹配最后一个斜杠后的字符串
+    const match = url.match(regex);
+    return match?.[1];
+};
+
+export const downloadFile = async (fileUrl) => {
+    let fileName = getFileNameFromUrl(fileUrl);
+    const response = await axios({
+        url: fileUrl,
+        method: 'GET',
+        responseType: 'blob', // 重要
+    });
+    if (!fileName) {
+        const disposition = response.headers['content-disposition'];
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+            fileName = disposition.split('filename=')[1].split(';')[0].replace(/"/g, '') || 'downloadedFile.ext';
+        }
+    }
+    await RNFS.writeFile(`${RNFS.DocumentDirectoryPath}/${fileName}`, response.data, 'base64');
+};

@@ -134,7 +134,7 @@ export default {
             dl.profile{$profile|split(' ')|compact}
         }
         >table[id=$pid|replace(/\\D/g,'')];
-        .postcontent .postinfo strong{$floor}
+        .postcontent .postinfo strong{$floor|replace(/\\D/g,'')|Number}
         .postcontent .postinfo{$date|match(/(\d{4}.*\d{2})/)|first}
         .postcontent .postmessage .t_msgfont{html($content)}
     };

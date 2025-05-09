@@ -109,7 +109,7 @@ export const getThreadPage = async (href) => {
     }
     try {
         const res = await http.get(href, { selector: selectors.thread })
-        const { title, breadcrumb, pagination } = res.data
+        const { title, breadcrumb, posts, pagination } = res.data
         const newData = {
             ...res.data,
             title: title.replace(title_regex, '$1'),
@@ -117,6 +117,14 @@ export const getThreadPage = async (href) => {
                 ...item,
                 name: item.name.replace(title_regex, '$1'),
             })),
+            posts: posts.map(item => {
+                return {
+                    ...item,
+                    content: item.content
+                        .replace(/[\t]/g, ``)
+                        .replace(/(\S)(<br>)(\S)/g, "$1$3"),
+                }
+            }),
         }
         if (pagination) {
             newData.pagination = {
