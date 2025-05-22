@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -31,9 +31,10 @@ const Thread = () => {
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [longPressKey, setLongPressKey] = useState(null);
   const [pageData, setPageData] = useState(null);
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [currentImage, setCurrentImage] = useState('');
+  const scrollViewRef = useRef(null);
 
   useFocusEffect(useCallback(() => {
     // renderPage(route.params.href)
@@ -105,19 +106,22 @@ const Thread = () => {
   })
 
   const renderPage = useCallback((href) => {
-    showLoading()
-    getThreadPage(href).then(data => {
-      console.log(data);
-      setPageData(data);
-      const { pagination } = data
-      if (pagination) {
-        ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
-      }
-    }).catch(error => {
-      console.log(error);
-    }).finally(() => {
-      hideLoading();
-    });
+    return new Promise((resolve, reject) => {
+      showLoading()
+      getThreadPage(href).then(data => {
+        console.log(data);
+        setPageData(data);
+        const { pagination } = data
+        if (pagination) {
+          ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+        }
+      }).catch(error => {
+        console.log(error);
+      }).finally(() => {
+        hideLoading();
+        resolve();
+      });
+    })
   })
 
   const actionSheetOptions = [
@@ -126,11 +130,14 @@ const Thread = () => {
   ];
 
   const handleActionSheetItemPress = async (action) => {
+    console.log('longPressKey', longPressKey);
+    console.log('action', action);
     if (action === 'searchByUid') {
     } else if (action === 'reply') {
 
     }
     setLongPressKey(null)
+    setActionSheetVisible(false);
   }
 
   const handleLinkPress = (href) => {
@@ -178,7 +185,9 @@ const Thread = () => {
     const { current, siblings } = pageData.pagination;
     siblings.forEach((item) => {
       if (item.page === current - 1) {
-        renderPage(item.href)
+        renderPage(item.href).then(() => {
+          scrollViewRef.current.scrollTo({ y: 0, animated: true });
+        })
       }
     })
   }
@@ -188,33 +197,52 @@ const Thread = () => {
     const { current, siblings } = pageData.pagination;
     siblings.forEach((item) => {
       if (item.page === current + 1) {
-        renderPage(item.href)
+        renderPage(item.href).then(() => {
+          scrollViewRef.current.scrollTo({ y: 0, animated: true });
+        })
       }
     })
   }
 
-  const renderReplyItem = ({ item, index }) => (
+  const renderReplyItem = ({ item }) => (
     <Pressable onLongPress={() => handleLongPress(item)} style={styles.replyItem}>
       <View style={styles.replyContent}>
-        <Image source={{ uri: item.avatar }} style={styles.replyAvatar} />
+        <Image source={{ uri: item.author.avatar }} style={styles.replyAvatar} />
         <View style={styles.replyBody}>
           <View style={styles.replyHeader}>
             <View style={styles.replyUserInfo}>
-              <Text style={styles.replyUsername}>{item.username}</Text>
+              <Text style={styles.replyUsername}>{item.author.name}</Text>
               <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>{item.level}</Text>
+                <Text style={styles.levelText}>{item.author.level}</Text>
               </View>
             </View>
-            <Text style={styles.replyNumber}>#{index + 1}</Text>
+            <Text style={styles.replyNumber}>#{item.floor}</Text>
           </View>
-          <Text style={styles.replyText}>{item.content}</Text>
+          {/* <Text style={styles.replyText}>{item.content}</Text> */}
+          <RenderHtml
+            contentWidth={width}
+            source={{ html: decodeHtmlEntity(item.content) }}
+            tagsStyles={htmlStyles}
+            renderersProps={{
+              a: {
+                onPress: (event, href) => handleLinkPress(href)
+              },
+              img: {
+                enableExperimentalPercentWidth: true,
+                computeImagesMaxWidth: 150,
+                onPress: (event, src) => {
+                  if (src.startsWith('attachments/')) {
+                    handleLinkPress(src);
+                  }
+                }
+              }
+            }}
+            baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
+            defaultViewProps={{ style: { marginVertical: 8 } }}
+          />
           <View style={styles.replyFooter}>
-            <Text style={styles.replyTime}>{item.time}</Text>
+            <Text style={styles.replyTime}>{item.date}</Text>
             <View style={styles.replyActions}>
-              <Pressable style={styles.replyAction}>
-                <Icon name="thumbs-o-up" size={14} color="#6B7280" style={styles.actionIcon} />
-                <Text style={styles.actionText}>{item.likes}</Text>
-              </Pressable>
               <Pressable style={styles.replyAction}>
                 <Icon name="comment-o" size={14} color="#6B7280" style={styles.actionIcon} />
                 <Text style={styles.actionText}>回复</Text>
@@ -230,14 +258,14 @@ const Thread = () => {
   }
   let firstPost = pageData.posts.filter(post => post.floor === 1)[0];
   const imageAttachments = firstPost?.attachments.filter(item => item.icon.includes('image.gif'));
-  console.log('firstPost', firstPost);
+  const repliesList = pageData.posts.filter(post => post.floor > 1);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
       {/* 主要内容区域 */}
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} ref={view => scrollViewRef.current = view}>
         {/* 帖子标题 */}
         {firstPost && <View style={styles.postContainer}>
           {/* <Text style={styles.postTitle}>{pageData?.title}</Text> */}
@@ -259,34 +287,32 @@ const Thread = () => {
 
           {/* 帖子内容 */}
           <View style={styles.postContent}>
-            {firstPost.content && (
-              <RenderHtml
-                contentWidth={width}
-                source={{ html: decodeHtmlEntity(firstPost.content) }}
-                tagsStyles={htmlStyles}
-                customHTMLElementModels={{
-                  // fieldset: HTMLElementModel.fromCustomModel({
-                  //   contentModel: HTMLContentModel.block
-                  // }),
-                }}
-                renderersProps={{
-                  a: {
-                    onPress: (event, href) => handleLinkPress(href)
-                  },
-                  img: {
-                    enableExperimentalPercentWidth: true,
-                    computeImagesMaxWidth: 150,
-                    onPress: (event, src) => {
-                      if (src.startsWith('attachments/')) {
-                        handleLinkPress(src);
-                      }
+            <RenderHtml
+              contentWidth={width}
+              source={{ html: decodeHtmlEntity(firstPost.content) }}
+              tagsStyles={htmlStyles}
+              customHTMLElementModels={{
+                // fieldset: HTMLElementModel.fromCustomModel({
+                //   contentModel: HTMLContentModel.block
+                // }),
+              }}
+              renderersProps={{
+                a: {
+                  onPress: (event, href) => handleLinkPress(href)
+                },
+                img: {
+                  enableExperimentalPercentWidth: true,
+                  computeImagesMaxWidth: 150,
+                  onPress: (event, src) => {
+                    if (src.startsWith('attachments/')) {
+                      handleLinkPress(src);
                     }
                   }
-                }}
-                baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
-                defaultViewProps={{ style: { marginVertical: 8 } }}
-              />
-            )}
+                }
+              }}
+              baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
+              defaultViewProps={{ style: { marginVertical: 8 } }}
+            />
           </View>
           {firstPost?.attachments && firstPost.attachments.length > 0 && (
             <View style={styles.attachmentContainer}>
@@ -333,7 +359,7 @@ const Thread = () => {
                 renderItem={({ item }) => (
                   <Pressable
                     style={styles.attachmentItem}
-                    onPress={() => handleLinkPress(item.url || item.link)}
+                    onPress={() => downloadFile(item.url || item.link, item.name)}
                   >
                     <View style={styles.attachmentIconContainer}>
                       {item.icon.includes('zip.gif') ? (
@@ -355,7 +381,6 @@ const Thread = () => {
               />
             </View>
           )}
-
           {firstPost?.legend && firstPost.legend.length > 0 && (
             <View style={styles.rateContainer}>
               <Text style={styles.rateTitle}>评分</Text>
@@ -368,29 +393,31 @@ const Thread = () => {
             </View>
           )}
           {/* 帖子数据 */}
-          {/* <View style={styles.postStats}>
-            <View style={styles.statItem}>
-              <Icon name="eye-slash" size={14} color="#6B7280" style={styles.statIcon} />
-              <Text style={styles.statText}>1,234 浏览</Text>
-            </View>
-            <Text style={styles.statDivider}>|</Text>
+          <View style={styles.postStats}>
+            {firstPost?.thanks > 0 && <>
+              <View style={styles.statItem}>
+                <Icon name="heart" size={12} color="#FF0000" style={styles.statIcon} />
+                <Text style={styles.statText}>{firstPost?.thanks} 感谢</Text>
+              </View>
+              <Text style={styles.statDivider}>|</Text>
+            </>}
             <View style={styles.statItem}>
               <Icon name="comment-o" size={14} color="#6B7280" style={styles.statIcon} />
-              <Text style={styles.statText}>89 回复</Text>
+              <Text style={styles.statText}>{(pageData?.pagination?.total || pageData.posts.length) - 1} 回复</Text>
             </View>
-          </View> */}
+          </View>
         </View>}
 
         {/* 回复列表 */}
         <FlatList
-          data={[]}
+          data={repliesList}
           renderItem={renderReplyItem}
-          keyExtractor={(item, index) => index.toString()}
+          keyExtractor={(item) => item.pid}
           scrollEnabled={false}
           style={styles.repliesList}
         />
 
-        {pageData?.pagination && <View style={styles.pageContainer}>
+        {pageData.pagination && <View style={styles.pageContainer}>
           <Text style={styles.pageCount}>{pageData.pagination.current} / {pageData.pagination.last}</Text>
         </View>}
       </ScrollView>
@@ -594,7 +621,6 @@ const styles = StyleSheet.create({
   },
   // 附件样式
   attachmentContainer: {
-    marginTop: 16,
     padding: 12,
     backgroundColor: '#F9FAFB',
     borderRadius: 8,
@@ -697,6 +723,7 @@ const styles = StyleSheet.create({
   navbarRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingRight: 12,
   },
   starButton: {
     width: 32,
@@ -704,7 +731,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: 4,
   },
   messageButton: {
     position: 'relative',
@@ -713,7 +740,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: 4,
   },
   messageBage: {
     position: 'absolute',
@@ -778,12 +805,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   postContent: {
-    marginTop: 16,
   },
   postStats: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 12,
   },
   statItem: {
     flexDirection: 'row',
@@ -861,7 +888,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
   },
   replyTime: {
     fontSize: 14,

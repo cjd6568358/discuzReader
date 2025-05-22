@@ -141,9 +141,10 @@ export const getThreadPage = async (href) => {
             }),
         }
         if (pagination) {
+            const { current, last, siblings } = pagination
             newData.pagination = {
                 ...pagination,
-                last: pagination.last || pagination.siblings.at(-1)?.page,
+                last: last || Math.max(siblings.at(-1)?.page, current),
             }
         }
         // redirect.php?tid=6379736(&goto=lastpost(#pid110991881)) 不参与缓存 
