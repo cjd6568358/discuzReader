@@ -13,8 +13,10 @@ import {
   Alert,
   ToastAndroid,
   useWindowDimensions,
+  Modal,
 } from 'react-native';
-import RenderHtml from 'react-native-render-html';
+import Swiper from 'react-native-swiper';
+import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Pagination from '../components/Pagination';
@@ -29,11 +31,13 @@ const Thread = () => {
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [longPressKey, setLongPressKey] = useState(null);
   const [pageData, setPageData] = useState(null);
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [currentImage, setCurrentImage] = useState('');
 
   useFocusEffect(useCallback(() => {
     // renderPage(route.params.href)
-    renderPage('thread-11332239-1-1.html')
+    renderPage('thread-9831798-1-2.html')
   }, []))
 
   useEffect(() => {
@@ -130,12 +134,17 @@ const Thread = () => {
   }
 
   const handleLinkPress = (href) => {
-    if (href.startsWith('thread-') || href.startsWith('viewthread') || href.startsWith('redirect.php?tid=')) {
+    console.log('handleLinkPress', href);
+    if (href.includes('thread-') || href.includes('viewthread') || href.includes('redirect.php?tid=')) {
       navigation.navigate('Thread', { href });
-    } else if (href.startsWith('forum-') || href.startsWith('forumdisplay')) {
+    } else if (href.includes('forum-') || href.includes('forumdisplay')) {
       navigation.navigate('Forum', { href });
-    } else if (href.startsWith('attachment.php')) {
-      downloadFile(href)
+    } else if (href.includes('attachment.php')) {
+      downloadFile(href);
+    } else if (/\.(png|jpg|jpeg|gif|jpeg|webp)$/.test(href)) {
+      // 处理附件图片点击，查看大图
+      setCurrentImage(href);
+      setImageViewerVisible(true);
     } else {
       // 其他类型的链接
       console.log('未处理的链接类型:', href);
@@ -219,10 +228,9 @@ const Thread = () => {
   if (!pageData) {
     return null
   }
-  let firstPost = null;
-  if (!pageData.pagination || pageData.pagination.current === 1) {
-    firstPost = pageData.posts.shift();
-  }
+  let firstPost = pageData.posts.filter(post => post.floor === 1)[0];
+  const imageAttachments = firstPost?.attachments.filter(item => item.icon.includes('image.gif'));
+  console.log('firstPost', firstPost);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -232,7 +240,7 @@ const Thread = () => {
       <ScrollView style={styles.scrollView}>
         {/* 帖子标题 */}
         {firstPost && <View style={styles.postContainer}>
-          <Text style={styles.postTitle}>{pageData?.title}</Text>
+          {/* <Text style={styles.postTitle}>{pageData?.title}</Text> */}
 
           {/* 作者信息 */}
           <View style={styles.authorContainer}>
@@ -256,12 +264,23 @@ const Thread = () => {
                 contentWidth={width}
                 source={{ html: decodeHtmlEntity(firstPost.content) }}
                 tagsStyles={htmlStyles}
+                customHTMLElementModels={{
+                  // fieldset: HTMLElementModel.fromCustomModel({
+                  //   contentModel: HTMLContentModel.block
+                  // }),
+                }}
                 renderersProps={{
                   a: {
                     onPress: (event, href) => handleLinkPress(href)
                   },
                   img: {
-                    enableExperimentalPercentWidth: true
+                    enableExperimentalPercentWidth: true,
+                    computeImagesMaxWidth: 150,
+                    onPress: (event, src) => {
+                      if (src.startsWith('attachments/')) {
+                        handleLinkPress(src);
+                      }
+                    }
                   }
                 }}
                 baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
@@ -269,7 +288,85 @@ const Thread = () => {
               />
             )}
           </View>
+          {firstPost?.attachments && firstPost.attachments.length > 0 && (
+            <View style={styles.attachmentContainer}>
+              <Text style={styles.attachmentTitle}>附件</Text>
 
+              {/* 图片附件轮播图 */}
+              {imageAttachments.length > 0 && (
+                <View style={styles.imageCarouselContainer}>
+                  <Swiper
+                    height={240}
+                    loop={true}
+                    autoplay={false}
+                    autoplayTimeout={4}
+                    showsButtons={false}
+                    paginationStyle={styles.swiperPagination}
+                    dotStyle={styles.swiperDot}
+                    activeDotStyle={styles.swiperActiveDot}
+                  >
+                    {imageAttachments.map((item, index) => (
+                      <Pressable
+                        key={index}
+                        style={styles.imageSlide}
+                        onPress={() => handleLinkPress(item.url || item.link)}
+                        onLongPress={() => downloadFile(item.url || item.link)}
+                      >
+                        <Image
+                          source={{ uri: item.url || item.link }}
+                          style={styles.carouselImage}
+                          resizeMode="cover"
+                        />
+                        <Text style={styles.imageCaption} numberOfLines={1}>{item.name}</Text>
+                      </Pressable>
+                    ))
+                    }
+                  </Swiper>
+                </View>
+              )}
+
+              {/* 非图片附件列表 */}
+              <FlatList
+                data={firstPost.attachments.filter(item => !item.icon.includes('image.gif'))}
+                keyExtractor={(item) => item.name}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.attachmentItem}
+                    onPress={() => handleLinkPress(item.url || item.link)}
+                  >
+                    <View style={styles.attachmentIconContainer}>
+                      {item.icon.includes('zip.gif') ? (
+                        <Icon name="file-archive-o" size={20} color="#D97706" />
+                      ) : (
+                        <Icon name="file-o" size={20} color="#6B7280" />
+                      )}
+                    </View>
+                    <View style={styles.attachmentInfo}>
+                      <Text style={styles.attachmentName} numberOfLines={1}>{item.name}</Text>
+                      <View style={styles.attachmentMeta}>
+                        <Text style={styles.attachmentSize}>{item.size}</Text>
+                        <Text style={styles.attachmentDate}>{item.date}</Text>
+                      </View>
+                    </View>
+                    {item.icon.includes('zip.gif') && <Icon name="download" size={16} color="#6B7280" />}
+                  </Pressable>
+                )}
+              />
+            </View>
+          )}
+
+          {firstPost?.legend && firstPost.legend.length > 0 && (
+            <View style={styles.rateContainer}>
+              <Text style={styles.rateTitle}>评分</Text>
+              {firstPost.legend.map((item, index) => (
+                <View key={index} style={styles.rateItem}>
+                  <Icon name="trophy" size={14} color="#f7ba2a" style={styles.rateIcon} />
+                  <Text style={styles.rateText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          )}
           {/* 帖子数据 */}
           {/* <View style={styles.postStats}>
             <View style={styles.statItem}>
@@ -322,6 +419,26 @@ const Thread = () => {
         onClose={() => setActionSheetVisible(false)}
         cancelText="取消"
       />
+
+      {/* 图片查看器 */}
+      <Modal
+        visible={imageViewerVisible}
+        transparent={true}
+        onRequestClose={() => setImageViewerVisible(false)}
+      >
+        <View style={styles.imageViewerContainer}>
+          <Pressable
+            style={styles.imageMask}
+            onPress={() => setImageViewerVisible(false)}
+          >
+          </Pressable>
+          <Image
+            source={{ uri: currentImage }}
+            style={styles.imageViewerImage}
+            resizeMode="contain"
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -338,7 +455,9 @@ const htmlStyles = {
   img: {
     marginVertical: 8,
     maxWidth: '100%',
+    width: 'auto',
     height: 'auto',
+    alignSelf: 'flex-start',
   },
   blockquote: {
     borderLeftWidth: 4,
@@ -408,6 +527,151 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  imageViewerContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerImage: {
+    width: '100%',
+    height: '80%',
+  },
+  imageMask: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: '100%',
+    height: '100%',
+  },
+  // 图片轮播样式
+  imageCarouselContainer: {
+    marginBottom: 10,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+  },
+  imageSlide: {
+    height: 240,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  carouselImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageCaption: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    color: '#FFFFFF',
+    fontSize: 12,
+    padding: 4,
+    textAlign: 'center',
+  },
+  swiperPagination: {
+    bottom: 5,
+  },
+  swiperDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    marginLeft: 3,
+    marginRight: 3,
+  },
+  swiperActiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    marginLeft: 3,
+    marginRight: 3,
+  },
+  // 附件样式
+  attachmentContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  attachmentTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  attachmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  attachmentIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  attachmentInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  attachmentName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  attachmentMeta: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  attachmentSize: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginRight: 8,
+  },
+  attachmentDate: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  // 评分样式
+  rateContainer: {
+    marginTop: 16,
+    padding: 6,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  rateTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  rateItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  rateIcon: {
+    marginRight: 8,
+  },
+  rateText: {
+    fontSize: 12,
+    color: '#4B5563',
+    flex: 1,
   },
   navTitleContainer: {
     flex: 1,
@@ -585,6 +849,7 @@ const styles = StyleSheet.create({
   replyNumber: {
     fontSize: 14,
     color: '#6B7280',
+    marginLeft: "auto"
   },
   replyText: {
     fontSize: 15,

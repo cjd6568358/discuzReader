@@ -1,6 +1,6 @@
 import http from './http';
 import selectors from './selectors';
-import { MMStore } from './index';
+import { MMStore, storage } from './index';
 
 const title_regex = new RegExp('^.*?\\|\\s*(.*?)\\s*$', 'g');
 export const getHomePage = async () => {
@@ -110,6 +110,7 @@ export const getThreadPage = async (href) => {
     try {
         const res = await http.get(href, { selector: selectors.thread })
         const { title, breadcrumb, posts, pagination } = res.data
+        const selectedNode = storage.getString('selectedNode');
         const newData = {
             ...res.data,
             title: title.replace(title_regex, '$1'),
@@ -120,9 +121,22 @@ export const getThreadPage = async (href) => {
             posts: posts.map(item => {
                 return {
                     ...item,
+                    author: {
+                        ...item.author,
+                        avatar: `${selectedNode}/bbs/` + item.author.avatar,
+                    },
                     content: item.content
                         .replace(/[\t]/g, ``)
-                        .replace(/(\S)(<br>)(\S)/g, "$1$3"),
+                        .replace(/(\S)(<br>)(\S)/g, "$1$3")
+                        .replace(/="attachment/g, `="${selectedNode}/bbs/attachment`)
+                        .replace(/="images/g, `="${selectedNode}/bbs/images`)
+                        .replace(/="http:\/\/(.*)\/bbs\//g, `="${selectedNode}/bbs/`),
+                    // 附件
+                    attachments: item.attachments.map(i => ({
+                        ...i,
+                        url: i.url ? `${selectedNode}/bbs/` + i.url : null,
+                        link: i.link ? `${selectedNode}/bbs/` + i.link : null,
+                    })),
                 }
             }),
         }

@@ -135,8 +135,18 @@ export default {
         }
         >table[id=$pid|replace(/\\D/g,'')];
         .postcontent .postinfo strong{$floor|replace(/\\D/g,'')|Number}
-        .postcontent .postinfo{$date|match(/(\d{4}.*\d{2})/)|first}
-        .postcontent .postmessage .t_msgfont{html($content)}
+        .postcontent .postinfo{$date|match(/(\\d{4}.*\\d{2})/)|first}
+        .postcontent>.postmessage>.t_msgfont>.t_msgfont{html($content)}
+        .postcontent>.postmessage>.t_msgfont>.postattachlist .t_attachlist@attachments{
+          dt img[src=$icon];
+          dt a[href=$link]{$name};
+          dt em{$size};
+          dl p:first-child{$date|trim};
+          dl p:last-child img[src=$url];
+        }
+        .postcontent>.postmessage>.t_msgfont>fieldset ul li@legend{
+          &{$|trim|replace(/\\t*/g,'')|replace(/\\n/g,' ')};
+        }
     };
     form+.pages_btns .pages@pagination|pack{
         em{$total|Number};
