@@ -22,7 +22,8 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import Pagination from '../components/Pagination';
 import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
-import { getThreadPage, favoriteAction } from '../utils/api'
+import ReplyModal from '../components/ReplyModal';
+import { getThreadPage, favoriteAction, threadAction, messageAction } from '../utils/api'
 import { MMStore, storage, decodeHtmlEntity, downloadFile } from '../utils/index';
 
 const Thread = () => {
@@ -34,7 +35,10 @@ const Thread = () => {
   const { width } = useWindowDimensions();
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [currentImage, setCurrentImage] = useState('');
+  const [postContent, setPostContent] = useState('');
   const scrollViewRef = useRef(null);
+  const [replyModalVisible, setReplyModalVisible] = useState(false);
+  const [replyTitle, setReplyTitle] = useState('');
 
   useFocusEffect(useCallback(() => {
     // renderPage(route.params.href)
@@ -125,16 +129,18 @@ const Thread = () => {
   })
 
   const actionSheetOptions = [
-    { text: '查看历史发帖', onPress: () => handleActionSheetItemPress('searchByUid') },
-    { text: '回复', destructive: true, onPress: () => handleActionSheetItemPress('reply') },
+    { text: '搜索', onPress: () => handleActionSheetItemPress('search') },
+    { text: '私信', destructive: true, onPress: () => handleActionSheetItemPress('message') },
   ];
 
   const handleActionSheetItemPress = async (action) => {
     console.log('longPressKey', longPressKey);
     console.log('action', action);
-    if (action === 'searchByUid') {
-    } else if (action === 'reply') {
+    if (action === 'search') {
 
+    } else if (action === 'message') {
+      setReplyTitle('私信给:' + longPressKey.author.name);
+      setReplyModalVisible(true);
     }
     setLongPressKey(null)
     setActionSheetVisible(false);
@@ -204,6 +210,19 @@ const Thread = () => {
     })
   }
 
+  const handlePostPress = () => {
+    console.log('handlePostPress');
+    if (!postContent) {
+      ToastAndroid.show('请输入评论内容', ToastAndroid.SHORT);
+      return
+    }
+    threadAction({ action: 'reply', href: pageData.replyUrl, formhash: pageData.formhash, subject: "", message: postContent }).then(() => {
+      ToastAndroid.show('评论成功', ToastAndroid.SHORT);
+      setPostContent('');
+      renderPage(`thread-${pageData.tid}-${pageData.pagination.current}-1.html`)
+    })
+  }
+
   const renderReplyItem = ({ item }) => (
     <Pressable onLongPress={() => handleLongPress(item)} style={styles.replyItem}>
       <View style={styles.replyContent}>
@@ -243,7 +262,10 @@ const Thread = () => {
           <View style={styles.replyFooter}>
             <Text style={styles.replyTime}>{item.date}</Text>
             <View style={styles.replyActions}>
-              <Pressable style={styles.replyAction}>
+              <Pressable style={styles.replyAction} onPress={() => {
+                setReplyTitle(`回复 ${item.floor}楼 的帖子`);
+                setReplyModalVisible(true)
+              }}>
                 <Icon name="comment-o" size={14} color="#6B7280" style={styles.actionIcon} />
                 <Text style={styles.actionText}>回复</Text>
               </Pressable>
@@ -253,6 +275,7 @@ const Thread = () => {
       </View>
     </Pressable>
   );
+
   if (!pageData) {
     return null
   }
@@ -430,9 +453,13 @@ const Thread = () => {
             placeholder="写下你的评论..."
             style={styles.commentInput}
             placeholderTextColor="#9CA3AF"
+            value={postContent}
+            onChangeText={setPostContent}
+            multiline={true}
+            numberOfLines={4}
           />
         </View>
-        <Pressable style={styles.sendButton}>
+        <Pressable style={styles.sendButton} onPress={handlePostPress}>
           <Text style={styles.sendButtonText}>发送</Text>
         </Pressable>
       </View>
@@ -466,6 +493,33 @@ const Thread = () => {
           />
         </View>
       </Modal>
+      {/* 回复模态框 */}
+      <ReplyModal
+        visible={replyModalVisible}
+        onClose={() => setReplyModalVisible(false)}
+        onSend={(content) => {
+          if (!content) {
+            ToastAndroid.show('内容不能为空', ToastAndroid.SHORT);
+            return
+          }
+          // 这里处理发送回复的逻辑
+          if (/回复\s\d+楼\s的帖子/.test(replyTitle)) {
+            threadAction({ action: 'reply', href: pageData.replyUrl, formhash: pageData.formhash, subject: "", message: content }).then(() => {
+              ToastAndroid.show('回复成功', ToastAndroid.SHORT);
+              setReplyTitle('');
+              renderPage(`thread-${pageData.tid}-${pageData.pagination.current}-1.html`)
+            })
+          } else {
+            // 私信
+            const msgto = replyTitle.split('私信给:')[1];
+            messageAction({ action: 'send', data: { formhash: '24cbfa84', pmsubmit: '24cbfa84', msgto, subject: '', message: content } }).then(() => {
+              ToastAndroid.show('发送成功', ToastAndroid.SHORT);
+              setReplyTitle('');
+            })
+          }
+        }}
+        title={replyTitle}
+      />
     </SafeAreaView>
   );
 };

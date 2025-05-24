@@ -46,7 +46,7 @@ export const getPMPage = async () => {
     }
 }
 
-export const postMessageAction = async (action = 'view', id) => {
+export const messageAction = async ({ action = 'view', id, data }) => {
     try {
         if (action === 'view') {
             const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}&inajax=1`)
@@ -59,12 +59,12 @@ export const postMessageAction = async (action = 'view', id) => {
             }
         } else if (action === 'markunread') {
             const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}`)
-        } else if (action === 'reply') {
-            const res = await http.get(`pm.php?action=send&do=${action}&pmid=${id}`)
+        } else if (action === 'send') {
+            const res = await http.post(`pm.php?action=send&inajax=1`, data)
         }
 
     } catch (error) {
-        console.log('getPostMessageContent', error);
+        console.log('messageAction', error);
     }
 }
 
@@ -158,6 +158,14 @@ export const getThreadPage = async (href) => {
         }
     } catch (error) {
         console.log('getForumPage', error);
+    }
+}
+
+export const threadAction = async ({ action, href, formhash, subject, message }) => {
+    if (action === 'reply') {
+        await http.post(href, { formhash, subject, message })
+    } else if (action === 'create') {
+        await http.post(href, { formhash, delete: true })
     }
 }
 

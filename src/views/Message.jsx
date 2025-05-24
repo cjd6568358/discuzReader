@@ -11,8 +11,9 @@ import {
 import Icon from 'react-native-vector-icons/FontAwesome';
 import TabBar from '../components/TabBar';
 import ActionSheet from '../components/ActionSheet';
+import ReplyModal from '../components/ReplyModal';
 import { useLoading } from '../components/Loading';
-import { getPMPage, postMessageAction } from '../utils/api';
+import { getPMPage, messageAction } from '../utils/api';
 
 const MessageView = () => {
   const { showLoading, hideLoading } = useLoading();
@@ -21,6 +22,8 @@ const MessageView = () => {
   const [batchMode, setBatchMode] = useState(false)
   const [messages, setMessages] = useState([]);
   const [longPressKey, setLongPressKey] = useState(null);
+  const [replyModalVisible, setReplyModalVisible] = useState(false);
+  const [replyTitle, setReplyTitle] = useState('');
   const actionSheetOptions = [
     { text: '回复', onPress: () => handleActionSheetItemPress('reply') },
     { text: '标为未读', onPress: () => handleActionSheetItemPress('markunread') },
@@ -56,7 +59,7 @@ const MessageView = () => {
 
   const deleteSelected = async () => {
     if (selectedMessages.length === 0) return;
-    await postMessageAction('batchdelete', selectedMessages.map(index => messages[index].id));
+    await messageAction({ action: 'batchdelete', id: selectedMessages.map(index => messages[index].id) });
     setMessages(prev => {
       const newMessages = [...prev];
       selectedMessages.sort((a, b) => b - a).forEach(index => {
@@ -81,7 +84,7 @@ const MessageView = () => {
       });
     } else {
       showLoading()
-      postMessageAction('view', messages[index].id).then(content => {
+      messageAction({ action: 'view', id: messages[index].id }).then(content => {
         setMessages(prev => {
           const newMessages = [...prev];
           newMessages[index].expanded = !newMessages[index].expanded;
@@ -102,7 +105,7 @@ const MessageView = () => {
     if (action === 'batchDelete') {
       setBatchMode(true);
     } else if (action === 'delete') {
-      await postMessageAction('delete', longPressKey);
+      await messageAction({ action: 'delete', id: longPressKey });
       setMessages(prev => {
         const newMessages = [...prev];
         const index = newMessages.findIndex(item => item.id === key);
@@ -112,7 +115,7 @@ const MessageView = () => {
         return newMessages;
       });
     } else if (action === 'markunread') {
-      await postMessageAction('markunread', longPressKey);
+      await messageAction({ action: 'markunread', id: longPressKey });
       setMessages(prev => {
         const newMessages = [...prev];
         const index = newMessages.findIndex(item => item.id === key);
@@ -120,9 +123,15 @@ const MessageView = () => {
         return newMessages;
       });
     } else if (action === 'reply') {
-      console.log('回复')
+      const messageIndex = messages.findIndex(item => item.id === longPressKey);
+      if (messageIndex !== -1) {
+        setReplyTitle('Re: ' + messages[messageIndex].title);
+        setReplyModalVisible(true);
+      }
     }
-    setLongPressKey(null)
+    if (action !== 'reply') {
+      setLongPressKey(null)
+    }
   }
 
   const renderMessageItem = ({ item, index }) => (
@@ -209,6 +218,20 @@ const MessageView = () => {
         options={actionSheetOptions}
         onClose={() => setActionSheetVisible(false)}
         cancelText="取消"
+      />
+      {/* 回复模态框 */}
+      <ReplyModal
+        visible={replyModalVisible}
+        onClose={() => { setReplyModalVisible(false); setLongPressKey(null) }}
+        onSend={(content) => {
+          // 这里处理发送回复的逻辑
+          const messageIndex = messages.findIndex(item => item.id === longPressKey);
+          if (messageIndex !== -1) {
+            messageAction({ action: 'send', data: { formhash: '24cbfa84', pmsubmit: '24cbfa84', msgto: messages[messageIndex].from, subject: replyTitle, message: content } });
+          }
+        }}
+        title={replyTitle}
+        placeholder="请输入回复内容"
       />
       {/* 底部导航栏 */}
       <TabBar currentTab="Message" />

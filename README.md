@@ -13,5 +13,5 @@ index
 ### TODO
 [x]Profile板块支持定制顺序和隐藏
 [x]LoginScreen支持找回密码，注册
-[x]MessageScreen支持回复
 [x]Tabbar的Navigation导航有问题。需要支持默认打开主题，后退没有堆栈记录时跳转到首页
+[x]Home支持跳转到搜索
