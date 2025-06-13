@@ -27,7 +27,7 @@ const MessageView = () => {
   const actionSheetOptions = [
     { text: '回复', onPress: () => handleActionSheetItemPress('reply') },
     { text: '标为未读', onPress: () => handleActionSheetItemPress('markunread') },
-    { text: '删除', destructive: true, onPress: handleActionSheetItemPress('delete') },
+    { text: '删除', destructive: true, onPress: () => handleActionSheetItemPress('delete') },
     { text: '批量删除', destructive: true, onPress: () => handleActionSheetItemPress('batchDelete') }
   ];
 
