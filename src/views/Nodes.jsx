@@ -21,7 +21,7 @@ import http from '../utils/http';
 
 const NodesView = () => {
     const navigation = useNavigation();
-    const [url, setUrl] = useState('https://1s2s3s.com/');
+    const [url, setUrl] = useState('https://1g2g3g.com/');
     const [nodes, setNodes] = useState(() => {
         const storedNodes = storage.getString('nodes');
         return storedNodes ? JSON.parse(storedNodes) : [];

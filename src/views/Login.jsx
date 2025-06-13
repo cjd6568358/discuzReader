@@ -16,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import http from '../utils/http';
 import { storage } from '../utils/index'
+import selectors from '../utils/selectors';
 
 const LoginView = () => {
   const navigation = useNavigation();
