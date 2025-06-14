@@ -41,8 +41,7 @@ const Thread = () => {
   const [replyTitle, setReplyTitle] = useState('');
 
   useFocusEffect(useCallback(() => {
-    // renderPage(route.params.href)
-    renderPage('thread-9831798-1-2.html')
+    renderPage(route.params.href)
   }, []))
 
   useEffect(() => {

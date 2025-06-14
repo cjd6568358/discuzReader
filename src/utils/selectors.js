@@ -58,13 +58,14 @@ export default {
     forum: `
     input[name=formhash][value=$formhash];
     #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
-    .mainbox.threadlist h1 a{$title};
+    title{$title|split(' - ')|slice(0,1)|first};
     #newpmnum{$newMessage|Number};
     #nav p:first-child a@breadcrumb{
         &[href=$href]{$name}
     };
     #ajax_favorite[href=$favorite_href];
     #ajax_favorite[href=$fid|replace(/\\D/g,'')|Number];
+    #newspecial a[href=$new_special];
     .mainbox.threadlist+.pages_btns .pages@pagination|pack{
         em{$total|Number};
         strong{$current|Number};
@@ -157,6 +158,20 @@ export default {
             &[href=$href]{$page|Number}
         }
     }
+    `,
+    post: `
+    input[name=formhash][value=$formhash];
+    #newpost thead+tbody tr:has(.altbg1)@extra_params{
+    td[class=altbg1]{$label}
+    td[class=altbg2] input[name=$field];
+    td[class=altbg2] select option@options{
+        &[value=$value|trim]{$label|trim}
+        };
+    }
+    #newpost tbody tr select[name=typeid] option@type_options{
+        &[value=$value|trim]{$label|trim}
+    }
+    #fastUploadFlashBody+tbody{$uploadLimits|trim|split(/\\n|\\t/)|compact}
     `,
     my: `
     .credits_info ul>li@creditList{

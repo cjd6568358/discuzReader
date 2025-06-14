@@ -134,7 +134,7 @@ const ForumView = ({ route }) => {
   })
 
   const renderHeader = useCallback(() => {
-    const isFavorite = MMStore.favorites.forums.includes(pageData.fid);
+    // const isFavorite = MMStore.favorites.forums.includes(pageData.fid);
     navigation.setOptions({
       headerTitle: () => <View style={styles.breadcrumb}>
         {
@@ -149,12 +149,15 @@ const ForumView = ({ route }) => {
       </View>,
       headerRight: () => (
         <View style={styles.navbarRight}>
-          <Pressable style={styles.starButton} onPress={toggleFavorite}>
+          {/* <Pressable style={styles.starButton} onPress={toggleFavorite}>
             <Icon name={isFavorite ? "star" : "star-o"} size={18} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
-          </Pressable>
+          </Pressable> */}
           <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Message')}>
             <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
             {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
+          </Pressable>
+          <Pressable style={styles.newSpecialButton} onPress={() => navigation.navigate('Post', { href: pageData.new_special })}>
+            <Icon name="file-text-o" size={18} color="#9CA3AF" />
           </Pressable>
         </View>
       ),
@@ -344,6 +347,9 @@ const styles = StyleSheet.create({
   navbarRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
+    width: 90,
+    gap: 8,
   },
   starButton: {
     width: 32,
@@ -351,7 +357,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
   },
   messageButton: {
     position: 'relative',
@@ -370,6 +375,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 4,
     backgroundColor: 'red'
+  },
+  newSpecialButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,

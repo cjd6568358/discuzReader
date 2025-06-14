@@ -161,6 +161,21 @@ export const getThreadPage = async (href) => {
     }
 }
 
+export const getPostPage = async (href) => {
+    try {
+        const res = await http.get(href, { selector: selectors.post })
+        return {
+            ...res.data,
+            uploadLimits: {
+                size: +res.data.uploadLimits[0].replace(/\D/g, ''),
+                type: res.data.uploadLimits[1].replace('可用扩展名: ', ''),
+            },
+        }
+    } catch (error) {
+        console.log('getPostPage', error);
+    }
+}
+
 export const threadAction = async ({ action, href, formhash, subject, message }) => {
     if (action === 'reply') {
         await http.post(href, { formhash, subject, message })
