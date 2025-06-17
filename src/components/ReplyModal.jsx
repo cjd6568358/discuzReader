@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: '80%',
+    height: 200,
     width: '100%',
   },
   navbar: {
@@ -166,7 +166,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
-    maxHeight: 300,
   },
   editorContainer: {
     backgroundColor: '#F9FAFB',

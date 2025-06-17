@@ -63,6 +63,10 @@ export const messageAction = async ({ action = 'view', id, data }) => {
             const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}`)
         } else if (action === 'send') {
             const res = await http.post(`pm.php?action=send&inajax=1`, data)
+        } else if (action === 'reply') {
+            http.get(`pm.php?action=send&pmid=${data.pmid}&do=reply`, { selector: selectors.reply }).then(res => {
+                http.post(`pm.php?action=send&pmsubmit=yes`, { ...data, formhash: res.data.formhash })
+            })
         }
 
     } catch (error) {

@@ -48,6 +48,9 @@ export default {
         td:nth-child(4){$date};
     }
     `,
+    reply:`
+    input[name=formhash][value=$formhash];
+    `,
     favorites: `
     input[name=formhash][value=$formhash];
     #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};

@@ -257,12 +257,16 @@ const Thread = ({ route }) => {
             tagsStyles={htmlStyles}
             renderersProps={{
               a: {
-                onPress: (event, href) => handleLinkPress(href)
+                onPress: (event, href) => {
+                  console.log('a onPress', src)
+                  handleLinkPress(href)
+                }
               },
               img: {
                 enableExperimentalPercentWidth: true,
                 computeImagesMaxWidth: 150,
                 onPress: (event, src) => {
+                  console.log('img onPress', src)
                   if (src.startsWith('attachments/')) {
                     handleLinkPress(src);
                   }
@@ -340,6 +344,7 @@ const Thread = ({ route }) => {
                   enableExperimentalPercentWidth: true,
                   computeImagesMaxWidth: 150,
                   onPress: (event, src) => {
+                    console.log('img onPress', src)
                     if (src.startsWith('attachments/')) {
                       handleLinkPress(src);
                     }
@@ -525,7 +530,7 @@ const Thread = ({ route }) => {
           } else {
             // 私信
             const msgto = replyTitle.split('私信给:')[1];
-            messageAction({ action: 'send', data: { formhash: '24cbfa84', pmsubmit: '24cbfa84', msgto, subject: '', message: content } }).then(() => {
+            messageAction({ action: 'send', data: { formhash: pageData.formhash, pmsubmit: pageData.formhash, msgto, subject: '', message: content } }).then(() => {
               ToastAndroid.show('发送成功', ToastAndroid.SHORT);
               setReplyTitle('');
             })

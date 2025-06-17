@@ -187,10 +187,10 @@ const LoginView = () => {
             <Text style={styles.loginButtonText}>登 录</Text>
           </Pressable>
 
-          <View style={styles.linksContainer}>
+          {/* <View style={styles.linksContainer}>
             <Text style={styles.forgotPasswordText}>忘记密码？</Text>
             <Text style={styles.registerText}>注册新账号</Text>
-          </View>
+          </View> */}
         </View>
       </ScrollView>
     </SafeAreaView>

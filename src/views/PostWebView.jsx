@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar, Pressable, ToastAndroid } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, StatusBar, Pressable } from 'react-native';
 import { WebView } from 'react-native-webview';
 import CookieManager from '@react-native-cookies/cookies';
 import { useNavigation } from '@react-navigation/native';
@@ -10,31 +10,10 @@ const PostScreen = ({ route }) => {
   const { showLoading, hideLoading } = useLoading();
   const [selectedNode] = useState(() => storage.getString('selectedNode'));
   const [cookies, setCookies] = useState({});
-  const [userKeys] = useState(() => {
-    let keyStr = storage.getString('userKeys');
-    if (keyStr) {
-      return {
-        username: '',
-        password: '',
-        questionid: 0,
-        answer: '',
-        ...JSON.parse(keyStr)
-      };
-    }
-    return {
-      username: '',
-      password: '',
-      questionid: 0,
-      answer: '',
-    };
-  });
+
   useEffect(() => {
     CookieManager.get(selectedNode).then((cookies) => {
       console.log('cookies', cookies);
-      // Object.keys(cookies).forEach(key => {
-      //   cookies[key].domain = selectedNode.replace(/https?:\/\//, '');
-      //   cookies[key].path = '/';
-      // })
       setCookies(cookies);
     });
   }, [selectedNode]);
@@ -53,11 +32,11 @@ const PostScreen = ({ route }) => {
       {/* 顶部导航栏 */}
       <View style={styles.navbar}>
         <Pressable style={styles.navButton} onPress={handleCancel}>
-          <Text style={styles.cancelText}>取消</Text>
+          <Text style={styles.cancelText}>返回</Text>
         </Pressable>
         <Text style={styles.navTitle}>发表主题</Text>
         <Pressable style={styles.navButton} onPress={handlePublish}>
-          <Text style={styles.publishText}>发布</Text>
+          <Text style={styles.publishText}></Text>
         </Pressable>
       </View>
 
@@ -67,7 +46,7 @@ const PostScreen = ({ route }) => {
           baseUrl: `${selectedNode}/bbs/`,
           uri: `${selectedNode}/bbs/${route.params.href}`,
           headers: {
-            // 'Cookie': `cdb3_auth=T%2FwQvF2F2c%2FEi2CxtUPeq0GE0o4GCojU2Naj4%2FEJdk%2BFPYdNkoJWHVkofg5k9INBs%2BEDP0ROebFLIA`,
+            'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
             'Referer': `${selectedNode}/bbs/forumdisplay.php?fid=${route.params.fid}&page=1`
           }
         }}
@@ -77,23 +56,9 @@ const PostScreen = ({ route }) => {
         javaScriptEnabled
         domStorageEnabled
         originWhitelist={['*']}
-        injectedJavaScript={`
-          // autologin
-          const formEl = document.querySelector('.box.message form[name=login]')
-          if (formEl) {
-            formEl.querySelector('input[name=cookietime]').value=315360000;
-            formEl.querySelector('input[name=username]').value='${userKeys.username}';
-            formEl.querySelector('input[name=password]').value='${userKeys.password}';
-            if (${userKeys.questionid} && '${userKeys.answer}') {
-              formEl.querySelector('select[name=questionid]').value=${userKeys.questionid};
-              formEl.querySelector('input[name=answer]').value='${userKeys.answer}';
-            }
-            '${userKeys.username}' && '${userKeys.password}' && formEl.querySelector('button[name=loginsubmit]').click();
-          }
-        `}
         // onLoadStart={() => showLoading()}
         // onLoadEnd={() => hideLoading()}
-        userAgent='Mozilla/5.0 (Linux; Android 12; M2012K11AC Build/SKQ1.211002.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.134 Mobile Safari/537.36 MMWEBID/8989 MicroMessenger/8.0.32.20210'
+        userAgent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0'
       />}
     </SafeAreaView>
   );

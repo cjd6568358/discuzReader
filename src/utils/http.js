@@ -15,7 +15,7 @@ const defaultConfig = {
     baseURL: selectedNode + '/bbs/',
     headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        userAgent: 'Mozilla/5.0 (Linux; Android 12; M2012K11AC Build/SKQ1.211002.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.134 Mobile Safari/537.36 MMWEBID/8989 MicroMessenger/8.0.32.20210',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0',
     },
     timeout: 30000, // 默认超时时间：30秒
     responseType: 'arraybuffer',

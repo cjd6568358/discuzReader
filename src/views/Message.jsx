@@ -236,7 +236,7 @@ const MessageView = () => {
           // 这里处理发送回复的逻辑
           const messageIndex = messages.findIndex(item => item.id === longPressKey);
           if (messageIndex !== -1) {
-            messageAction({ action: 'send', data: { formhash: '24cbfa84', pmsubmit: '24cbfa84', msgto: messages[messageIndex].from, subject: replyTitle, message: content } });
+            messageAction({ action: 'reply', data: { pmid: longPressKey, msgto: messages[messageIndex].from, subject: replyTitle, message: content } });
           }
         }}
         title={replyTitle}
