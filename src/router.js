@@ -1,5 +1,7 @@
 import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import HomeView from './views/Home'
 import LoginView from './views/Login'
 import NodesView from './views/Nodes'
@@ -10,6 +12,42 @@ import PostView from './views/PostWebView'
 import ProfileView from './views/Profile'
 import SearchView from './views/Search'
 
+const HomeTabs = createBottomTabNavigator({
+    screenOptions: {
+        headerShown: false,
+    },
+    backBehavior: "history",
+    screens: {
+        Home: {
+            screen: HomeView,
+            options: {
+                tabBarLabel: '首页',
+                tabBarIcon: ({ color }) => (
+                    <Icon name="home" color={color} size={20} />
+                ),
+            },
+        },
+        Message: {
+            screen: MessageView,
+            options: {
+                tabBarLabel: '消息',
+                tabBarIcon: ({ color }) => (
+                    <Icon name="envelope" color={color} size={20} />
+                ),
+            },
+        },
+        Profile: {
+            screen: ProfileView,
+            options: {
+                tabBarLabel: '我的',
+                tabBarIcon: ({ color }) => (
+                    <Icon name="user" color={color} size={20} />
+                ),
+            },
+        },
+    },
+});
+
 export const defaultConfig = {
     initialRouteName: 'Home',
     screenOptions: {
@@ -17,11 +55,17 @@ export const defaultConfig = {
     },
     screens: {
         Home: {
-            screen: HomeView,
+            screen: HomeTabs,
         },
-        Message: {
-            screen: MessageView,
-        },
+        // Home: {
+        //     screen: HomeView,
+        // },
+        // Message: {
+        //     screen: MessageView,
+        // },
+        // Profile: {
+        //     screen: ProfileView,
+        // },
         Forum: {
             screen: ForumView,
             options: {
@@ -36,9 +80,6 @@ export const defaultConfig = {
         },
         Post: {
             screen: PostView,
-        },
-        Profile: {
-            screen: ProfileView,
         },
         Search: {
             screen: SearchView,

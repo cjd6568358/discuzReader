@@ -12,7 +12,6 @@ import {
   Pressable
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import TabBar from '../components/TabBar';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Swiper from 'react-native-swiper';
 import { useLoading } from '../components/Loading';
@@ -25,11 +24,11 @@ const IndexView = () => {
   const [currentSection, setCurrentSection] = useState('');
   useFocusEffect(
     useCallback(() => {
-      showLoading()
+      !pageData && showLoading()
       getHomePage().then(data => {
         console.log(data);
         setPageData(data);
-        setCurrentSection(data.sectionList[0].name);
+        !currentSection && setCurrentSection(data.sectionList[0].name);
       }).catch(error => {
         console.log(error);
         if (error === 'redirect login') {
@@ -41,10 +40,6 @@ const IndexView = () => {
       }).finally(() => {
         hideLoading();
       });
-      return () => {
-        // Do something when the screen is unfocused
-        // Useful for cleanup functions
-      };
     }, []))
 
   const onAnnouncementPress = (item) => {
@@ -190,9 +185,6 @@ const IndexView = () => {
           />
         </View>}
       </ScrollView>
-
-      {/* 底部导航栏 */}
-      <TabBar currentTab='Home' />
     </SafeAreaView>
   );
 };

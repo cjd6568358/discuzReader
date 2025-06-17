@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,8 @@ import {
   StatusBar,
   Pressable,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import TabBar from '../components/TabBar';
 import ActionSheet from '../components/ActionSheet';
 import ReplyModal from '../components/ReplyModal';
 import { useLoading } from '../components/Loading';
@@ -20,7 +20,7 @@ const MessageView = () => {
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState([]); // 存储选中的消息索引
   const [batchMode, setBatchMode] = useState(false)
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(null);
   const [longPressKey, setLongPressKey] = useState(null);
   const [replyModalVisible, setReplyModalVisible] = useState(false);
   const [replyTitle, setReplyTitle] = useState('');
@@ -31,25 +31,25 @@ const MessageView = () => {
     { text: '批量删除', destructive: true, onPress: () => handleActionSheetItemPress('batchDelete') }
   ];
 
-  useEffect(() => {
-    showLoading()
-    getPMPage().then(data => {
-      console.log(data.pmList)
-      setMessages(data.pmList)
-    }).catch(error => {
-      console.log(error);
-      if (error === 'redirect login') {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        })
-      }
-    }).finally(() => {
-      hideLoading()
-    })
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      !messages && showLoading()
+      getPMPage().then(data => {
+        setMessages(data.pmList || [])
+      }).catch(error => {
+        console.log(error);
+        if (error === 'redirect login') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          })
+        }
+      }).finally(() => {
+        hideLoading()
+      })
+    }, []))
 
-  const badgeCount = messages.reduce((acc, cur) => {
+  const badgeCount = (messages || []).reduce((acc, cur) => {
     if (cur.unread === 1) {
       acc += 1;
     }
@@ -216,7 +216,7 @@ const MessageView = () => {
 
       {/* 消息列表 */}
       <FlatList
-        data={messages}
+        data={messages || []}
         renderItem={renderMessageItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.messageList}
@@ -242,8 +242,6 @@ const MessageView = () => {
         title={replyTitle}
         placeholder="请输入回复内容"
       />
-      {/* 底部导航栏 */}
-      <TabBar currentTab="Message" />
     </SafeAreaView>
   );
 };
