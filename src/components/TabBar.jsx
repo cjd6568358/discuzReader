@@ -14,7 +14,12 @@ const TabBar = ({ currentTab }) => {
   ])
 
   const onTabChange = (tabId) => {
-    navigation.navigate(tabId);
+    console.log('onTabChange', navigation.getState().routes)
+    if (navigation.getState().routes.some(({ name }) => name === tabId)) {
+      navigation.popTo(tabId)
+    } else {
+      navigation.navigate(tabId);
+    }
   };
 
   useEffect(() => {
