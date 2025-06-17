@@ -10,7 +10,7 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const Loading = ({ visible, message = '加载中...', duration = 2000, onHide }) => {
+const Loading = ({ visible, message = '加载中...' }) => {
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -20,13 +20,6 @@ const Loading = ({ visible, message = '加载中...', duration = 2000, onHide })
         duration: 300,
         useNativeDriver: true
       }).start();
-
-      if (duration > 0) {
-        const timer = setTimeout(() => {
-          hide();
-        }, duration);
-        return () => clearTimeout(timer);
-      }
     } else {
       hide();
     }
@@ -38,7 +31,6 @@ const Loading = ({ visible, message = '加载中...', duration = 2000, onHide })
       duration: 300,
       useNativeDriver: true
     }).start(() => {
-      if (onHide) onHide();
     });
   };
 

@@ -18,7 +18,7 @@ const HomeTabs = createBottomTabNavigator({
     },
     backBehavior: "history",
     screens: {
-        Home: {
+        Index: {
             screen: HomeView,
             options: {
                 tabBarLabel: '首页',

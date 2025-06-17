@@ -72,7 +72,7 @@ const IndexView = () => {
     </Pressable>
   );
 
-  const renderForum = ({ item, index }) => (
+  const renderForum = ({ item }) => (
     <Pressable
       key={item.name}
       onPress={() => onForumPress(item)}
@@ -110,19 +110,12 @@ const IndexView = () => {
     </Pressable>
   );
 
-  if (!pageData) {
-    return (
-      <View style={styles.loadingContainer}>
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
       {/* 顶部导航栏 */}
       <View style={styles.navbar}>
-        <Text style={styles.navTitle}>{pageData?.title}</Text>
+        <Text style={styles.navTitle}>{pageData?.title || ''}</Text>
         {/* 搜索栏 */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
@@ -139,7 +132,7 @@ const IndexView = () => {
       <ScrollView style={styles.scrollView}>
         {/* 公告栏 */}
         <View style={{ marginVertical: 8 }}>
-          <Swiper
+          {pageData?.announcementList.length > 0 && <Swiper
             height={56}
             loop={true}
             autoplay={true}
@@ -160,19 +153,19 @@ const IndexView = () => {
                 </Pressable>
               ))
             }
-          </Swiper>
+          </Swiper>}
         </View>
 
         {/* 分区导航 */}
         <View style={styles.sectionsContainer}>
-          <FlatList
+          {pageData?.sectionList.length > 0 && <FlatList
             data={pageData.sectionList}
             renderItem={renderSection}
             keyExtractor={(item) => item.name}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.sectionsList}
-          />
+          />}
         </View>
 
         {/* 子版块列表 */}
@@ -190,12 +183,6 @@ const IndexView = () => {
 };
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF'
-  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',

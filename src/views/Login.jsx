@@ -52,9 +52,6 @@ const LoginView = () => {
     }
     const [questionid, answer] = securityAnswer.split(",");
     showLoading();
-    setTimeout(() => {
-      hideLoading()
-    }, 6 * 1000);
     http.get('logging.php?action=login', { selector: selectors.login }).then(async res => {
       const formhash = res.data.formhash;
       try {
@@ -89,6 +86,7 @@ const LoginView = () => {
               rememberPassword
             }))
           }
+          hideLoading();
           // 导航到首页
           navigation.reset({
             index: 0,
@@ -99,10 +97,11 @@ const LoginView = () => {
         console.error('Login failed:', error);
         // 这里可以添加错误提示逻辑
         ToastAndroid.show('登录失败', ToastAndroid.SHORT);
-      } finally {
         hideLoading();
       }
-    });
+    }, () => {
+      hideLoading();
+    })
   };
 
   const handleSettings = () => {

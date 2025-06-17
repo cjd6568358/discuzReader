@@ -4,30 +4,33 @@ import LoadingComponent from './component';
 const LoadingContext = createContext();
 
 export const LoadingProvider = ({ children }) => {
-  const [visible, setVisible] = useState(false);
-  const [message, setMessage] = useState('');
-  const [duration, setDuration] = useState(2000);
+  const [props, setProps] = useState({
+    visible: false,
+    message: '加载中...',
+  });
   const timerRef = useRef(null);
 
-  const showLoading = (msg = '加载中...', dur = 0) => {
+  const showLoading = (msg = '加载中...') => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    setMessage(msg);
-    setDuration(dur);
-    setVisible(true);
+    setProps({
+      visible: true,
+      message: msg,
+    })
   };
 
   const hideLoading = () => {
-    setVisible(false);
+    setProps({
+      ...props,
+      visible: false,
+    })
   };
 
   return (
-    <LoadingContext.Provider value={{ showLoading, hideLoading, isLoading: visible }}>
+    <LoadingContext.Provider value={{ showLoading, hideLoading, isLoading: props.visible }}>
       {children}
       <LoadingComponent
-        visible={visible}
-        message={message}
-        duration={duration}
-        onHide={() => setVisible(false)}
+        visible={props.visible}
+        message={props.message}
       />
     </LoadingContext.Provider>
   );
