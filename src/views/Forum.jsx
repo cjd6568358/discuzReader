@@ -94,7 +94,7 @@ const ForumView = ({ route }) => {
   }
 
   const renderPage = useCallback((href) => {
-    showLoading()
+    !pageData && showLoading()
     getForumPage(href).then(data => {
       console.log(data);
       setPageData(data);
@@ -124,10 +124,16 @@ const ForumView = ({ route }) => {
       }, [])
       setThreads(Array.from(threadMap.values()))
       if (pagination) {
-        ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+        !pageData && ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
       }
     }).catch(error => {
       console.log(error);
+      if (error === 'redirect login') {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      }
     }).finally(() => {
       hideLoading();
     });
@@ -156,7 +162,7 @@ const ForumView = ({ route }) => {
             <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
             {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
           </Pressable>
-          <Pressable style={styles.newSpecialButton} onPress={() => navigation.navigate('Post', { href: pageData.new_special })}>
+          <Pressable style={styles.newSpecialButton} onPress={() => navigation.navigate('Post', { href: pageData.new_special, fid: pageData.fid })}>
             <Icon name="file-text-o" size={18} color="#9CA3AF" />
           </Pressable>
         </View>

@@ -36,6 +36,15 @@ const MessageView = () => {
     getPMPage().then(data => {
       console.log(data.pmList)
       setMessages(data.pmList)
+    }).catch(error => {
+      console.log(error);
+      if (error === 'redirect login') {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      }
+    }).finally(() => {
       hideLoading()
     })
   }, [])

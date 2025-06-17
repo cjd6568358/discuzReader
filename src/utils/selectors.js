@@ -138,7 +138,9 @@ export default {
         .postcontent .postinfo strong{$floor|replace(/\\D/g,'')|Number}
         .postcontent .postinfo{$date|match(/(\\d{4}.*\\d{2})/)|first}
         .postcontent>.postmessage>.postratings b{$thanks|Number}
+        .postcontent>.postmessage>.t_msgfont{html($content)}
         .postcontent>.postmessage>.t_msgfont>.t_msgfont{html($content)}
+        .postcontent>.postmessage>.notice{html($content)}
         .postcontent>.postmessage>.t_msgfont>.postattachlist .t_attachlist@attachments{
           dt img[src=$icon];
           dt a[href=$link]{$name};
@@ -171,7 +173,8 @@ export default {
     #newpost tbody tr select[name=typeid] option@type_options{
         &[value=$value|trim]{$label|trim}
     }
-    #fastUploadFlashBody+tbody{$uploadLimits|trim|split(/\\n|\\t/)|compact}
+    #fastUploadFlashBody+tbody{$upload_limits|trim|split(/\\n|\\t/)|compact}
+    #postform[action=$post_action];
     `,
     my: `
     .credits_info ul>li@creditList{

@@ -37,6 +37,14 @@ export const checkLogin = async () => {
     }
 };
 
+export const logout = async () => {
+    try {
+        await CookieManager.clearAll();
+    } catch (error) {
+        return false;
+    }
+}
+
 export const UTF8ToGBK = (str) => {
     let from = iconv.encode(str, 'GBK');
     var rt = "";

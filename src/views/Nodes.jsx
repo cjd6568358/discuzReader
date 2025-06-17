@@ -59,12 +59,16 @@ const NodesView = () => {
     }, [navigation]);
     // 当nodes状态变化时，保存到本地存储
     useEffect(() => {
-        storage.set('nodes', JSON.stringify(nodes));
+        if (nodes) {
+            storage.set('nodes', JSON.stringify(nodes));
+        }
     }, [nodes]);
 
     useEffect(() => {
-        storage.set('selectedNode', selectedNode);
-        http.defaults.baseURL = selectedNode + '/bbs/';
+        if (selectedNode) {
+            storage.set('selectedNode', selectedNode);
+            http.defaults.baseURL = selectedNode + '/bbs/';
+        }
     }, [selectedNode])
 
     // 移除加载更多节点的函数

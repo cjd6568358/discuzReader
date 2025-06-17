@@ -26,7 +26,7 @@ import ReplyModal from '../components/ReplyModal';
 import { getThreadPage, favoriteAction, threadAction, messageAction } from '../utils/api'
 import { MMStore, storage, decodeHtmlEntity, downloadFile } from '../utils/index';
 
-const Thread = () => {
+const Thread = ({ route }) => {
   const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
@@ -42,7 +42,7 @@ const Thread = () => {
 
   useFocusEffect(useCallback(() => {
     renderPage(route.params.href)
-  }, []))
+  }, [route.params.href]))
 
   useEffect(() => {
     pageData && renderHeader()
@@ -120,9 +120,16 @@ const Thread = () => {
         }
       }).catch(error => {
         console.log(error);
+        if (error === 'redirect login') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          })
+        }
       }).finally(() => {
         hideLoading();
         resolve();
+        scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: true });
       });
     })
   })
@@ -146,14 +153,21 @@ const Thread = () => {
   }
 
   const handleLinkPress = (href) => {
+    if (href.startsWith('about:///')) {
+      href = href.replace('about:///', '')
+    }
     console.log('handleLinkPress', href);
     if (href.includes('thread-') || href.includes('viewthread') || href.includes('redirect.php?tid=')) {
-      navigation.navigate('Thread', { href });
+      // console.log('navigate1', href);
+      navigation.push('Thread', { href });
     } else if (href.includes('forum-') || href.includes('forumdisplay')) {
-      navigation.navigate('Forum', { href });
+      // console.log('navigate2', href);
+      navigation.push('Forum', { href });
     } else if (href.includes('attachment.php')) {
+      // console.log('navigate3', href);
       downloadFile(href);
     } else if (/\.(png|jpg|jpeg|gif|jpeg|webp)$/.test(href)) {
+      // console.log('navigate4', href);
       // 处理附件图片点击，查看大图
       setCurrentImage(href);
       setImageViewerVisible(true);

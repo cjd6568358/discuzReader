@@ -31,6 +31,7 @@ export const getHomePage = async () => {
         }
     } catch (error) {
         console.log('getHomePage', error);
+        return Promise.reject(error)
     }
 }
 
@@ -43,6 +44,7 @@ export const getPMPage = async () => {
         }
     } catch (error) {
         console.log('getPMPage', error);
+        return Promise.reject(error)
     }
 }
 
@@ -89,6 +91,7 @@ export const getForumPage = async (href) => {
         return newData
     } catch (error) {
         console.log('getForumPage', error);
+        return Promise.reject(error)
     }
 }
 
@@ -119,6 +122,7 @@ export const getThreadPage = async (href) => {
                 name: item.name.replace(title_regex, '$1'),
             })),
             posts: posts.map(item => {
+                item.content = item.content ?? '';
                 return {
                     ...item,
                     author: {
@@ -157,7 +161,8 @@ export const getThreadPage = async (href) => {
             anchor: href.split('#')[1]
         }
     } catch (error) {
-        console.log('getForumPage', error);
+        console.log('getThreadPage', error);
+        return Promise.reject(error)
     }
 }
 
@@ -166,13 +171,14 @@ export const getPostPage = async (href) => {
         const res = await http.get(href, { selector: selectors.post })
         return {
             ...res.data,
-            uploadLimits: {
-                size: +res.data.uploadLimits[0].replace(/\D/g, ''),
-                type: res.data.uploadLimits[1].replace('可用扩展名: ', ''),
+            upload_limits: {
+                size: +res.data.upload_limits[0].replace(/\D/g, ''),
+                type: res.data.upload_limits[1].replace('可用扩展名: ', ''),
             },
         }
     } catch (error) {
         console.log('getPostPage', error);
+        return Promise.reject(error)
     }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,18 +14,32 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { useLoading } from '../components/Loading';
 import http from '../utils/http';
 import { storage } from '../utils/index'
 import selectors from '../utils/selectors';
 
 const LoginView = () => {
   const navigation = useNavigation();
-  const [username, setUsername] = useState('cjd610630890');
-  const [password, setPassword] = useState('cjd110109');
-  const [securityAnswer, setSecurityAnswer] = useState('3,建湖');
+  const { showLoading, hideLoading } = useLoading();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('cjd11109');
+  const [securityAnswer, setSecurityAnswer] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
 
+  useEffect(() => {
+    const userKeys = storage.getString('userKeys');
+    if (userKeys) {
+      const { username, password, questionid, answer, rememberPassword } = JSON.parse(userKeys);
+      setUsername(username);
+      setPassword(password);
+      setRememberPassword(rememberPassword);
+      if (questionid && answer) {
+        setSecurityAnswer(`${questionid},${answer}`);
+      }
+    }
+  }, []);
 
   const togglePassword = () => {
     setShowPassword(!showPassword);
@@ -37,10 +51,13 @@ const LoginView = () => {
       return
     }
     const [questionid, answer] = securityAnswer.split(",");
+    showLoading();
+    setTimeout(() => {
+      hideLoading()
+    }, 6 * 1000);
     http.get('logging.php?action=login', { selector: selectors.login }).then(async res => {
       const formhash = res.data.formhash;
       try {
-
         let formData = {
           cookietime: "315360000",
           loginfield: "username",
@@ -52,7 +69,6 @@ const LoginView = () => {
           username,
           password,
         };
-
         if (!questionid || !answer) {
           delete formData.questionid;
           delete formData.answer;
@@ -60,16 +76,31 @@ const LoginView = () => {
         const res = await http.post(`logging.php?action=login`, formData);
         if (res.data.includes(`欢迎您回来，${username}。现在将转入登录前页面。`)) {
           ToastAndroid.show('登录成功', ToastAndroid.SHORT);
+          if (rememberPassword) {
+            storage.set('userKeys', JSON.stringify({
+              username,
+              password,
+              questionid,
+              answer,
+              rememberPassword
+            }))
+          } else {
+            storage.set('userKeys', JSON.stringify({
+              rememberPassword
+            }))
+          }
+          // 导航到首页
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }],
+          });
         }
-        // 导航到首页
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Home' }],
-        });
       } catch (error) {
         console.error('Login failed:', error);
         // 这里可以添加错误提示逻辑
         ToastAndroid.show('登录失败', ToastAndroid.SHORT);
+      } finally {
+        hideLoading();
       }
     });
   };

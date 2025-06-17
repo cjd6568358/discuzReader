@@ -1,7 +1,7 @@
 import axios from 'axios';
 import iconv from 'iconv-lite';
 import { ToastAndroid } from 'react-native';
-import { storage, UTF8ToGBK, decodeHtmlEntity } from './index';
+import { storage, UTF8ToGBK, decodeHtmlEntity, logout } from './index';
 import temme from '../lib/temme';
 
 /**
@@ -15,6 +15,7 @@ const defaultConfig = {
     baseURL: selectedNode + '/bbs/',
     headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        userAgent: 'Mozilla/5.0 (Linux; Android 12; M2012K11AC Build/SKQ1.211002.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.134 Mobile Safari/537.36 MMWEBID/8989 MicroMessenger/8.0.32.20210',
     },
     timeout: 30000, // 默认超时时间：30秒
     responseType: 'arraybuffer',
@@ -24,7 +25,7 @@ const defaultConfig = {
 const instance = axios.create(defaultConfig);
 // 添加请求拦截器
 instance.interceptors.request.use(config => {
-    if ('POST,PUT,PATCH'.includes(config.method.toUpperCase())) {
+    if ('POST,PUT,PATCH'.includes(config.method.toUpperCase()) && !config.skipGBK) {
         config.data = UTF8ToGBK(decodeURIComponent(new URLSearchParams(config.data).toString()));
     }
     return config;
@@ -38,6 +39,7 @@ instance.interceptors.response.use(response => {
     if (response.config.responseType === 'arraybuffer') {
         response.data = decodeHtmlEntity(iconv.decode(new Uint8Array(response.data), "GBK"));
     }
+    // console.log(response);
     if (response.headers['content-Length'] < 500) {
         const errorStack = response.data
             // 合并 <br> 和 <br/> 的处理，并去掉多余空格
@@ -52,6 +54,9 @@ instance.interceptors.response.use(response => {
             ToastAndroid.show(errorStack[0], ToastAndroid.SHORT);
         }
         throw new Error(errorStack);
+    } else if (response.config.url !== 'logging.php?action=login' && response.data.includes(`<a href="logging.php?action=login">登录</a>`)) {
+        logout()
+        return Promise.reject('redirect login');
     } else if (response.config.selector) {
         const t1 = Date.now();
         response.data = temme(response.data, response.config.selector);

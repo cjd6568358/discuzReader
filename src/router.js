@@ -6,7 +6,7 @@ import NodesView from './views/Nodes'
 import MessageView from './views/Message'
 import ForumView from './views/Forum'
 import ThreadView from './views/Thread'
-import PostView from './views/Post'
+import PostView from './views/PostWebView'
 import ProfileView from './views/Profile'
 import SearchView from './views/Search'
 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, Image, StyleSheet, SafeAreaView, StatusBar, Pressable, } from 'react-native';
+import { View, Text, TextInput, ScrollView, Image, StyleSheet, SafeAreaView, StatusBar, Pressable, ToastAndroid } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import iconv from 'iconv-lite'
 import { useLoading } from '../components/Loading';
 import { getPostPage } from '../utils/api'
-import { UTF8ToGBK } from '../utils/index'
 import http from '../utils/http';
 
 const PostScreen = ({ route }) => {
@@ -43,34 +43,31 @@ const PostScreen = ({ route }) => {
   };
 
   const handlePublish = () => {
-    // 处理发布操作
-    const fd = new FormData()
-    fd.append('iconid', 0)
-    fd.append('wysiwyg', 0)
-    fd.append('posteditor_mediatyperadio', 'on')
-    fd.append('formhash', pageData.formhash)
-    fd.append('typeid', selectTypeId)
-    fd.append('subject', UTF8ToGBK(subject))
-    fd.append('selecttypeid', selectTypeId)
-    fd.append('message', UTF8ToGBK(message))
-    fd.append('readperm', readPermission)
-    Object.keys(extraParamValues).forEach(key => {
-      fd.append(key, extraParamValues[key])
-    })
-    http.post('post.php?action=newthread&fid=230&extra=page%3D1&topicsubmit=yes', fd).then(res => console.log(res))
+    if (selectTypeId && subject && message) {
+      // 处理发布操作
+      try {
+        console.log('subject', iconv.encode(subject, 'GBK'))
+        const fd = new FormData()
+        fd.append('iconid', 0)
+        fd.append('wysiwyg', 0)
+        fd.append('posteditor_mediatyperadio', 'on')
+        fd.append('formhash', pageData.formhash)
+        fd.append('typeid', selectTypeId)
+        fd.append('subject', iconv.encode(subject, 'GBK'))
+        fd.append('selecttypeid', selectTypeId)
+        fd.append('message', iconv.encode(message, 'GBK'))
+        fd.append('readperm', readPermission)
+        Object.keys(extraParamValues).forEach(key => {
+          fd.append(key, extraParamValues[key])
+        })
+        http.post(pageData.post_action, fd, { skipGBK: true }).then(res => console.log(res)).catch(err => console.log(err))
+      } catch (error) {
+        console.log(error)
+      }
+    } else {
+      ToastAndroid.show('请填写完整信息', ToastAndroid.SHORT)
+    }
   };
-
-  const renderImageItem = ({ item, index }) => (
-    <View style={styles.imageContainer}>
-      <Image source={{ uri: item }} style={styles.image} />
-      <Pressable
-        style={styles.removeButton}
-        onPress={() => removeImage(index)}
-      >
-        <Icon name="times" size={12} color="#FFFFFF" />
-      </Pressable>
-    </View>
-  );
 
   return (
     <SafeAreaView style={styles.container}>

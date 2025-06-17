@@ -32,6 +32,12 @@ const IndexView = () => {
         setCurrentSection(data.sectionList[0].name);
       }).catch(error => {
         console.log(error);
+        if (error === 'redirect login') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          })
+        }
       }).finally(() => {
         hideLoading();
       });
