@@ -11,6 +11,5 @@ index
 .notabs@moderator{$moderator} 正常
 
 ### TODO
-[x]Profile板块支持定制顺序和隐藏
 [x]Home支持跳转到搜索
 [x]thread图片展示异常
