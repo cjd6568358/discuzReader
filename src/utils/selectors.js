@@ -184,9 +184,8 @@ export default {
         &{$|trim()}
     };
     a.notabs[href=$formhash|replace(/^.*formhash=/,'')];
-
     #menu li cite a{$username};
-    .mainbox table:nth-of-type(1) tbody tr@recentTopics|compact{
+    .mainbox table:nth-of-type(1) tbody tr@recent_topics|compact{
         td:nth-child(1) a[href=$href]{$title}
         td:nth-child(1) a[href=$tid|split('-')|slice(1,2)|first];
         td:nth-child(2) a@forum|pack{
@@ -198,7 +197,7 @@ export default {
         }
         td:nth-child(4){$status}
     };
-    .mainbox table:nth-of-type(2) tbody tr@recentReplys|compact{
+    .mainbox table:nth-of-type(2) tbody tr@recent_replys|compact{
         td:nth-child(1) a[href=$href]{$title}
         td:nth-child(1) a[href=$tid|replace(/^redirect.*ptid=/g,'')|Number];
         td:nth-child(2) a@forum|pack{
@@ -209,6 +208,23 @@ export default {
             a:last-child{$author}
         }
         td:nth-child(4){$status}
+    }
+    `,
+    profile: `
+    .credits_info ul>li@creditList{
+        &{$|trim()}
+    };
+    a.notabs[href=$formhash|replace(/^.*formhash=/,'')];
+    #menu li cite a{$username};
+    img.avatar[src=$avatar];
+    .memberinfo_avatar a[href=$uid|replace(/\\D/g,'')];
+    .memberinfo_forum li:nth-child(2) font{$level};
+    .mainbox tbody tr@pmlist{
+      th a[href=$id|replace(/\\D/g,'')]{$title}
+      td.user@from{
+          a[href=$uid|replace(/\\D/g,'')]{$name}
+      }
+      td.time{$time}
     }
     `,
     search: `

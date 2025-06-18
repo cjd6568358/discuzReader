@@ -8,11 +8,10 @@ import temme from '../lib/temme';
  * HTTP客户端封装
  * 基于axios实现，包含请求拦截器、响应拦截器和统一错误处理
  */
-const selectedNode = storage.getString('selectedNode');
 
 // 默认配置
 const defaultConfig = {
-    baseURL: selectedNode + '/bbs/',
+    baseURL: storage.getString('selectedNode') + '/bbs/',
     headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0',

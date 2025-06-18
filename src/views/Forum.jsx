@@ -98,7 +98,7 @@ const ForumView = ({ route }) => {
     getForumPage(href).then(data => {
       console.log(data);
       setPageData(data);
-      const { filter_tags, action_tags, categorys, pagination } = data
+      const { filter_tags, action_tags, categorys } = data
       let tmpTagColors = [...tagColors]
       const colorMap = {}
       const tags = filter_tags.concat(action_tags).map((item) => {
@@ -123,9 +123,9 @@ const ForumView = ({ route }) => {
         });
       }, [])
       setThreads(Array.from(threadMap.values()))
-      if (pagination) {
-        !pageData && ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
-      }
+      // if (pagination) {
+      //   !pageData && ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+      // }
     }).catch(error => {
       console.log(error);
       if (error === 'redirect login') {

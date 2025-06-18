@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,39 +11,35 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { logout } from '../utils/index';
+import { getProfilePage } from '../utils/api';
+import { logout, MMStore, storage } from '../utils/index';
+import http from '../utils/http';
 
 const Profile = () => {
   const navigation = useNavigation();
-  const userAvatar = 'https://ai-public.mastergo.com/ai/img_res/2e19df2dbf5a6ea30dab5f77cb2711af.jpg';
-  const statistics = [
-    { label: '积分', value: '2,386' },
-    { label: '金币', value: '1,253' },
-    { label: '原创', value: '46' },
-    { label: '威望', value: '328' }
-  ];
   const menuItems = [
     {
-      title: '我的帖子',
+      title: '主题回复',
       icon: 'file-text-o',
       count: '128'
     },
     {
       title: '我的收藏',
       icon: 'star',
-      count: '56'
-    },
-    {
-      title: '我的消息',
-      icon: 'envelope',
-      count: '3'
+      count: MMStore.favorites.forums.length + MMStore.favorites.threads.length
     },
     {
       title: '我的浏览',
       icon: 'history',
-      count: '12'
+      count: JSON.parse(storage.getString('history') || '[]').length + ''
     }
   ];
+  const [pageData, setPageData] = useState({});
+  useEffect(() => {
+    getProfilePage().then(res => {
+      setPageData(res);
+    })
+  }, [])
 
   return (
     <SafeAreaView style={styles.container}>
@@ -56,26 +52,26 @@ const Profile = () => {
             <View style={styles.profileHeader}>
               <View style={styles.avatarContainer}>
                 <Image
-                  source={{ uri: userAvatar }}
+                  source={{ uri: `${http.defaults.baseURL}${pageData.avatar}` }}
                   style={styles.avatar}
                 />
               </View>
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>陈明远</Text>
+                <Text style={styles.userName}>{pageData.username}</Text>
                 <View style={styles.levelContainer}>
                   <Text style={styles.levelText}>
-                    LV.8 资深会员
+                    {pageData.level}
                   </Text>
                 </View>
               </View>
               <View style={styles.statsContainer}>
                 <View style={styles.statsGrid}>
-                  {statistics.map((stat, index) => (
+                  {/* {statistics.map((stat, index) => (
                     <View key={index} style={styles.statItem}>
                       <Text style={styles.statValue}>{stat.value}</Text>
                       <Text style={styles.statLabel}>{stat.label}</Text>
                     </View>
-                  ))}
+                  ))} */}
                 </View>
                 <Pressable style={styles.chevronContainer}>
                   <Icon name="chevron-right" size={16} color="#D1D5DB" />
@@ -105,12 +101,9 @@ const Profile = () => {
 
           {/* 设置和退出 */}
           <View style={styles.settingsContainer}>
-            <Pressable style={styles.settingItem}>
-              <Icon name="cog" size={20} color="#9CA3AF" style={styles.menuIcon} />
-              <Text style={styles.menuTitle}>设置</Text>
-              <Icon name="chevron-right" size={16} color="#D1D5DB" />
-            </Pressable>
-            <Pressable style={styles.settingItem}>
+            <Pressable style={styles.settingItem} onPress={() => {
+              MMStore.cached = {}
+            }}>
               <Icon name="trash" size={20} color="#9CA3AF" style={styles.menuIcon} />
               <Text style={styles.menuTitle}>清理缓存</Text>
               <Icon name="chevron-right" size={16} color="#D1D5DB" />
@@ -122,7 +115,7 @@ const Profile = () => {
                     index: 0,
                     routes: [{ name: 'Login' }],
                   })
-                }).catch(err=>{
+                }).catch(err => {
                   console.log(err)
                 })
               } catch (error) {
@@ -214,7 +207,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   chevronContainer: {
-    marginLeft: 12,
+    marginLeft: 0,
   },
   menuContainer: {
     backgroundColor: '#FFFFFF',

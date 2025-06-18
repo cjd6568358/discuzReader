@@ -114,10 +114,20 @@ const Thread = ({ route }) => {
       getThreadPage(href).then(data => {
         console.log(data);
         setPageData(data);
-        const { pagination } = data
-        if (pagination) {
-          ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+        // const { pagination } = data
+        // if (pagination) {
+        //   ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+        // }
+        const history = JSON.parse(storage.getString('history') || '[]')
+        if(history.find(item => item.tid === tid)){
+          history.filter(item => item.tid !== tid)
         }
+        history.push({
+          tid: data.tid,
+          href,
+          title: data.title,
+        })
+        storage.set('history', JSON.stringify(history))
       }).catch(error => {
         console.log(error);
         if (error === 'redirect login') {

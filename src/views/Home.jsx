@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   // ActivityIndicator,
   View,
@@ -11,7 +11,7 @@ import {
   FlatList,
   Pressable
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Swiper from 'react-native-swiper';
 import { useLoading } from '../components/Loading';
@@ -22,25 +22,24 @@ const IndexView = () => {
   const { showLoading, hideLoading } = useLoading();
   const [pageData, setPageData] = useState(null);
   const [currentSection, setCurrentSection] = useState('');
-  useFocusEffect(
-    useCallback(() => {
-      !pageData && showLoading()
-      getHomePage().then(data => {
-        console.log(data);
-        setPageData(data);
-        !currentSection && setCurrentSection(data.sectionList[0].name);
-      }).catch(error => {
-        console.log(error);
-        if (error === 'redirect login') {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          })
-        }
-      }).finally(() => {
-        hideLoading();
-      });
-    }, []))
+  useEffect(() => {
+    showLoading()
+    getHomePage().then(data => {
+      console.log(data);
+      setPageData(data);
+      !currentSection && setCurrentSection(data.sectionList[0].name);
+    }).catch(error => {
+      console.log(error);
+      if (error === 'redirect login') {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      }
+    }).finally(() => {
+      hideLoading();
+    });
+  }, [])
 
   const onAnnouncementPress = (item) => {
     console.log(item);

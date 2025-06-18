@@ -21,6 +21,7 @@ import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
 import { getThreadPage, favoriteAction } from '../utils/api'
 import { MMStore, storage, decodeHtmlEntity } from '../utils/index';
+import http from '../utils/http';
 
 const Thread = () => {
   const navigation = useNavigation();
@@ -351,7 +352,7 @@ const Thread = () => {
               originWhitelist={['*']}
               source={{ 
                 html: generateHtmlContent(firstPost.content),
-                baseUrl: storage.getString('selectedNode')
+                baseUrl: http.defaults.baseURL,
               }}
               style={[styles.webView, { height: webViewHeight }]}
               scrollEnabled={false}

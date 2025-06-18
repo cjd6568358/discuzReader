@@ -1,6 +1,6 @@
 import http from './http';
 import selectors from './selectors';
-import { MMStore, storage } from './index';
+import { MMStore } from './index';
 
 const title_regex = new RegExp('^.*?\\|\\s*(.*?)\\s*$', 'g');
 export const getHomePage = async () => {
@@ -117,7 +117,6 @@ export const getThreadPage = async (href) => {
     try {
         const res = await http.get(href, { selector: selectors.thread })
         const { title, breadcrumb, posts, pagination } = res.data
-        const selectedNode = storage.getString('selectedNode');
         const newData = {
             ...res.data,
             title: title.replace(title_regex, '$1'),
@@ -131,19 +130,19 @@ export const getThreadPage = async (href) => {
                     ...item,
                     author: {
                         ...item.author,
-                        avatar: `${selectedNode}/bbs/` + item.author.avatar,
+                        avatar: http.defaults.baseURL + item.author.avatar,
                     },
                     content: item.content
                         .replace(/[\t]/g, ``)
                         .replace(/(\S)(<br>)(\S)/g, "$1$3")
-                        .replace(/="attachment/g, `="${selectedNode}/bbs/attachment`)
-                        .replace(/="images/g, `="${selectedNode}/bbs/images`)
-                        .replace(/="http:\/\/(.*)\/bbs\//g, `="${selectedNode}/bbs/`),
+                        .replace(/="attachment/g, `="${http.ba.baseUrl}attachment`)
+                        .replace(/="images/g, `="${http.defaults.baseURL}images`)
+                        .replace(/="http:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`),
                     // 附件
                     attachments: item.attachments.map(i => ({
                         ...i,
-                        url: i.url ? `${selectedNode}/bbs/` + i.url : null,
-                        link: i.link ? `${selectedNode}/bbs/` + i.link : null,
+                        url: i.url ? `${http.defaults.baseURL}` + i.url : null,
+                        link: i.link ? `${http.defaults.baseURL}` + i.link : null,
                     })),
                 }
             }),
@@ -208,5 +207,25 @@ export const favoriteAction = async (type, href, formhash) => {
         }
     } catch (error) {
         console.log('favoriteAction', error);
+    }
+}
+
+export const getMyPage = async () => {
+    try {
+        const res = await http.get('my.php', { selector: selectors.my })
+        return res.data
+    } catch (error) {
+        console.log('getMyPage', error);
+        return Promise.reject(error)
+    }
+}
+
+export const getProfilePage = async () => {
+    try {
+        const res = await http.get(`memcp.php`, { selector: selectors.profile })
+        return res.data
+    } catch (error) {
+        console.log('getProfilePage', error);
+        return Promise.reject(error)
     }
 }

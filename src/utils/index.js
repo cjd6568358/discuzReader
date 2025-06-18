@@ -8,11 +8,11 @@ import axios from 'axios';
 
 export const storage = new MMKV();
 export const MMStore = {
-    'favorites': {
+    favorites: {
         forums: [],
         threads: [],
     },
-    'cached': {},
+    cached: {},
 };
 /**
  * 检查用户是否已登录
