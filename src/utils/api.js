@@ -76,8 +76,8 @@ export const messageAction = async ({ action = 'view', id, data }) => {
 
 export const getForumPage = async (href) => {
     try {
-        const res = await http.get(href, { selector: href.startsWith('search.php') ? selectors.searchResult : selectors.forum })
-        const { title, breadcrumb, pagination } = res.data
+        const res = await http.get(href, { selector: href.includes('search.php?searchid=') ? selectors.searchResult : selectors.forum })
+        const { title = '', breadcrumb = [], pagination } = res.data
         const newData = {
             ...res.data,
             title: title.replace(title_regex, '$1'),
@@ -85,6 +85,16 @@ export const getForumPage = async (href) => {
                 ...item,
                 name: item.name.replace(title_regex, '$1'),
             })),
+        }
+        if (href.includes('search.php?searchid=')) {
+            newData.action_tags = []
+            newData.categorys = [{
+                name: '全部',
+                threads: newData.threads,
+            }]
+            newData.children = []
+            newData.filter_tags = []
+            newData.title = '搜索结果'
         }
         if (pagination) {
             newData.pagination = {
@@ -130,7 +140,7 @@ export const getThreadPage = async (href) => {
                     ...item,
                     author: {
                         ...item.author,
-                        avatar: http.defaults.baseURL + item.author.avatar,
+                        avatar: http.defaults.baseURL + item.author?.avatar,
                     },
                     content: item.content
                         .replace(/[\t]/g, ``)

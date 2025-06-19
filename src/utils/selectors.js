@@ -110,8 +110,8 @@ export default {
         }
     }
     .mainbox.forumlist tbody tr@children{
-        th.new h2 a[href=$href]{$name}
-        th.new p{$desc}
+        th h2 a[href=$href]{$name}
+        th p{$desc}
         td.nums:nth-of-type(1){$thread}
         td.nums:nth-of-type(2){$post}
         td.lastpost@lastPost|pack{
@@ -132,6 +132,7 @@ export default {
     #ajax_favorite[href=$tid|replace(/\\D/g,'')|Number];
     form .mainbox.viewthread@posts{
         .postauthor@author|pack{
+            >cite{$name|trim};
             >cite a[href=$uid|replace(/\\D/g,'')|Number]{$name};
             >.avatar>img:first-child[src=$avatar];
             >p:nth-of-type(1){$level};
@@ -233,19 +234,17 @@ export default {
     searchResult: `
     .mainbox.threadlist tbody@threads{
         th a[href=$href]{$title};
-        th a[href=$tid|split('-')|slice(1,2)|first|Number];
+        th a[href=$tid|replace(/^.*tid=|&highlight.*$/g,'')|Number];
         th img[src*=attachicons]{$attach=1}
         th img[src*=digest]{$digest=1}
         td.forum@forum|pack{
             a[href=$href]{$name}
         }
-        td.author@author{
-            a[href=$uid|replace(/\\D/g,'')]{$name}
-        }
+        td.author a{$author}
         td.author em{$date}
         td.nums strong{$reply|Number}
         td.nums em{$view|Number}
-        td.lastpost@lastPost{
+        td.lastpost@lastPost|pack{
             em a[href=$href]{$date}
             cite a{$username}
         }

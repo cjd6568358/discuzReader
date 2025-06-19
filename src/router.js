@@ -83,6 +83,10 @@ export const defaultConfig = {
         },
         Search: {
             screen: SearchView,
+            options: {
+                headerTitle: '搜索',
+                headerShown: true,
+            },
         },
         Login: {
             screen: LoginView,

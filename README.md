@@ -11,5 +11,3 @@ index
 .notabs@moderator{$moderator} 正常
 
 ### TODO
-[x]Home支持跳转到搜索
-[x]thread图片展示异常

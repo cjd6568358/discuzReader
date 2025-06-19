@@ -38,7 +38,6 @@ instance.interceptors.response.use(response => {
     if (response.config.responseType === 'arraybuffer') {
         response.data = decodeHtmlEntity(iconv.decode(new Uint8Array(response.data), "GBK"));
     }
-    // console.log(response);
     if (response.headers['content-Length'] < 500) {
         const errorStack = response.data
             // 合并 <br> 和 <br/> 的处理，并去掉多余空格

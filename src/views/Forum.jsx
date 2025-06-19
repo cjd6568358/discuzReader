@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   StatusBar,
   ToastAndroid,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Pagination from '../components/Pagination';
 import ActionSheet from '../components/ActionSheet';
@@ -61,10 +61,11 @@ const ForumView = ({ route }) => {
   const [blockThreads, setBlockThreads] = useState(() => {
     return (storage.getString('blockThreads') || '').split(',') || [];
   })
+  const scrollViewRef = useRef(null);
 
-  useFocusEffect(useCallback(() => {
+  useEffect(() => {
     renderPage(route.params.href)
-  }, []))
+  }, [])
 
   useEffect(() => {
     pageData && renderHeader()
@@ -94,7 +95,7 @@ const ForumView = ({ route }) => {
   }
 
   const renderPage = useCallback((href) => {
-    !pageData && showLoading()
+    showLoading()
     getForumPage(href).then(data => {
       console.log(data);
       setPageData(data);
@@ -124,7 +125,7 @@ const ForumView = ({ route }) => {
       }, [])
       setThreads(Array.from(threadMap.values()))
       // if (pagination) {
-      //   !pageData && ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
+      //   ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
       // }
     }).catch(error => {
       console.log(error);
@@ -136,6 +137,7 @@ const ForumView = ({ route }) => {
       }
     }).finally(() => {
       hideLoading();
+      scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: true });
     });
   })
 
@@ -248,11 +250,15 @@ const ForumView = ({ route }) => {
     return threads.map(thread => (
       <Pressable key={thread.href} onPress={() => onThreadPress(thread)} onLongPress={() => handleLongPress(thread.href)} style={styles.forumThreadCard}>
         <View style={styles.tagContainer}>
-          {thread.tag && <View style={[styles.tagBadge, thread.colors]}>
-            <Text style={[styles.tagBadgeText, { color: thread.colors?.color }]}>{thread.tag.name}</Text>
-          </View>}
-          {thread.attach && <Icon style={{ marginRight: 8 }} name="chain" size={12} color="#2563EB" />}
-          {thread.digest && <Icon style={{ marginRight: 8 }} name="diamond" size={12} color="#2563EB" />}
+          {thread.forum ? <View>
+            <Text style={[styles.tagBadgeText, { color: thread.colors?.color }]}>{thread.forum.name}</Text>
+          </View> : <>
+            {thread.tag && <View style={[styles.tagBadge, thread.colors]}>
+              <Text style={[styles.tagBadgeText, { color: thread.colors?.color }]}>{thread.tag.name}</Text>
+            </View>}
+            {thread.attach && <Icon style={{ marginRight: 8 }} name="chain" size={12} color="#2563EB" />}
+            {thread.digest && <Icon style={{ marginRight: 8 }} name="diamond" size={12} color="#2563EB" />}
+          </>}
           <View style={styles.statsContainer}>
             {thread.thanks > 0 && <View style={styles.statItem}>
               <Icon name="heart" size={12} color="#FF0000" />
@@ -292,6 +298,7 @@ const ForumView = ({ route }) => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        ref={view => scrollViewRef.current = view}
       >
         {/* 子版块 */}
         {pageData?.children?.length > 0 && <View style={styles.sectionContainer}>

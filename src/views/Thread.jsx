@@ -55,7 +55,7 @@ const Thread = ({ route }) => {
         <Text style={styles.navTitle} numberOfLines={1} ellipsizeMode="tail" >{pageData.title}</Text>
         <View style={styles.navSubtitle}>
           {pageData.breadcrumb.slice(1)
-            .map((item, i, arr) => <View key={item.name} style={{ flexDirection: 'row', alignItems: 'center' }}>
+            .map((item, i, arr) => <View key={item.name + i} style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={styles.navSubtitleText}>{item.name}</Text>
               {i < arr.length - 1 && <Icon name="chevron-right" size={10} color="#9CA3AF" style={styles.navIcon} />}
             </View>)
@@ -119,8 +119,8 @@ const Thread = ({ route }) => {
         //   ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
         // }
         const history = JSON.parse(storage.getString('history') || '[]')
-        if (history.find(item => item.tid === tid)) {
-          history.filter(item => item.tid !== tid)
+        if (history.find(item => item.tid === data.tid)) {
+          history.filter(item => item.tid !== data.tid)
         }
         history.push({
           tid: data.tid,
@@ -214,9 +214,7 @@ const Thread = ({ route }) => {
     const { current, siblings } = pageData.pagination;
     siblings.forEach((item) => {
       if (item.page === current - 1) {
-        renderPage(item.href).then(() => {
-          scrollViewRef.current.scrollTo({ y: 0, animated: true });
-        })
+        renderPage(item.href)
       }
     })
   }
@@ -226,9 +224,7 @@ const Thread = ({ route }) => {
     const { current, siblings } = pageData.pagination;
     siblings.forEach((item) => {
       if (item.page === current + 1) {
-        renderPage(item.href).then(() => {
-          scrollViewRef.current.scrollTo({ y: 0, animated: true });
-        })
+        renderPage(item.href)
       }
     })
   }
@@ -265,10 +261,24 @@ const Thread = ({ route }) => {
             contentWidth={width}
             source={{ html: decodeHtmlEntity(item.content) }}
             tagsStyles={htmlStyles}
+            customHTMLElementModels={{
+              font: HTMLElementModel.fromCustomModel({
+                contentModel: HTMLContentModel.block
+              }),
+              marquee: HTMLElementModel.fromCustomModel({
+                contentModel: HTMLContentModel.block
+              }),
+              object: HTMLElementModel.fromCustomModel({
+                contentModel: HTMLContentModel.block
+              }),
+              // fieldset: HTMLElementModel.fromCustomModel({
+              //   contentModel: HTMLContentModel.block
+              // }),
+            }}
             renderersProps={{
               a: {
                 onPress: (event, href) => {
-                  console.log('a onPress', src)
+                  console.log('a onPress', href)
                   handleLinkPress(href)
                 }
               },
@@ -342,6 +352,15 @@ const Thread = ({ route }) => {
               source={{ html: decodeHtmlEntity(firstPost.content) }}
               tagsStyles={htmlStyles}
               customHTMLElementModels={{
+                font: HTMLElementModel.fromCustomModel({
+                  contentModel: HTMLContentModel.block
+                }),
+                marquee: HTMLElementModel.fromCustomModel({
+                  contentModel: HTMLContentModel.block
+                }),
+                object: HTMLElementModel.fromCustomModel({
+                  contentModel: HTMLContentModel.block
+                }),
                 // fieldset: HTMLElementModel.fromCustomModel({
                 //   contentModel: HTMLContentModel.block
                 // }),

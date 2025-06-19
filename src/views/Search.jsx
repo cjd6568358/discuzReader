@@ -121,17 +121,6 @@ const SearchView = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
-      {/* 导航栏 */}
-      <View style={styles.navbar}>
-        <View style={styles.navbarContent}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size={18} color="#6B7280" />
-          </Pressable>
-          <Text style={styles.navbarTitle}>搜索</Text>
-          <View style={{ width: 18 }} />
-        </View>
-      </View>
-
       {/* 主体内容 */}
       <ScrollView style={styles.content}>
         {/* 基础搜索 */}
