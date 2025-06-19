@@ -76,7 +76,7 @@ export const messageAction = async ({ action = 'view', id, data }) => {
 
 export const getForumPage = async (href) => {
     try {
-        const res = await http.get(href, { selector: selectors.forum })
+        const res = await http.get(href, { selector: href.startsWith('search.php') ? selectors.searchResult : selectors.forum })
         const { title, breadcrumb, pagination } = res.data
         const newData = {
             ...res.data,
@@ -104,8 +104,8 @@ export const getThreadPage = async (href) => {
     // /thread-\d*-\d*-\d*.html/.test(href)
     if (/viewthread\.php\?tid=(\d+)(?:&page=(\d+))?(?:#(\d+))?/.test(href)) {
         // viewthread.php?tid=6369158(&page=1(#pid110991881))
-        const [, tid, page = 1, anchor] = url.match(/viewthread\.php\?tid=(\d+)(?:&page=(\d+))?(?:#(\d+))?/)
-        href = `thread-${tid}-${page}-1.html${anchor ? `#${anchor}` : ''}}`
+        const [, tid, page = 1, anchor] = href.match(/viewthread\.php\?tid=(\d+)(?:&page=(\d+))?(?:#(\d+))?/)
+        href = `thread-${tid}-${page}-1.html${anchor ? `#${anchor}` : ''}`
     }
     if (MMStore.cached[href]) {
         return {
@@ -135,7 +135,7 @@ export const getThreadPage = async (href) => {
                     content: item.content
                         .replace(/[\t]/g, ``)
                         .replace(/(\S)(<br>)(\S)/g, "$1$3")
-                        .replace(/="attachment/g, `="${http.ba.baseUrl}attachment`)
+                        .replace(/="attachment/g, `="${http.defaults.baseURL}attachment`)
                         .replace(/="images/g, `="${http.defaults.baseURL}images`)
                         .replace(/="http:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`),
                     // 附件
@@ -226,6 +226,16 @@ export const getProfilePage = async () => {
         return res.data
     } catch (error) {
         console.log('getProfilePage', error);
+        return Promise.reject(error)
+    }
+}
+
+export const getSearchPage = async () => {
+    try {
+        const res = await http.get(`search.php`, { selector: selectors.search })
+        return res.data
+    } catch (error) {
+        console.log('getSearchPage', error);
         return Promise.reject(error)
     }
 }

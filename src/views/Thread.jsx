@@ -41,7 +41,7 @@ const Thread = ({ route }) => {
   const [replyTitle, setReplyTitle] = useState('');
 
   useFocusEffect(useCallback(() => {
-    renderPage(route.params.href)
+    renderPage(route.params.href);
   }, [route.params.href]))
 
   useEffect(() => {
@@ -119,7 +119,7 @@ const Thread = ({ route }) => {
         //   ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
         // }
         const history = JSON.parse(storage.getString('history') || '[]')
-        if(history.find(item => item.tid === tid)){
+        if (history.find(item => item.tid === tid)) {
           history.filter(item => item.tid !== tid)
         }
         history.push({
@@ -563,10 +563,10 @@ const htmlStyles = {
   },
   img: {
     marginVertical: 8,
-    maxWidth: '100%',
+    maxWidth: 350,
     width: 'auto',
     height: 'auto',
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
   },
   blockquote: {
     borderLeftWidth: 4,

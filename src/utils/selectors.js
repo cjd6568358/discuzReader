@@ -228,6 +228,9 @@ export default {
     }
     `,
     search: `
+    input[name=formhash][value=$formhash];
+    `,
+    searchResult: `
     .mainbox.threadlist tbody@threads{
         th a[href=$href]{$title};
         th a[href=$tid|split('-')|slice(1,2)|first|Number];

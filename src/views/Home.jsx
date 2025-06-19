@@ -163,6 +163,7 @@ const IndexView = () => {
               placeholder="搜索帖子、用户"
               style={styles.searchInput}
               placeholderTextColor="#9CA3AF"
+              onFocus={() => navigation.navigate('Search')}
             />
           </View>
         </View>
