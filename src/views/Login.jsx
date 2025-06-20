@@ -23,7 +23,7 @@ const LoginView = () => {
   const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('cjd11109');
+  const [password, setPassword] = useState('');
   const [securityAnswer, setSecurityAnswer] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
