@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import Swiper from 'react-native-swiper';
 import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Pagination from '../components/Pagination';
 import ActionSheet from '../components/ActionSheet';
@@ -40,9 +40,9 @@ const Thread = ({ route }) => {
   const [replyModalVisible, setReplyModalVisible] = useState(false);
   const [replyTitle, setReplyTitle] = useState('');
 
-  useFocusEffect(useCallback(() => {
+  useEffect(() => {
     renderPage(route.params.href);
-  }, [route.params.href]))
+  }, [route.params.href])
 
   useEffect(() => {
     pageData && renderHeader()
@@ -83,9 +83,9 @@ const Thread = ({ route }) => {
   })
 
   const clearCache = useCallback(() => {
-    delete MMStore.cached[`thread-${pageData.tid}-${pageData.pagination.current}-1.html`]
+    delete MMStore.cached[`thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`]
     setTimeout(() => {
-      renderPage(`thread-${pageData.tid}-${pageData.pagination.current}-1.html`)
+      renderPage(`thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`)
     }, ToastAndroid.SHORT);
     ToastAndroid.show('缓存已清除', ToastAndroid.SHORT);
   })
@@ -118,9 +118,9 @@ const Thread = ({ route }) => {
         // if (pagination) {
         //   ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
         // }
-        const history = JSON.parse(storage.getString('history') || '[]')
+        let history = JSON.parse(storage.getString('history') || '[]')
         if (history.find(item => item.tid === data.tid)) {
-          history.filter(item => item.tid !== data.tid)
+          history = history.filter(item => item.tid !== data.tid)
         }
         history.push({
           tid: data.tid,
@@ -153,7 +153,9 @@ const Thread = ({ route }) => {
     console.log('longPressKey', longPressKey);
     console.log('action', action);
     if (action === 'search') {
-
+      navigation.navigate('Search', {
+        srchuname: longPressKey.author.name,
+      })
     } else if (action === 'message') {
       setReplyTitle('私信给:' + longPressKey.author.name);
       setReplyModalVisible(true);
@@ -188,7 +190,7 @@ const Thread = ({ route }) => {
     }
   }
 
-  const handleLongPress = (key) => {
+  const handleReplyPress = (key) => {
     setLongPressKey(key);
     setActionSheetVisible(true)
   };
@@ -243,7 +245,7 @@ const Thread = ({ route }) => {
   }
 
   const renderReplyItem = ({ item }) => (
-    <Pressable onLongPress={() => handleLongPress(item)} style={styles.replyItem}>
+    <Pressable onPress={() => handleReplyPress(item)} style={styles.replyItem}>
       <View style={styles.replyContent}>
         <Image source={{ uri: item.author.avatar }} style={styles.replyAvatar} />
         <View style={styles.replyBody}>
@@ -271,9 +273,12 @@ const Thread = ({ route }) => {
               object: HTMLElementModel.fromCustomModel({
                 contentModel: HTMLContentModel.block
               }),
-              // fieldset: HTMLElementModel.fromCustomModel({
-              //   contentModel: HTMLContentModel.block
-              // }),
+              fieldset: HTMLElementModel.fromCustomModel({
+                contentModel: HTMLContentModel.block
+              }),
+              legend: HTMLElementModel.fromCustomModel({
+                contentModel: HTMLContentModel.block
+              }),
             }}
             renderersProps={{
               a: {
@@ -287,7 +292,7 @@ const Thread = ({ route }) => {
                 computeImagesMaxWidth: 150,
                 onPress: (event, src) => {
                   console.log('img onPress', src)
-                  if (src.startsWith('attachments/')) {
+                  if (src.includes('attachments/')) {
                     handleLinkPress(src);
                   }
                 }
@@ -296,6 +301,17 @@ const Thread = ({ route }) => {
             baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
             defaultViewProps={{ style: { marginVertical: 8 } }}
           />
+          {item.legend && item.legend.length > 0 && (
+            <View style={[styles.rateContainer, { marginTop: -20 }]}>
+              <Text style={styles.rateTitle}>评分</Text>
+              {item.legend.map((item, index) => (
+                <View key={index} style={styles.rateItem}>
+                  <Icon name="trophy" size={14} color="#f7ba2a" style={styles.rateIcon} />
+                  <Text style={styles.rateText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          )}
           <View style={styles.replyFooter}>
             <Text style={styles.replyTime}>{item.date}</Text>
             <View style={styles.replyActions}>
@@ -361,20 +377,23 @@ const Thread = ({ route }) => {
                 object: HTMLElementModel.fromCustomModel({
                   contentModel: HTMLContentModel.block
                 }),
-                // fieldset: HTMLElementModel.fromCustomModel({
-                //   contentModel: HTMLContentModel.block
-                // }),
+                fieldset: HTMLElementModel.fromCustomModel({
+                  contentModel: HTMLContentModel.block
+                }),
+                legend: HTMLElementModel.fromCustomModel({
+                  contentModel: HTMLContentModel.block
+                }),
               }}
               renderersProps={{
                 a: {
                   onPress: (event, href) => handleLinkPress(href)
                 },
                 img: {
-                  enableExperimentalPercentWidth: true,
-                  computeImagesMaxWidth: 150,
+                  // enableExperimentalPercentWidth: true,
+                  // computeImagesMaxWidth: 150,
                   onPress: (event, src) => {
                     console.log('img onPress', src)
-                    if (src.startsWith('attachments/')) {
+                    if (src.includes('attachments/')) {
                       handleLinkPress(src);
                     }
                   }

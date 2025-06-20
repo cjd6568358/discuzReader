@@ -16,7 +16,7 @@ import { useLoading } from '../components/Loading';
 import { getSearchPage } from '../utils/api';
 import http from '../utils/http';
 
-const SearchView = () => {
+const SearchView = ({ route }) => {
   const { showLoading, hideLoading } = useLoading();
   const navigation = useNavigation();
   const [formhash, setFormhash] = useState('');
@@ -28,6 +28,9 @@ const SearchView = () => {
   const [orderby, setOrderby] = useState('lastpost');
   const [ascdesc, setAscdesc] = useState('desc');
   useEffect(() => {
+    if (route.params?.srchuname) {
+      setSrchuname(route.params.srchuname);
+    }
     getSearchPage().then(data => {
       setFormhash(data.formhash);
     })

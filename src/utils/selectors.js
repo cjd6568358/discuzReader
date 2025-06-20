@@ -142,17 +142,17 @@ export default {
         .postcontent .postinfo strong{$floor|replace(/\\D/g,'')|Number}
         .postcontent .postinfo{$date|match(/(\\d{4}.*\\d{2})/)|first}
         .postcontent>.postmessage>.postratings b{$thanks|Number}
-        .postcontent>.postmessage>.t_msgfont{html($content)}
-        .postcontent>.postmessage>.t_msgfont>.t_msgfont{html($content)}
-        .postcontent>.postmessage>.notice{html($content)}
-        .postcontent>.postmessage>.t_msgfont>.postattachlist .t_attachlist@attachments{
+        .postcontent>.postmessage .t_msgfont[id^=postmessage_]{html($content)}
+        .postcontent>.postmessage .t_msgfont .t_msgfont[id^=postmessage_]{html($content)}
+        .postcontent>.postmessage>.notice{html($notice)}
+        .postcontent>.postmessage .postattachlist .t_attachlist@attachments{
           dt img[src=$icon];
           dt a[href=$link]{$name};
           dt em{$size};
           dl p:first-child{$date|trim};
           dl p:last-child img[src=$url];
         }
-        .postcontent>.postmessage>.t_msgfont>fieldset ul li@legend{
+        .postcontent>.postmessage fieldset ul li@legend{
           &{$|trim|replace(/\\t*/g,'')|replace(/\\n/g,' ')};
         }
     };

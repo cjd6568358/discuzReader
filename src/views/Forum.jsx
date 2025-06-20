@@ -190,7 +190,7 @@ const ForumView = ({ route }) => {
 
   const onForumPress = (item) => {
     console.log('onForumPress', item);
-    navigation.navigate('Forum', {
+    navigation.push('Forum', {
       href: item.href,
     })
   }

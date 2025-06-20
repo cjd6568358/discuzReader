@@ -135,19 +135,18 @@ export const getThreadPage = async (href) => {
                 name: item.name.replace(title_regex, '$1'),
             })),
             posts: posts.map(item => {
-                item.content = item.content ?? '';
+                let content = (item.content ?? '').replace(/[\t]/g, ``)
+                .replace(/(\S)(<br>)(\S)/g, "$1$3")
+                .replace(/="http:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`)
+                .replace(/="attachment/g, `="${http.defaults.baseURL}attachment`)
+                .replace(/="images/g, `="${http.defaults.baseURL}images`) + '<br>' + (item.notice ?? '');
                 return {
                     ...item,
                     author: {
                         ...item.author,
                         avatar: http.defaults.baseURL + item.author?.avatar,
                     },
-                    content: item.content
-                        .replace(/[\t]/g, ``)
-                        .replace(/(\S)(<br>)(\S)/g, "$1$3")
-                        .replace(/="attachment/g, `="${http.defaults.baseURL}attachment`)
-                        .replace(/="images/g, `="${http.defaults.baseURL}images`)
-                        .replace(/="http:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`),
+                    content,
                     // 附件
                     attachments: item.attachments.map(i => ({
                         ...i,
