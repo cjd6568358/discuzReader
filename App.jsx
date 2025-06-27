@@ -23,6 +23,7 @@ const App = () => {
         favoriteAction('view', 'my.php?item=favorites&type=thread'),
         favoriteAction('view', 'my.php?item=favorites&type=forum')
       ]).then(([thread, forum]) => {
+        console.log('收藏数据', thread, forum)
         MMStore.favorites.thread = thread
         MMStore.favorites.forums = forum
       }).catch(err => {

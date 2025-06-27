@@ -117,18 +117,18 @@ export const getThreadPage = async (href) => {
         const [, tid, page = 1, anchor] = href.match(/viewthread\.php\?tid=(\d+)(?:&page=(\d+))?(?:#(\d+))?/)
         href = `thread-${tid}-${page}-1.html${anchor ? `#${anchor}` : ''}`
     }
+    let result = null
+    let isCache = false
     if (MMStore.cached[href]) {
-        return {
-            ...MMStore.cached[href],
-            cached: true,
-            anchor: href.split('#')[1]
-        }
+        result = MMStore.cached[href]
+        isCache = true
+    } else {
+        result = await http.get(href, { selector: selectors.thread })
     }
     try {
-        const res = await http.get(href, { selector: selectors.thread })
-        const { title, breadcrumb, posts, pagination } = res.data
+        const { title, breadcrumb, posts, pagination } = result.data
         const newData = {
-            ...res.data,
+            ...result.data,
             title: title.replace(title_regex, '$1'),
             breadcrumb: breadcrumb.map(item => ({
                 ...item,
@@ -136,10 +136,10 @@ export const getThreadPage = async (href) => {
             })),
             posts: posts.map(item => {
                 let content = (item.content ?? '').replace(/[\t]/g, ``)
-                .replace(/(\S)(<br>)(\S)/g, "$1$3")
-                .replace(/="http:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`)
-                .replace(/="attachment/g, `="${http.defaults.baseURL}attachment`)
-                .replace(/="images/g, `="${http.defaults.baseURL}images`) + '<br>' + (item.notice ?? '');
+                    .replace(/(\S)(<br>)(\S)/g, "$1$3")
+                    .replace(/="http:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`)
+                    .replace(/="attachment/g, `="${http.defaults.baseURL}attachment`)
+                    .replace(/="images/g, `="${http.defaults.baseURL}images`) + '<br>' + (item.notice ?? '');
                 return {
                     ...item,
                     author: {
@@ -166,11 +166,12 @@ export const getThreadPage = async (href) => {
         // redirect.php?tid=6379736(&goto=lastpost(#pid110991881)) 不参与缓存 
         // 第一页和最后一页不参与缓存
         if (!/^redirect\.php\?tid=\d*&goto=lastpost/.test(href) || !pagination || newData.pagination.current === newData.pagination.last) {
-            MMStore.cached[href] = newData
+            MMStore.cached[href] = result
         }
         return {
             ...newData,
-            anchor: href.split('#')[1]
+            anchor: href.split('#')[1],
+            isCache
         }
     } catch (error) {
         console.log('getThreadPage', error);

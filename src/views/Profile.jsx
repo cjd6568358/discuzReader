@@ -7,7 +7,8 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
-  Pressable
+  Pressable,
+  ToastAndroid
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -90,7 +91,7 @@ const Profile = () => {
                 <Icon name={item.icon} size={20} color="#9CA3AF" style={styles.menuIcon} />
                 <Text style={styles.menuTitle}>{item.title}</Text>
                 <View style={styles.menuRight}>
-                  {item.count && (
+                  {item.count > 0 && (
                     <Text style={styles.menuCount}>{item.count}</Text>
                   )}
                   <Icon name="chevron-right" size={16} color="#D1D5DB" />
@@ -102,7 +103,8 @@ const Profile = () => {
           {/* 设置和退出 */}
           <View style={styles.settingsContainer}>
             <Pressable style={styles.settingItem} onPress={() => {
-              MMStore.cached = {}
+              MMStore.cached = {};
+              ToastAndroid.show('清理缓存成功', ToastAndroid.SHORT);
             }}>
               <Icon name="trash" size={20} color="#9CA3AF" style={styles.menuIcon} />
               <Text style={styles.menuTitle}>清理缓存</Text>
