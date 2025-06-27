@@ -53,7 +53,7 @@ export default function temme(
   // 优化cheerio加载，减少不必要的DOM操作
   let $: CheerioStatic
   if (typeof html === 'string') {
-    $ = cheerio.load(html, { decodeEntities: false, _useHtmlParser2: true })
+    $ = cheerio.load(html, { decodeEntities: false, _useHtmlParser2: false })
   } else if (isCheerioStatic(html)) {
     $ = html
   } else {
