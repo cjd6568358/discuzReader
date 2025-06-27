@@ -36,9 +36,11 @@ const NodesView = () => {
     const abortControllerRef = useRef({});
     const timeoutIdsRef = useRef([]);
     const flatListRef = useRef(null);
+    const willUnmountRef = useRef(false);
     // 组件卸载时的清理函数
     useEffect(() => {
         return () => {
+            willUnmountRef.current = true;
             // 取消所有正在进行的测速请求
             if (Object.keys(abortControllerRef.current).length) {
                 Object.values(abortControllerRef.current).forEach(item => item.abort())
@@ -171,10 +173,18 @@ const NodesView = () => {
                     });
 
                     // 发送请求并计时
-                    const fetchPromise = fetch(testUrl + '/bbs/index.php', {
-                        method: 'GET',
-                        signal: abortControllerRef.current[url].signal
-                    });
+                    const fetchPromise = new Promise((resolve, reject) => {
+                        fetch(testUrl + '/bbs/index.php', {
+                            method: 'GET',
+                            signal: abortControllerRef.current[url].signal
+                        }).then(res => {
+                            if (res.headers.map["x-powered-by"]?.includes('PHP') && res.status === 200) {
+                                resolve(Date.now() - startTime);
+                            } else {
+                                reject(new Error('请求失败'));
+                            }
+                        }).catch(err => reject(err));
+                    })
 
                     // 使用Promise.race来实现超时控制
                     await Promise.race([fetchPromise, timeoutPromise]);
@@ -254,6 +264,9 @@ const NodesView = () => {
 
         // 逐批测试
         for (let i = 0; i < batches.length; i++) {
+            if (willUnmountRef.current) {
+                break;
+            }
             const currentBatch = batches[i];
 
             // 并行测试当前批次的所有节点
