@@ -255,96 +255,183 @@ const Thread = ({ route }) => {
     })
   }
 
-  const renderReplyItem = ({ item }) => (
-    <Pressable onPress={() => handleReplyPress(item)} style={styles.replyItem}>
-      <View style={styles.replyContent}>
-        <Image source={{ uri: item.author.avatar }} style={styles.replyAvatar} />
-        <View style={styles.replyBody}>
-          <View style={styles.replyHeader}>
-            <View style={styles.replyUserInfo}>
-              <Text style={styles.replyUsername}>{item.author.name}</Text>
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>{item.author.level}</Text>
-              </View>
+  const renderPostItem = ({ item }) => {
+    const imageAttachments = item.attachments.filter(item => item.icon.includes('image.gif'));
+    const otherAttachments = item.attachments.filter(item => !item.icon.includes('image.gif'));
+    const isFirstPost = item.floor === 1;
+    return <Pressable onPress={() => handleReplyPress(item)} style={styles.postContainer}>
+      <View style={styles.authorContainer}>
+        <Image source={{ uri: item.author.avatar }} style={styles.authorAvatar} />
+        <View style={styles.authorInfo}>
+          <View style={styles.authorNameContainer}>
+            <Text style={styles.authorName}>{item.author.name}</Text>
+            <View style={styles.authorBadge}>
+              <Text style={styles.authorBadgeText}>{item.author.level}</Text>
             </View>
             <Text style={styles.replyNumber}>#{item.floor}</Text>
           </View>
-          <RenderHtml
-            contentWidth={width}
-            source={{ html: decodeHtmlEntity(item.content) }}
-            tagsStyles={htmlStyles}
-            customHTMLElementModels={{
-              font: HTMLElementModel.fromCustomModel({
-                contentModel: HTMLContentModel.block
-              }),
-              marquee: HTMLElementModel.fromCustomModel({
-                contentModel: HTMLContentModel.block
-              }),
-              object: HTMLElementModel.fromCustomModel({
-                contentModel: HTMLContentModel.block
-              }),
-              fieldset: HTMLElementModel.fromCustomModel({
-                contentModel: HTMLContentModel.block
-              }),
-              legend: HTMLElementModel.fromCustomModel({
-                contentModel: HTMLContentModel.block
-              }),
-            }}
-            renderersProps={{
-              a: {
-                onPress: (event, href) => {
-                  console.log('a onPress', href)
-                  handleLinkPress(href)
-                }
-              },
-              img: {
-                enableExperimentalPercentWidth: true,
-                computeImagesMaxWidth: 150,
-                onPress: (event, src) => {
-                  console.log('img onPress', src)
-                  if (src.includes('attachments/')) {
-                    handleLinkPress(src);
-                  }
-                }
-              }
-            }}
-            baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
-            defaultViewProps={{ style: { marginVertical: 8 } }}
-          />
-          {item.legend && item.legend.length > 0 && (
-            <View style={[styles.rateContainer, { marginTop: -20 }]}>
-              <Text style={styles.rateTitle}>评分</Text>
-              {item.legend.map((item, index) => (
-                <View key={index} style={styles.rateItem}>
-                  <Icon name="trophy" size={14} color="#f7ba2a" style={styles.rateIcon} />
-                  <Text style={styles.rateText}>{item}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-          <View style={styles.replyFooter}>
-            <Text style={styles.replyTime}>{item.date}</Text>
-            <View style={styles.replyActions}>
-              <Pressable style={styles.replyAction} onPress={() => {
-                setReplyTitle(`回复 ${item.floor}楼 的帖子`);
-                setReplyModalVisible(true)
-              }}>
-                <Icon name="comment-o" size={14} color="#6B7280" style={styles.actionIcon} />
-                <Text style={styles.actionText}>回复</Text>
-              </Pressable>
-            </View>
-          </View>
+          <Text style={styles.postTime}>{item.date}</Text>
         </View>
       </View>
+
+      {/* 帖子内容 */}
+      <View style={styles.postContent}>
+        <RenderHtml
+          contentWidth={width}
+          source={{ html: decodeHtmlEntity(item.content) }}
+          tagsStyles={htmlStyles}
+          customHTMLElementModels={{
+            font: HTMLElementModel.fromCustomModel({
+              contentModel: HTMLContentModel.block
+            }),
+            marquee: HTMLElementModel.fromCustomModel({
+              contentModel: HTMLContentModel.block
+            }),
+            object: HTMLElementModel.fromCustomModel({
+              contentModel: HTMLContentModel.block
+            }),
+            fieldset: HTMLElementModel.fromCustomModel({
+              contentModel: HTMLContentModel.block
+            }),
+            legend: HTMLElementModel.fromCustomModel({
+              contentModel: HTMLContentModel.block
+            }),
+          }}
+          renderersProps={{
+            a: {
+              onPress: (event, href) => handleLinkPress(href)
+            },
+            img: {
+              // enableExperimentalPercentWidth: true,
+              // computeImagesMaxWidth: 150,
+              onPress: (event, src) => {
+                console.log('img onPress', src)
+                if (src.includes('attachments/')) {
+                  handleLinkPress(src);
+                }
+              }
+            }
+          }}
+          baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
+          defaultViewProps={{ style: { marginVertical: 8 } }}
+        />
+      </View>
+      {item.attachments.length > 0 && (
+        <View style={styles.attachmentContainer}>
+          <Text style={styles.attachmentTitle}>附件</Text>
+          {/* 图片附件轮播图 */}
+          {imageAttachments.length > 0 && cookies.cdb3_auth?.value && (
+            <View style={styles.imageCarouselContainer}>
+              <Swiper
+                height={240}
+                loop={true}
+                autoplay={false}
+                autoplayTimeout={4}
+                showsButtons={false}
+                paginationStyle={styles.swiperPagination}
+                dotStyle={styles.swiperDot}
+                activeDotStyle={styles.swiperActiveDot}
+              >
+                {imageAttachments.map((item, index) => (
+                  <Pressable
+                    key={index}
+                    style={styles.imageSlide}
+                    onPress={() => handleLinkPress(item.url || item.link, item.name)}
+                    onLongPress={() => downloadFile(item.url || item.link, item.name)}
+                  >
+                    <Image
+                      source={{
+                        uri: item.url || item.link,
+                        headers: {
+                          'User-Agent': userAgent,
+                          'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
+                        }
+                      }}
+                      style={styles.carouselImage}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.imageCaption} numberOfLines={1}>{item.name}</Text>
+                  </Pressable>
+                ))
+                }
+              </Swiper>
+            </View>
+          )}
+          {/* 非图片附件列表 */}
+          {otherAttachments.length > 0 && <FlatList
+            data={otherAttachments}
+            keyExtractor={(item) => item.name}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <Pressable
+                style={styles.attachmentItem}
+                onPress={() => downloadFile(item.url || item.link, item.name)}
+              >
+                <View style={styles.attachmentIconContainer}>
+                  {item.icon.includes('zip.gif') ? (
+                    <Icon name="file-archive-o" size={20} color="#D97706" />
+                  ) : (
+                    <Icon name="file-o" size={20} color="#6B7280" />
+                  )}
+                </View>
+                <View style={styles.attachmentInfo}>
+                  <Text style={styles.attachmentName} numberOfLines={1}>{item.name}</Text>
+                  <View style={styles.attachmentMeta}>
+                    <Text style={styles.attachmentSize}>{item.size}</Text>
+                    <Text style={styles.attachmentDate}>{item.date}</Text>
+                  </View>
+                </View>
+                {item.icon.includes('zip.gif') && <Icon name="download" size={16} color="#6B7280" />}
+              </Pressable>
+            )}
+          />}
+        </View>
+      )}
+      {item.legend.length > 0 && (
+        <View style={styles.rateContainer}>
+          <Text style={styles.rateTitle}>评分</Text>
+          {item.legend.map((item, index) => (
+            <View key={index} style={styles.rateItem}>
+              <Icon name="trophy" size={14} color="#f7ba2a" style={styles.rateIcon} />
+              <Text style={styles.rateText}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {/* 帖子数据 */}
+      {isFirstPost ?
+        <View style={styles.postStats}>
+          {item.thanks > 0 && <>
+            <View style={styles.statItem}>
+              <Icon name="heart" size={12} color="#FF0000" style={styles.statIcon} />
+              <Text style={styles.statText}>{item.thanks} 感谢</Text>
+            </View>
+            <Text style={styles.statDivider}>|</Text>
+          </>}
+          <View style={styles.statItem}>
+            <Icon name="comment-o" size={14} color="#6B7280" style={styles.statIcon} />
+            <Text style={styles.statText}>{(pageData?.pagination?.total || pageData.posts.length) - 1} 回复</Text>
+          </View>
+        </View>
+        :
+        <View style={styles.replyFooter}>
+          <View style={styles.replyActions}>
+            <Pressable style={styles.replyAction} onPress={() => {
+              setReplyTitle(`回复 ${item.floor}楼 的帖子`);
+              setReplyModalVisible(true)
+            }}>
+              <Icon name="comment-o" size={14} color="#6B7280" style={styles.actionIcon} />
+              <Text style={styles.actionText}>回复</Text>
+            </Pressable>
+          </View>
+        </View>
+      }
     </Pressable>
-  );
+  };
 
   if (!pageData) {
     return null
   }
-  let firstPost = pageData.posts.filter(post => post.floor === 1)[0];
-  const imageAttachments = firstPost?.attachments.filter(item => item.icon.includes('image.gif'));
-  const repliesList = pageData.posts.filter(post => post.floor > 1);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -352,174 +439,13 @@ const Thread = ({ route }) => {
 
       {/* 主要内容区域 */}
       <ScrollView style={styles.scrollView} ref={view => scrollViewRef.current = view}>
-        {/* 帖子标题 */}
-        {firstPost && <View style={styles.postContainer}>
-          {/* <Text style={styles.postTitle}>{pageData?.title}</Text> */}
-
-          {/* 作者信息 */}
-          <View style={styles.authorContainer}>
-            <Image source={{ uri: firstPost.author.avatar }} style={styles.authorAvatar} />
-            <View style={styles.authorInfo}>
-              <View style={styles.authorNameContainer}>
-                <Text style={styles.authorName}>{firstPost.author.name}</Text>
-                <View style={styles.authorBadge}>
-                  <Text style={styles.authorBadgeText}>{firstPost.author.level}</Text>
-                </View>
-                <Text style={styles.replyNumber}>#{firstPost.floor}</Text>
-              </View>
-              <Text style={styles.postTime}>{firstPost.date}</Text>
-            </View>
-          </View>
-
-          {/* 帖子内容 */}
-          <View style={styles.postContent}>
-            <RenderHtml
-              contentWidth={width}
-              source={{ html: decodeHtmlEntity(firstPost.content) }}
-              tagsStyles={htmlStyles}
-              customHTMLElementModels={{
-                font: HTMLElementModel.fromCustomModel({
-                  contentModel: HTMLContentModel.block
-                }),
-                marquee: HTMLElementModel.fromCustomModel({
-                  contentModel: HTMLContentModel.block
-                }),
-                object: HTMLElementModel.fromCustomModel({
-                  contentModel: HTMLContentModel.block
-                }),
-                fieldset: HTMLElementModel.fromCustomModel({
-                  contentModel: HTMLContentModel.block
-                }),
-                legend: HTMLElementModel.fromCustomModel({
-                  contentModel: HTMLContentModel.block
-                }),
-              }}
-              renderersProps={{
-                a: {
-                  onPress: (event, href) => handleLinkPress(href)
-                },
-                img: {
-                  // enableExperimentalPercentWidth: true,
-                  // computeImagesMaxWidth: 150,
-                  onPress: (event, src) => {
-                    console.log('img onPress', src)
-                    if (src.includes('attachments/')) {
-                      handleLinkPress(src);
-                    }
-                  }
-                }
-              }}
-              baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
-              defaultViewProps={{ style: { marginVertical: 8 } }}
-            />
-          </View>
-          {firstPost?.attachments && firstPost.attachments.length > 0 && (
-            <View style={styles.attachmentContainer}>
-              <Text style={styles.attachmentTitle}>附件</Text>
-
-              {/* 图片附件轮播图 */}
-              {imageAttachments.length > 0 && cookies.cdb3_auth?.value && (
-                <View style={styles.imageCarouselContainer}>
-                  <Swiper
-                    height={240}
-                    loop={true}
-                    autoplay={false}
-                    autoplayTimeout={4}
-                    showsButtons={false}
-                    paginationStyle={styles.swiperPagination}
-                    dotStyle={styles.swiperDot}
-                    activeDotStyle={styles.swiperActiveDot}
-                  >
-                    {imageAttachments.map((item, index) => (
-                      <Pressable
-                        key={index}
-                        style={styles.imageSlide}
-                        onPress={() => handleLinkPress(item.url || item.link, item.name)}
-                        onLongPress={() => downloadFile(item.url || item.link, item.name)}
-                      >
-                        <Image
-                          source={{
-                            uri: item.url || item.link,
-                            headers: {
-                              'User-Agent': userAgent,
-                              'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
-                            }
-                          }}
-                          style={styles.carouselImage}
-                          resizeMode="cover"
-                        />
-                        <Text style={styles.imageCaption} numberOfLines={1}>{item.name}</Text>
-                      </Pressable>
-                    ))
-                    }
-                  </Swiper>
-                </View>
-              )}
-
-              {/* 非图片附件列表 */}
-              <FlatList
-                data={firstPost.attachments.filter(item => !item.icon.includes('image.gif'))}
-                keyExtractor={(item) => item.name}
-                scrollEnabled={false}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={styles.attachmentItem}
-                    onPress={() => downloadFile(item.url || item.link, item.name)}
-                  >
-                    <View style={styles.attachmentIconContainer}>
-                      {item.icon.includes('zip.gif') ? (
-                        <Icon name="file-archive-o" size={20} color="#D97706" />
-                      ) : (
-                        <Icon name="file-o" size={20} color="#6B7280" />
-                      )}
-                    </View>
-                    <View style={styles.attachmentInfo}>
-                      <Text style={styles.attachmentName} numberOfLines={1}>{item.name}</Text>
-                      <View style={styles.attachmentMeta}>
-                        <Text style={styles.attachmentSize}>{item.size}</Text>
-                        <Text style={styles.attachmentDate}>{item.date}</Text>
-                      </View>
-                    </View>
-                    {item.icon.includes('zip.gif') && <Icon name="download" size={16} color="#6B7280" />}
-                  </Pressable>
-                )}
-              />
-            </View>
-          )}
-          {firstPost?.legend && firstPost.legend.length > 0 && (
-            <View style={styles.rateContainer}>
-              <Text style={styles.rateTitle}>评分</Text>
-              {firstPost.legend.map((item, index) => (
-                <View key={index} style={styles.rateItem}>
-                  <Icon name="trophy" size={14} color="#f7ba2a" style={styles.rateIcon} />
-                  <Text style={styles.rateText}>{item}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-          {/* 帖子数据 */}
-          <View style={styles.postStats}>
-            {firstPost?.thanks > 0 && <>
-              <View style={styles.statItem}>
-                <Icon name="heart" size={12} color="#FF0000" style={styles.statIcon} />
-                <Text style={styles.statText}>{firstPost?.thanks} 感谢</Text>
-              </View>
-              <Text style={styles.statDivider}>|</Text>
-            </>}
-            <View style={styles.statItem}>
-              <Icon name="comment-o" size={14} color="#6B7280" style={styles.statIcon} />
-              <Text style={styles.statText}>{(pageData?.pagination?.total || pageData.posts.length) - 1} 回复</Text>
-            </View>
-          </View>
-        </View>}
-
         {/* 回复列表 */}
         <FlatList
-          data={repliesList}
-          renderItem={renderReplyItem}
+          data={pageData.posts}
+          renderItem={renderPostItem}
           keyExtractor={(item) => item.pid}
           scrollEnabled={false}
-          style={styles.repliesList}
+          style={styles.postList}
         />
 
         {pageData.pagination && <View style={styles.pageContainer}>
@@ -900,12 +826,8 @@ const styles = StyleSheet.create({
   postContainer: {
     padding: 16,
     backgroundColor: '#FFFFFF',
-  },
-  postTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    lineHeight: 28,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   authorContainer: {
     flexDirection: 'row',
@@ -969,61 +891,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     color: '#6B7280',
   },
-  repliesList: {
-    marginTop: 8,
-  },
-  replyItem: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  replyContent: {
-    flexDirection: 'row',
-  },
-  replyAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  replyBody: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  replyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  replyUserInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  replyUsername: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  levelBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 4,
-  },
-  levelText: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  replyNumber: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: "auto"
-  },
-  replyText: {
-    fontSize: 15,
-    color: '#374151',
-    lineHeight: 22,
+  postList: {
     marginTop: 8,
   },
   replyFooter: {
@@ -1031,10 +899,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 12,
-  },
-  replyTime: {
-    fontSize: 14,
-    color: '#6B7280',
   },
   replyActions: {
     flexDirection: 'row',
@@ -1095,8 +959,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 8,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
   },
   commentInputContainer: {
     flex: 1,

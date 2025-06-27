@@ -160,7 +160,7 @@ const ForumView = ({ route }) => {
           {/* <Pressable style={styles.starButton} onPress={toggleFavorite}>
             <Icon name={isFavorite ? "star" : "star-o"} size={18} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
           </Pressable> */}
-          <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Message')}>
+          <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Home', { screen: 'Message' })}>
             <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
             {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
           </Pressable>
