@@ -895,8 +895,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   replyFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     marginTop: 12,
   },
