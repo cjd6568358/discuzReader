@@ -137,7 +137,7 @@ export const getThreadPage = async (href) => {
             posts: posts.map(item => {
                 let content = (item.content ?? '').replace(/[\t]/g, ``)
                     .replace(/(\S)(<br>)(\S)/g, "$1$3")
-                    .replace(/="http:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`)
+                    .replace(/="https?:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`)
                     .replace(/="attachment/g, `="${http.defaults.baseURL}attachment`)
                     .replace(/="images/g, `="${http.defaults.baseURL}images`) + '<br>' + (item.notice ?? '');
                 return {

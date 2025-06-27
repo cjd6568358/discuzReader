@@ -858,6 +858,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     backgroundColor: '#EBF5FF',
     borderRadius: 4,
+    marginRight: 'auto',
   },
   authorBadgeText: {
     fontSize: 12,
