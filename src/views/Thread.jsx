@@ -164,7 +164,7 @@ const Thread = ({ route }) => {
     setActionSheetVisible(false);
   }
 
-  const handleLinkPress = (href) => {
+  const handleLinkPress = (href, name) => {
     if (href.startsWith('about:///')) {
       href = href.replace('about:///', '')
     }
@@ -177,7 +177,7 @@ const Thread = ({ route }) => {
       navigation.push('Forum', { href });
     } else if (href.includes('attachment.php')) {
       // console.log('navigate3', href);
-      downloadFile(href);
+      downloadFile(href, name);
     } else if (/\.(png|jpg|jpeg|gif|jpeg|webp)$/.test(href)) {
       // console.log('navigate4', href);
       // 处理附件图片点击，查看大图
@@ -424,8 +424,8 @@ const Thread = ({ route }) => {
                       <Pressable
                         key={index}
                         style={styles.imageSlide}
-                        onPress={() => handleLinkPress(item.url || item.link)}
-                        onLongPress={() => downloadFile(item.url || item.link)}
+                        onPress={() => handleLinkPress(item.url || item.link, item.name)}
+                        onLongPress={() => downloadFile(item.url || item.link, item.name)}
                       >
                         <Image
                           source={{ uri: item.url || item.link }}
