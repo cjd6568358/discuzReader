@@ -26,12 +26,12 @@ const Profile = () => {
     {
       title: '我的收藏',
       icon: 'star',
-      count: MMStore.favorites.forums.length + MMStore.favorites.threads.length
+      count: MMStore.favorites.forums?.length + MMStore.favorites.threads?.length
     },
     {
       title: '我的浏览',
       icon: 'history',
-      count: JSON.parse(storage.getString('history') || '[]').length + ''
+      count: JSON.parse(storage.getString('history') || '[]')?.length + ''
     }
   ];
   const [pageData, setPageData] = useState({});

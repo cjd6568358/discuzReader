@@ -99,7 +99,8 @@ const LoginView = () => {
         ToastAndroid.show('登录失败', ToastAndroid.SHORT);
         hideLoading();
       }
-    }, () => {
+    }, (err) => {
+      ToastAndroid.show(err, ToastAndroid.SHORT);
       hideLoading();
     })
   };
