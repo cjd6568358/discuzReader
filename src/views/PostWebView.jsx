@@ -4,7 +4,8 @@ import { WebView } from 'react-native-webview';
 import CookieManager from '@react-native-cookies/cookies';
 import { useNavigation } from '@react-navigation/native';
 import { useLoading } from '../components/Loading';
-import { storage } from '../utils/index';
+import { storage, userAgent } from '../utils/index';
+
 const PostScreen = ({ route }) => {
   const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
@@ -58,7 +59,7 @@ const PostScreen = ({ route }) => {
         originWhitelist={['*']}
         // onLoadStart={() => showLoading()}
         // onLoadEnd={() => hideLoading()}
-        userAgent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0'
+        userAgent={userAgent}
       />}
     </SafeAreaView>
   );

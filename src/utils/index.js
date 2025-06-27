@@ -3,7 +3,6 @@ import CookieManager from '@react-native-cookies/cookies';
 import { MMKV } from 'react-native-mmkv';
 import RNFS from 'react-native-fs';
 import iconv from 'iconv-lite'
-import axios from 'axios';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const storage = new MMKV();
@@ -86,9 +85,11 @@ const getFileNameFromUrl = (url) => {
     return match?.[1];
 };
 
-export const downloadFile = async (fileUrl, fileName = '') => {
+export const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0';
+
+export const downloadFile = async (fromUrl, fileName = '') => {
     if (!fileName) {
-        fileName = getFileNameFromUrl(fileUrl);
+        fileName = getFileNameFromUrl(fromUrl);
     }
     // 请求存储权限
     const granted = await PermissionsAndroid.request(
@@ -107,62 +108,34 @@ export const downloadFile = async (fileUrl, fileName = '') => {
         ToastAndroid.show('存储权限被拒绝', ToastAndroid.LONG);
         return Promise.reject('存储权限被拒绝');
     }
-    const response = await axios({
-        url: fileUrl,
-        method: 'GET',
-        responseType: 'blob', // 重要
-    });
-    if (!fileName) {
-        const disposition = response.headers['content-disposition'];
-        if (disposition && disposition.indexOf('attachment') !== -1) {
-            fileName = disposition.split('filename=')[1].split(';')[0].replace(/"/g, '') || 'downloadedFile.ext';
-        }
-    }
     // 使用公共下载目录，便于用户访问
     // 在Android上，DownloadDirectoryPath是公共下载目录
     const downloadPath = Platform.OS === 'android' ? RNFS.DownloadDirectoryPath : RNFS.DocumentDirectoryPath;
     try {
-        // 使用Promise包装FileReader操作，确保异步操作完成
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                try {
-                    // 构建完整的文件路径
-                    const filePath = `${downloadPath}/DiscuzReader/${fileName}`;
-
-                    try {
-                        await RNFS.mkdir(`${downloadPath}/DiscuzReader`).catch(err => console.log('目录已存在或创建失败:', err));
-
-                        // 写入文件到下载目录
-                        await RNFS.writeFile(filePath, reader.result.split(',')[1], 'base64');
-                        console.log('文件已成功保存至:', filePath);
-
-                        // 显示成功提示信息
-                        ToastAndroid.show(`文件 ${fileName} 已保存到下载目录`, ToastAndroid.LONG);
-
-                        // 如果是图片或PDF等文件，可以选择性地通知媒体库扫描该文件
-                        if (Platform.OS === 'android' && (fileName.endsWith('.jpg') || fileName.endsWith('.png') || fileName.endsWith('.pdf'))) {
-                            // 通知媒体库扫描新文件，使其在图库或文件管理器中可见
-                            await RNFS.scanFile(filePath).catch(err => console.log('媒体库扫描失败:', err));
-                        }
-
-                        resolve(filePath);
-                    } catch (fileError) {
-                        console.log('文件写入过程中出错:', fileError);
-                        ToastAndroid.show(`文件下载失败: ${fileError.message}`, ToastAndroid.LONG);
-                        reject(fileError);
-                    }
-                } catch (error) {
-                    console.log('写入文件错误:', error);
-                    reject(error);
-                }
-            };
-            reader.onerror = (error) => {
-                console.log('读取文件错误:', error);
-                reject(error);
-            };
-            reader.readAsDataURL(response.data); // 将 Blob 转换为 Base64
-        });
+        const selectedNode = storage.getString('selectedNode');
+        const cookies = await CookieManager.get(selectedNode);
+        // 构建完整的文件路径
+        const toFile = `${downloadPath}/DiscuzReader/${fileName}`;
+        await RNFS.mkdir(`${downloadPath}/DiscuzReader`).catch(err => console.log('目录已存在或创建失败:', err));
+        await RNFS.downloadFile({
+            fromUrl,
+            toFile,
+            background: true,
+            headers: {
+                'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
+                'User-Agent': userAgent,
+            },
+            begin: (res) => {
+                console.log('文件大小:', res.contentLength);
+            },
+        })
+        // 显示成功提示信息
+        ToastAndroid.show(`文件 ${fileName} 已保存到下载目录`, ToastAndroid.LONG);
+        // 如果是图片或PDF等文件，可以选择性地通知媒体库扫描该文件
+        if (Platform.OS === 'android' && (fileName.endsWith('.jpg') || fileName.endsWith('.png') || fileName.endsWith('.pdf'))) {
+            // 通知媒体库扫描新文件，使其在图库或文件管理器中可见
+            await RNFS.scanFile(toFile).catch(err => console.log('媒体库扫描失败:', err));
+        }
     } catch (error) {
         console.log('下载文件错误:', error);
         throw error; // 抛出错误以便调用者处理

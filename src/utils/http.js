@@ -1,7 +1,7 @@
 import axios from 'axios';
 import iconv from 'iconv-lite';
 import { ToastAndroid } from 'react-native';
-import { storage, UTF8ToGBK, decodeHtmlEntity, logout } from './index';
+import { storage, userAgent, UTF8ToGBK, decodeHtmlEntity, logout } from './index';
 import temme from '../lib/temme';
 
 /**
@@ -14,7 +14,7 @@ const defaultConfig = {
     baseURL: storage.getString('selectedNode') + '/bbs/',
     headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0',
+        'User-Agent': userAgent,
     },
     timeout: 6000, // 默认超时时间：4秒
     responseType: 'arraybuffer',
