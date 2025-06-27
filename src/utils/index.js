@@ -141,3 +141,23 @@ export const downloadFile = async (fromUrl, fileName = '') => {
         throw error; // 抛出错误以便调用者处理
     }
 };
+
+export const loadImageBase64 = async (uri) => {
+    try {
+        const response = await axios({
+            url: uri,
+            method: 'GET',
+            responseType: 'blob', // 重要
+        });
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(response.data);
+        });
+        return base64;
+    } catch (error) {
+        console.error('loadImageBase64:', error);
+        throw error;
+    }
+};

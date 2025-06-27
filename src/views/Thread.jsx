@@ -18,13 +18,15 @@ import {
 import Swiper from 'react-native-swiper';
 import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
 import { useNavigation } from '@react-navigation/native';
+import CookieManager from '@react-native-cookies/cookies';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Pagination from '../components/Pagination';
 import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
 import ReplyModal from '../components/ReplyModal';
 import { getThreadPage, favoriteAction, threadAction, messageAction } from '../utils/api'
-import { MMStore, storage, decodeHtmlEntity, downloadFile } from '../utils/index';
+import { MMStore, storage, decodeHtmlEntity, downloadFile, userAgent } from '../utils/index';
+
 
 const Thread = ({ route }) => {
   const navigation = useNavigation();
@@ -39,6 +41,8 @@ const Thread = ({ route }) => {
   const scrollViewRef = useRef(null);
   const [replyModalVisible, setReplyModalVisible] = useState(false);
   const [replyTitle, setReplyTitle] = useState('');
+  const [selectedNode] = useState(() => storage.getString('selectedNode'));
+  const [cookies, setCookies] = useState({});
 
   useEffect(() => {
     renderPage(route.params.href);
@@ -47,6 +51,13 @@ const Thread = ({ route }) => {
   useEffect(() => {
     pageData && renderHeader()
   }, [pageData])
+
+  useEffect(() => {
+    CookieManager.get(selectedNode).then((cookies) => {
+      console.log('cookies', cookies);
+      setCookies(cookies);
+    });
+  }, [selectedNode]);
 
   const renderHeader = useCallback(() => {
     const isFavorite = MMStore.favorites.threads.includes(pageData.tid);
@@ -175,10 +186,10 @@ const Thread = ({ route }) => {
     } else if (href.includes('forum-') || href.includes('forumdisplay')) {
       // console.log('navigate2', href);
       navigation.push('Forum', { href });
-    } else if (href.includes('attachment.php')) {
+    } else if (href.includes('attachment.php') && !/\.(png|jpg|jpeg|gif|webp)$/.test(name)) {
       // console.log('navigate3', href);
       downloadFile(href, name);
-    } else if (/\.(png|jpg|jpeg|gif|jpeg|webp)$/.test(href)) {
+    } else if (/\.(png|jpg|jpeg|gif|webp)$/.test(name) || /\.(png|jpg|jpeg|gif|webp)$/.test(href)) {
       // console.log('navigate4', href);
       // 处理附件图片点击，查看大图
       setCurrentImage(href);
@@ -258,7 +269,6 @@ const Thread = ({ route }) => {
             </View>
             <Text style={styles.replyNumber}>#{item.floor}</Text>
           </View>
-          {/* <Text style={styles.replyText}>{item.content}</Text> */}
           <RenderHtml
             contentWidth={width}
             source={{ html: decodeHtmlEntity(item.content) }}
@@ -408,7 +418,7 @@ const Thread = ({ route }) => {
               <Text style={styles.attachmentTitle}>附件</Text>
 
               {/* 图片附件轮播图 */}
-              {imageAttachments.length > 0 && (
+              {imageAttachments.length > 0 && cookies.cdb3_auth?.value && (
                 <View style={styles.imageCarouselContainer}>
                   <Swiper
                     height={240}
@@ -428,7 +438,13 @@ const Thread = ({ route }) => {
                         onLongPress={() => downloadFile(item.url || item.link, item.name)}
                       >
                         <Image
-                          source={{ uri: item.url || item.link }}
+                          source={{
+                            uri: item.url || item.link,
+                            headers: {
+                              'User-Agent': userAgent,
+                              'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
+                            }
+                          }}
                           style={styles.carouselImage}
                           resizeMode="cover"
                         />
@@ -553,7 +569,13 @@ const Thread = ({ route }) => {
           >
           </Pressable>
           <Image
-            source={{ uri: currentImage }}
+            source={{
+              uri: currentImage,
+              headers: {
+                'User-Agent': userAgent,
+                'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
+              }
+            }}
             style={styles.imageViewerImage}
             resizeMode="contain"
           />
