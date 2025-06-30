@@ -127,6 +127,7 @@ export const getThreadPage = async (href) => {
     }
     try {
         const { title, breadcrumb, posts, pagination } = result.data
+        const imgSrcList = [];
         const newData = {
             ...result.data,
             title: title.replace(title_regex, '$1'),
@@ -140,6 +141,14 @@ export const getThreadPage = async (href) => {
                     .replace(/="https?:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`)
                     .replace(/="attachment/g, `="${http.defaults.baseURL}attachment`)
                     .replace(/="images/g, `="${http.defaults.baseURL}images`) + '<br>' + (item.notice ?? '');
+                // 使用正则表达式提取 src 属性
+                const regex = /<img[^>]+src=["']([^"']+)["']/g;
+                let match;
+                while ((match = regex.exec(content)) !== null) {
+                    if (!/images\/[smilies|green|attachicons]/.test(match[1])) {
+                        imgSrcList.push(match[1]); // match[1] 是捕获的 src 值
+                    }
+                }
                 return {
                     ...item,
                     author: {
@@ -168,8 +177,10 @@ export const getThreadPage = async (href) => {
         if (!/^redirect\.php\?tid=\d*&goto=lastpost/.test(href) || !pagination || newData.pagination.current === newData.pagination.last) {
             MMStore.cached[href] = result
         }
+        console.log('imgSrcList', imgSrcList)
         return {
             ...newData,
+            imgSrcList,
             anchor: href.split('#')[1],
             isCache
         }

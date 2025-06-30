@@ -16,7 +16,7 @@ import {
   Modal,
 } from 'react-native';
 import Swiper from 'react-native-swiper';
-import RenderHtml, { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
+import RenderHtml, { HTMLElementModel, HTMLContentModel, useInternalRenderer } from 'react-native-render-html';
 import { useNavigation } from '@react-navigation/native';
 import CookieManager from '@react-native-cookies/cookies';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -37,6 +37,7 @@ const Thread = ({ route }) => {
   const { width } = useWindowDimensions();
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [currentImage, setCurrentImage] = useState('');
+  const [imageSwiperVisible, setImageSwiperVisible] = useState(false);
   const [postContent, setPostContent] = useState('');
   const scrollViewRef = useRef(null);
   const [replyModalVisible, setReplyModalVisible] = useState(false);
@@ -120,7 +121,7 @@ const Thread = ({ route }) => {
   })
 
   const renderPage = useCallback((href) => {
-    return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
       showLoading()
       getThreadPage(href).then(data => {
         console.log(data);
@@ -255,9 +256,33 @@ const Thread = ({ route }) => {
     })
   }
 
+  const CustomImageRenderer = useCallback((props) => {
+    const { Renderer, rendererProps } = useInternalRenderer('img', props);
+    const onPress = (...args) => {
+      console.log('img onPress', rendererProps)
+      setImageSwiperVisible(true);
+    };
+    return (
+      <Renderer {...rendererProps} source={{
+        uri: rendererProps.source.uri,
+        headers: {
+          'User-Agent': userAgent,
+          'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
+        }
+      }} onPress={onPress} />
+    );
+  })
+
   const renderPostItem = ({ item }) => {
-    const imageAttachments = item.attachments.filter(item => item.icon.includes('image.gif'));
-    const otherAttachments = item.attachments.filter(item => !item.icon.includes('image.gif'));
+    const imageAttachments = []
+    const otherAttachments = []
+    item.attachments.forEach((item) => {
+      if (item.icon.includes('image.gif')) {
+        imageAttachments.push(item);
+      } else {
+        otherAttachments.push(item);
+      }
+    })
     const isFirstPost = item.floor === 1;
     return <Pressable onPress={() => handleReplyPress(item)} style={styles.postContainer}>
       <View style={styles.authorContainer}>
@@ -302,15 +327,11 @@ const Thread = ({ route }) => {
               onPress: (event, href) => handleLinkPress(href)
             },
             img: {
-              // enableExperimentalPercentWidth: true,
-              // computeImagesMaxWidth: 150,
-              onPress: (event, src) => {
-                console.log('img onPress', src)
-                if (src.includes('attachments/')) {
-                  handleLinkPress(src);
-                }
-              }
+              enableExperimentalPercentWidth: true,
             }
+          }}
+          renderers={{
+            img: CustomImageRenderer
           }}
           baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
           defaultViewProps={{ style: { marginVertical: 8 } }}
@@ -336,7 +357,10 @@ const Thread = ({ route }) => {
                   <Pressable
                     key={index}
                     style={styles.imageSlide}
-                    onPress={() => handleLinkPress(item.url || item.link, item.name)}
+                    onPress={() => {
+                      setCurrentImage(item.url || item.link);
+                      setImageViewerVisible(true);
+                    }}
                     onLongPress={() => downloadFile(item.url || item.link, item.name)}
                   >
                     <Image
@@ -507,6 +531,51 @@ const Thread = ({ route }) => {
           />
         </View>
       </Modal>
+      {/* 图片轮播框 */}
+      <Modal
+        visible={imageSwiperVisible}
+        transparent={true}
+        onRequestClose={() => setImageSwiperVisible(false)}
+      >
+        <View style={styles.imageViewerContainer}>
+          <Pressable
+            style={styles.imageMask}
+            onPress={() => setImageSwiperVisible(false)}
+          >
+          </Pressable>
+          {imageSwiperVisible && <View style={styles.imageSwiperContainer}>
+            <Swiper
+              width={width}
+              loop={true}
+              autoplay={false}
+              autoplayTimeout={4}
+              showsButtons={false}
+              paginationStyle={styles.swiperPagination}
+              dotStyle={styles.swiperDot}
+              activeDotStyle={styles.swiperActiveDot}
+            >
+              {pageData.imgSrcList?.map((item, index) => (
+                <Pressable
+                  key={index}
+                  onLongPress={() => downloadFile(item)}
+                >
+                  <Image
+                    source={{
+                      uri: item,
+                      headers: {
+                        'User-Agent': userAgent,
+                        'Cookie': `cdb3_auth=${cookies.cdb3_auth?.value};`,
+                      }
+                    }}
+                    style={styles.carouselImage}
+                    resizeMode="contain"
+                  />
+                </Pressable>
+              ))}
+            </Swiper>
+          </View>}
+        </View>
+      </Modal>
       {/* 回复模态框 */}
       <ReplyModal
         visible={replyModalVisible}
@@ -629,16 +698,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  imageViewerImage: {
-    width: '100%',
-    height: '80%',
-  },
   imageMask: {
     position: 'absolute',
     bottom: 0,
     right: 0,
     width: '100%',
     height: '100%',
+  },
+  imageViewerImage: {
+    width: '100%',
+    height: '50%',
+  },
+  imageSwiperContainer: {
+    height: 480,
   },
   // 图片轮播样式
   imageCarouselContainer: {
