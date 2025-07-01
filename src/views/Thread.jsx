@@ -56,7 +56,7 @@ const Thread = ({ route }) => {
 
   useEffect(() => {
     CookieManager.get(selectedNode).then((cookies) => {
-      console.log('cookies', cookies);
+      // console.log('cookies', cookies);
       setCookies(cookies);
     });
   }, [selectedNode]);
@@ -135,10 +135,16 @@ const Thread = ({ route }) => {
         if (history.find(item => item.tid === data.tid)) {
           history = history.filter(item => item.tid !== data.tid)
         }
-        history.push({
+        const isFirstPage = !data.pagination || data.pagination.current === 1;
+        history.unshift({
           tid: data.tid,
-          href,
           title: data.title,
+          href,
+          forum: data.breadcrumb.at(-1),
+          author: isFirstPage ? data.posts[0].author.name : '',
+          thanks: isFirstPage ? data.posts[0].thanks : '',
+          date: isFirstPage ? data.posts[0].date : '',
+          reply: data.pagination?.total || (data.posts.length - 1),
         })
         storage.set('history', JSON.stringify(history))
       }).catch(error => {

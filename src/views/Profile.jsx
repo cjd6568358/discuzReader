@@ -117,6 +117,7 @@ const Profile = () => {
           <View style={styles.settingsContainer}>
             <Pressable style={styles.settingItem} onPress={() => {
               MMStore.cached = {};
+              storage.set('history', JSON.stringify([]));
               ToastAndroid.show('清理缓存成功', ToastAndroid.SHORT);
             }}>
               <Icon name="trash" size={20} color="#9CA3AF" style={styles.menuIcon} />

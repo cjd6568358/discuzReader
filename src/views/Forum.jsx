@@ -121,7 +121,7 @@ const ForumView = ({ route }) => {
         children: [],
         filter_tags: []
       })
-      setThreads(MMStore.history)
+      setThreads(JSON.parse(storage.getString('history') || '[]'))
       return
     }
     showLoading()
