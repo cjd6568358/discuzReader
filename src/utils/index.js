@@ -7,10 +7,7 @@ import iconv from 'iconv-lite'
 
 export const storage = new MMKV();
 export const MMStore = {
-    favorites: {
-        forums: [],
-        threads: [],
-    },
+    favorites: [],
     cached: {},
 };
 /**

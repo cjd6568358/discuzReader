@@ -54,11 +54,20 @@ export default {
     favorites: `
     input[name=formhash][value=$formhash];
     #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
-    .mainbox form tbody tr@ids{
-        td:nth-child(2) a[href=$|split('-')|slice(1,2)|first|Number];
+    .mainbox form tbody tr@threads{
+        td:nth-child(2) a[href=$href]{$title};
+        td:nth-child(4){$reply|Number};
+        td:nth-child(3)@forum|pack{
+            a[href=$href]{$name}
+        }
+        td:nth-child(5)@lastPost|pack{
+            a[href=$href]{$date}
+            a[target=_blank]{$username}
+        }
     }
     `,
     forum: `
+    .box.message p b{$error};
     input[name=formhash][value=$formhash];
     #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
     title{$title|split(' - ')|slice(0,1)|first};
@@ -121,6 +130,7 @@ export default {
     }
     `,
     thread: `
+    .box.message p b{$error};
     input[name=formhash][value=$formhash];
     head title{$title|split(' - ')|first};
     #newpmnum{$newMessage|Number};

@@ -95,6 +95,35 @@ const ForumView = ({ route }) => {
   }
 
   const renderPage = useCallback((href) => {
+    if (href === 'favorites') {
+      setPageData({
+        title: '收藏的主题',
+        breadcrumb: [],
+        action_tags: [],
+        categorys: [{
+          name: '全部',
+          threads: MMStore.favorites,
+        }],
+        children: [],
+        filter_tags: []
+      })
+      setThreads(MMStore.favorites)
+      return
+    } else if (href === 'history') {
+      setPageData({
+        title: '历史记录',
+        breadcrumb: [],
+        action_tags: [],
+        categorys: [{
+          name: '全部',
+          threads: [],
+        }],
+        children: [],
+        filter_tags: []
+      })
+      setThreads(MMStore.history)
+      return
+    }
     showLoading()
     getForumPage(href).then(data => {
       console.log(data);
@@ -142,7 +171,6 @@ const ForumView = ({ route }) => {
   })
 
   const renderHeader = useCallback(() => {
-    // const isFavorite = MMStore.favorites.forums.includes(pageData.fid);
     navigation.setOptions({
       headerTitle: () => <View style={styles.breadcrumb}>
         {
@@ -164,29 +192,29 @@ const ForumView = ({ route }) => {
             <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
             {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
           </Pressable>
-          <Pressable style={styles.newSpecialButton} onPress={() => navigation.navigate('Post', { href: pageData.new_special, fid: pageData.fid })}>
+          {pageData.fid > 0 && <Pressable style={styles.newSpecialButton} onPress={() => navigation.navigate('Post', { href: pageData.new_special, fid: pageData.fid })}>
             <Icon name="file-text-o" size={18} color="#9CA3AF" />
-          </Pressable>
+          </Pressable>}
         </View>
       ),
     })
   })
 
-  const toggleFavorite = async () => {
-    console.log('toggleFavorite');
-    if (MMStore.favorites.forums.includes(pageData.fid)) {
-      await favoriteAction('del', pageData.favorite_href, pageData.formhash)
-      MMStore.favorites.forums = MMStore.favorites.forums.filter(item => item !== pageData.fid);
-      ToastAndroid.show('取消收藏', ToastAndroid.SHORT);
-    } else {
-      await favoriteAction('add', pageData.favorite_href)
-      MMStore.favorites.forums.push(pageData.fid);
-      ToastAndroid.show('收藏成功', ToastAndroid.SHORT);
-    }
-    setPageData(prevData => ({
-      ...prevData,
-    }))
-  }
+  // const toggleFavorite = async () => {
+  //   console.log('toggleFavorite');
+  //   if (MMStore.favorites.forums.includes(pageData.fid)) {
+  //     await favoriteAction('del', pageData.favorite_href, pageData.formhash)
+  //     MMStore.favorites.forums = MMStore.favorites.forums.filter(item => item !== pageData.fid);
+  //     ToastAndroid.show('取消收藏', ToastAndroid.SHORT);
+  //   } else {
+  //     await favoriteAction('add', pageData.favorite_href)
+  //     MMStore.favorites.forums.push(pageData.fid);
+  //     ToastAndroid.show('收藏成功', ToastAndroid.SHORT);
+  //   }
+  //   setPageData(prevData => ({
+  //     ...prevData,
+  //   }))
+  // }
 
   const onForumPress = (item) => {
     console.log('onForumPress', item);

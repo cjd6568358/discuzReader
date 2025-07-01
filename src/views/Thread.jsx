@@ -39,6 +39,7 @@ const Thread = ({ route }) => {
   const [currentImage, setCurrentImage] = useState('');
   const [imageSwiperVisible, setImageSwiperVisible] = useState(false);
   const [postContent, setPostContent] = useState('');
+  const swiperRef = useRef(null);
   const scrollViewRef = useRef(null);
   const [replyModalVisible, setReplyModalVisible] = useState(false);
   const [replyTitle, setReplyTitle] = useState('');
@@ -61,7 +62,7 @@ const Thread = ({ route }) => {
   }, [selectedNode]);
 
   const renderHeader = useCallback(() => {
-    const isFavorite = MMStore.favorites.threads.includes(pageData.tid);
+    const isFavorite = MMStore.favorites.map(item => item.tid).includes(pageData.tid);
     navigation.setOptions({
       headerTitle: () => <View style={styles.navTitleContainer}>
         <Text style={styles.navTitle} numberOfLines={1} ellipsizeMode="tail" >{pageData.title}</Text>
@@ -121,7 +122,7 @@ const Thread = ({ route }) => {
   })
 
   const renderPage = useCallback((href) => {
-        return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       showLoading()
       getThreadPage(href).then(data => {
         console.log(data);
@@ -209,15 +210,12 @@ const Thread = ({ route }) => {
 
   const toggleFavorite = async () => {
     console.log('toggleFavorite');
-    if (MMStore.favorites.threads.includes(pageData.tid)) {
+    if (MMStore.favorites.map(item => item.tid).includes(pageData.tid)) {
       await favoriteAction('del', pageData.favorite_href, pageData.formhash)
-      MMStore.favorites.threads = MMStore.favorites.threads.filter(item => item !== pageData.tid);
-      ToastAndroid.show('取消收藏', ToastAndroid.SHORT);
     } else {
       await favoriteAction('add', pageData.favorite_href)
-      MMStore.favorites.threads.push(pageData.tid);
-      ToastAndroid.show('收藏成功', ToastAndroid.SHORT);
     }
+    ToastAndroid.show('操作成功', ToastAndroid.SHORT);
     setPageData(prevData => ({
       ...prevData,
     }))
@@ -261,6 +259,9 @@ const Thread = ({ route }) => {
     const onPress = (...args) => {
       console.log('img onPress', rendererProps)
       setImageSwiperVisible(true);
+      setTimeout(() => {
+        swiperRef.current.scrollBy(pageData.imgSrcList.indexOf(rendererProps.source.uri), true);
+      }, 10);
     };
     return (
       <Renderer {...rendererProps} source={{
@@ -543,8 +544,9 @@ const Thread = ({ route }) => {
             onPress={() => setImageSwiperVisible(false)}
           >
           </Pressable>
-          {imageSwiperVisible && <View style={styles.imageSwiperContainer}>
+          <View style={styles.imageSwiperContainer}>
             <Swiper
+              ref={swiperRef}
               width={width}
               loop={true}
               autoplay={false}
@@ -573,7 +575,7 @@ const Thread = ({ route }) => {
                 </Pressable>
               ))}
             </Swiper>
-          </View>}
+          </View>
         </View>
       </Modal>
       {/* 回复模态框 */}

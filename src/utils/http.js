@@ -59,6 +59,10 @@ instance.interceptors.response.use(response => {
         const t1 = Date.now();
         response.data = temme(response.data, response.config.selector);
         console.log('temme time:', Date.now() - t1);
+        if (response.data.error) {
+            ToastAndroid.show(response.data.error, ToastAndroid.SHORT);
+            return Promise.reject('not forbidden');
+        }
     }
     // 对响应数据做点什么
     return response;

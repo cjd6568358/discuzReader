@@ -218,13 +218,15 @@ export const favoriteAction = async (type, href, formhash) => {
     try {
         if (type === 'add') {
             await http.get(href)
+            favoriteAction('view', 'my.php?item=favorites&type=thread').then(threads => MMStore.favorites = threads)
         } else if (type === 'del') {
             const id = href.replace(/\D/g, '')
             const url = href.includes('fid') ? `my.php?item=favorites&type=forum` : `my.php?item=favorites&type=thread`
             await http.post(url, { formhash, 'delete%5B%5D': id, favsubmit: true })
+            favoriteAction('view', 'my.php?item=favorites&type=thread').then(threads => MMStore.favorites = threads)
         } else if (type === 'view') {
             const res = await http.get(href, { selector: selectors.favorites })
-            return res.data.ids
+            return res.data.threads
         }
     } catch (error) {
         console.log('favoriteAction', error);

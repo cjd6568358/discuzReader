@@ -19,15 +19,8 @@ const App = () => {
   useEffect(() => {
     if (isLoggedIn) {
       // 初始化收藏数据
-      Promise.all([
-        favoriteAction('view', 'my.php?item=favorites&type=thread'),
-        favoriteAction('view', 'my.php?item=favorites&type=forum')
-      ]).then(([thread, forum]) => {
-        console.log('收藏数据', thread, forum)
-        MMStore.favorites.thread = thread
-        MMStore.favorites.forums = forum
-      }).catch(err => {
-        console.log('初始化收藏数据', err)
+      favoriteAction('view', 'my.php?item=favorites&type=thread').then(threads => MMStore.favorites = threads).catch(err => {
+        console.log('初始化收藏数据失败', err)
       })
     }
   }, [isLoggedIn]);

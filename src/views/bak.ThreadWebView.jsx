@@ -41,7 +41,7 @@ const Thread = () => {
   }, [pageData])
 
   const renderHeader = useCallback(() => {
-    const isFavorite = MMStore.favorites.threads.includes(pageData.tid);
+    const isFavorite = MMStore.favorites.map(item => item.tid).includes(pageData.tid);
     navigation.setOptions({
       headerTitle: () => <View style={styles.navTitleContainer}>
         <Text style={styles.navTitle} numberOfLines={1} ellipsizeMode="tail" >{pageData.title}</Text>
@@ -250,13 +250,16 @@ const Thread = () => {
 
   const toggleFavorite = async () => {
     console.log('toggleFavorite');
-    if (MMStore.favorites.threads.includes(pageData.tid)) {
+    if (MMStore.favorites.map(item => item.tid).includes(pageData.tid)) {
       await favoriteAction('del', pageData.favorite_href, pageData.formhash)
-      MMStore.favorites.threads = MMStore.favorites.threads.filter(item => item !== pageData.tid);
+      MMStore.favorites = MMStore.favorites.filter(item => item.tid !== pageData.tid);
       ToastAndroid.show('取消收藏', ToastAndroid.SHORT);
     } else {
       await favoriteAction('add', pageData.favorite_href)
-      MMStore.favorites.threads.push(pageData.tid);
+      MMStore.favorites.push({
+        tid: pageData.tid,
+        title: pageData.title,
+      });
       ToastAndroid.show('收藏成功', ToastAndroid.SHORT);
     }
     setPageData(prevData => ({

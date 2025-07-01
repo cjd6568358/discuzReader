@@ -27,7 +27,7 @@ const Profile = () => {
     {
       title: '我的收藏',
       icon: 'star',
-      count: MMStore.favorites.forums?.length + MMStore.favorites.threads?.length
+      count: MMStore.favorites.length
     },
     {
       title: '我的浏览',
@@ -35,6 +35,18 @@ const Profile = () => {
       count: JSON.parse(storage.getString('history') || '[]')?.length + ''
     }
   ];
+  const onMenuItemPress = (item) => {
+    if (item.title === '主题回复') {
+      navigation.navigate('Search', {
+        srchuname: pageData.username,
+      })
+    } else if (item.title === '我的收藏') {
+      navigation.navigate('Forum', { href: 'favorites' });
+    } else if (item.title === '我的浏览') {
+      navigation.navigate('Forum', { href: 'history' });
+    }
+  }
+
   const [pageData, setPageData] = useState({});
   useEffect(() => {
     getProfilePage().then(res => {
@@ -87,6 +99,7 @@ const Profile = () => {
               <Pressable
                 key={index}
                 style={[styles.menuItem, index === menuItems.length - 1 ? styles.lastMenuItem : null]}
+                onPress={() => onMenuItemPress(item)}
               >
                 <Icon name={item.icon} size={20} color="#9CA3AF" style={styles.menuIcon} />
                 <Text style={styles.menuTitle}>{item.title}</Text>
