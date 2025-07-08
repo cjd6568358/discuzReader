@@ -57,15 +57,6 @@ export const defaultConfig = {
         Home: {
             screen: HomeTabs,
         },
-        // Home: {
-        //     screen: HomeView,
-        // },
-        // Message: {
-        //     screen: MessageView,
-        // },
-        // Profile: {
-        //     screen: ProfileView,
-        // },
         Forum: {
             screen: ForumView,
             options: {
