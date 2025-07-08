@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { HeaderButtonsProvider } from 'react-navigation-header-buttons/HeaderButtonsProvider';
+import { RootStack } from './src/router';
 import { LoadingProvider } from './src/components/Loading';
 import { checkLogin, MMStore } from './src/utils/index';
-import { createAppNavigation } from './src/router';
 import { favoriteAction } from './src/utils/api';
 
 const App = () => {
@@ -28,11 +31,16 @@ const App = () => {
   if (isLoggedIn === undefined) {
     return null
   }
-  // 根据登录状态创建导航
-  const Navigation = createAppNavigation({
-    initialRouteName: isLoggedIn ? 'Home' : 'Login'
-  });
-  return <LoadingProvider><Navigation /></LoadingProvider>;
+
+  return <NavigationContainer>
+    <SafeAreaProvider>
+      <HeaderButtonsProvider stackType='native'>
+        <LoadingProvider>
+          <RootStack initialRouteName={isLoggedIn ? 'Home' : 'Login'} />
+        </LoadingProvider>
+      </HeaderButtonsProvider>
+    </SafeAreaProvider>
+  </NavigationContainer>;
 }
 
 export default App;

@@ -15,6 +15,14 @@ import {
   useWindowDimensions,
   Modal,
 } from 'react-native';
+import {
+  HeaderButtons,
+  Item,
+  HiddenItem,
+  OverflowMenu,
+  Divider,
+  HeaderButton,
+} from 'react-navigation-header-buttons';
 import Swiper from 'react-native-swiper';
 import RenderHtml, { HTMLElementModel, HTMLContentModel, useInternalRenderer } from 'react-native-render-html';
 import { useNavigation } from '@react-navigation/native';
@@ -27,7 +35,11 @@ import ReplyModal from '../components/ReplyModal';
 import { getThreadPage, favoriteAction, threadAction, messageAction } from '../utils/api'
 import { MMStore, storage, decodeHtmlEntity, downloadFile, userAgent } from '../utils/index';
 
-
+const FontAwesomeHeaderButton = (props) => (
+  // the `props` here come from <Item ... />
+  // you may access them and pass something else to `HeaderButton` if you like
+  <HeaderButton IconComponent={Icon} iconSize={20} {...props} />
+);
 const Thread = ({ route }) => {
   const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
@@ -80,7 +92,7 @@ const Thread = ({ route }) => {
           <Pressable style={styles.starButton} onPress={toggleFavorite}>
             <Icon name={isFavorite ? "star" : "star-o"} size={18} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
           </Pressable>
-          <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Message')}>
+          <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Home', { screen: 'Message' })}>
             <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
             {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
           </Pressable>
@@ -92,6 +104,37 @@ const Thread = ({ route }) => {
           </Pressable>
         </View>
       ),
+      headerRight: () => <HeaderButtons style={styles.navbarRight} HeaderButtonComponent={FontAwesomeHeaderButton}>
+        <Pressable style={styles.starButton} onPress={toggleFavorite}>
+          <Icon name={isFavorite ? "star" : "star-o"} size={20} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
+        </Pressable>
+        <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Home', { screen: 'Message' })}>
+          <Icon name="envelope" size={20} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
+          {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
+        </Pressable>
+        {/* <Item
+          title=""
+          iconName={isFavorite ? "star" : "star-o"}
+          size={20}
+          color={isFavorite ? "#f7ba2a" : "#9CA3AF"}
+          onPress={toggleFavorite}
+        />
+        <Item
+          title=""
+          iconName="envelope"
+          size={20}
+          color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"}
+          onPress={() => navigation.navigate('Home', { screen: 'Message' })}
+        /> */}
+        <OverflowMenu
+          OverflowIcon={({ color }) => (
+            <Icon style={{ padding: 10 }} name="ellipsis-v" size={20} color={color} />
+          )}
+        >
+          <HiddenItem title="清除缓存" onPress={clearCache} />
+          <HiddenItem title="加入黑名单" onPress={block} />
+        </OverflowMenu>
+      </HeaderButtons>,
     })
   })
 
@@ -869,26 +912,25 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   navbarRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingRight: 12,
+    // flexDirection: 'row',
+    // alignItems: 'center',
+    // paddingRight: 12,
+    columnGap:1
   },
   starButton: {
+    alignSelf: 'center',
     width: 32,
     height: 32,
-    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
   },
   messageButton: {
+    alignSelf: 'center',
     position: 'relative',
     width: 32,
     height: 32,
-    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
   },
   messageBage: {
     position: 'absolute',

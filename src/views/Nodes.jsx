@@ -14,11 +14,23 @@ import {
     Pressable
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useHeaderHeight } from '@react-navigation/elements';
+import {
+    HeaderButtons,
+    Item,
+    HiddenItem,
+    OverflowMenu,
+    Divider,
+    HeaderButton,
+} from 'react-navigation-header-buttons';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { storage } from '../utils/index'
 import http from '../utils/http';
 
+const FontAwesomeHeaderButton = (props) => (
+    // the `props` here come from <Item ... />
+    // you may access them and pass something else to `HeaderButton` if you like
+    <HeaderButton IconComponent={Icon} iconSize={20} {...props} />
+);
 const NodesView = () => {
     const navigation = useNavigation();
     const [url, setUrl] = useState('https://1g2g3g.com/');
@@ -28,11 +40,8 @@ const NodesView = () => {
     });
     const [selectedNode, setSelectedNode] = useState(storage.getString('selectedNode'));
     const [loading, setLoading] = useState({});
-    const [showDropMenuModal, setShowDropMenuModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [newNode, setNewNode] = useState({ name: '', address: '' });
-    const headerHeight = useHeaderHeight();
-    const [initialHeaderHeight] = useState(headerHeight);
     const abortControllerRef = useRef({});
     const timeoutIdsRef = useRef([]);
     const flatListRef = useRef(null);
@@ -54,11 +63,78 @@ const NodesView = () => {
     }, []);
     useEffect(() => {
         navigation.setOptions({
-            headerRight: () => <Pressable style={{ padding: 10 }} onPress={() => setShowDropMenuModal(true)} >
-                <Icon name="ellipsis-v" size={20} />
-            </Pressable>,
+            headerRight: () => <HeaderButtons HeaderButtonComponent={FontAwesomeHeaderButton}>
+                <OverflowMenu
+                    OverflowIcon={({ color }) => (
+                        <Icon style={{ padding: 10 }} name="ellipsis-v" size={20} color={color} />
+                    )}
+                >
+                    <HiddenItem title="删除无效节点" onPress={() => {
+                        const validNodes = nodes.filter(node => node.latency !== '异常');
+                        const removedCount = nodes.length - validNodes.length;
+                        setNodes(validNodes);
+                        ToastAndroid.show(`已删除 ${removedCount} 个无效节点`, ToastAndroid.SHORT);
+                    }} />
+                    <HiddenItem title="删除全部节点" onPress={() => {
+                        if (nodes.length > 0) {
+                            Alert.alert(
+                                '确认删除',
+                                '确定要删除全部节点吗？此操作不可恢复。',
+                                [
+                                    {
+                                        text: '取消',
+                                        style: 'cancel'
+                                    },
+                                    {
+                                        text: '确定删除',
+                                        onPress: () => {
+                                            setNodes([]);
+                                            ToastAndroid.show('已删除全部节点', ToastAndroid.SHORT);
+                                        },
+                                        style: 'destructive'
+                                    }
+                                ]
+                            );
+                        } else {
+                            ToastAndroid.show('没有节点可删除', ToastAndroid.SHORT);
+                        }
+                    }} />
+                    <HiddenItem title="测试全部节点" onPress={() => {
+                        const newNodes = nodes.map(node => ({ ...node, latency: '-' }));
+                        setNodes(newNodes)
+                        // 测试所有节点，每次最多测试5个
+                        handleBatchTest(newNodes);
+                    }} />
+                    <HiddenItem title="按测试结果排序" onPress={() => {
+                        // 按测试结果排序
+                        const sortedNodes = [...nodes].sort((a, b) => {
+                            // 处理未测试的节点（latency为'-'）
+                            if (a.latency === '-' && b.latency !== '-') return 1; // 未测试的排在后面
+                            if (a.latency !== '-' && b.latency === '-') return -1; // 已测试的排在前面
+
+                            // 首先将正常节点排在异常节点前面
+                            if (a.latency !== '异常' && b.latency === '异常') return -1;
+                            if (a.latency === '异常' && b.latency !== '异常') return 1;
+
+                            // 如果两个节点状态相同且都是正常（非'-'和非'异常'），按延迟时间排序
+                            if (a.latency !== '异常' && b.latency !== '异常' &&
+                                a.latency !== '-' && b.latency !== '-') {
+                                const latencyA = parseInt(a.latency);
+                                const latencyB = parseInt(b.latency);
+                                return latencyA - latencyB; // 从小到大排序
+                            }
+
+                            // 其他情况保持原有顺序
+                            return 0;
+                        });
+
+                        setNodes(sortedNodes);
+                        ToastAndroid.show('已按测试结果排序', ToastAndroid.SHORT);
+                    }} />
+                </OverflowMenu>
+            </HeaderButtons>,
         });
-    }, [navigation]);
+    }, [navigation, nodes]);
     // 当nodes状态变化时，保存到本地存储
     useEffect(() => {
         if (nodes) {
@@ -268,7 +344,6 @@ const NodesView = () => {
                 break;
             }
             const currentBatch = batches[i];
-
             // 并行测试当前批次的所有节点
             const testPromises = currentBatch.map(node => handleTest(node.url));
             await Promise.all(testPromises);
@@ -426,109 +501,6 @@ const NodesView = () => {
                         </View>
                     </View>
                 </View>
-            </Modal>
-            <Modal
-                visible={showDropMenuModal}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowDropMenuModal(false)}
-            >
-                <Pressable style={{ flex: 1 }} onPress={() => setShowDropMenuModal(false)}>
-                    <View style={[styles.dropMenuModalOverlay, { top: initialHeaderHeight }]}>
-                        <Pressable
-                            android_ripple={{ color: '#9CA3AF' }}
-                            style={styles.dropMenuItemButton}
-                            onPress={() => {
-                                setShowDropMenuModal(false);
-                                // 删除所有状态为"异常"的节点
-                                const validNodes = nodes.filter(node => node.latency !== '异常');
-                                const removedCount = nodes.length - validNodes.length;
-                                setNodes(validNodes);
-                                ToastAndroid.show(`已删除 ${removedCount} 个无效节点`, ToastAndroid.SHORT);
-                            }}
-                        >
-                            <Text style={styles.dropMenuItem}>删除无效节点</Text>
-                        </Pressable>
-                        <Pressable
-                            android_ripple={{ color: '#9CA3AF' }}
-                            style={styles.dropMenuItemButton}
-                            onPress={() => {
-                                setShowDropMenuModal(false);
-                                // 确认是否删除全部节点
-                                if (nodes.length > 0) {
-                                    Alert.alert(
-                                        '确认删除',
-                                        '确定要删除全部节点吗？此操作不可恢复。',
-                                        [
-                                            {
-                                                text: '取消',
-                                                style: 'cancel'
-                                            },
-                                            {
-                                                text: '确定删除',
-                                                onPress: () => {
-                                                    setNodes([]);
-                                                    ToastAndroid.show('已删除全部节点', ToastAndroid.SHORT);
-                                                },
-                                                style: 'destructive'
-                                            }
-                                        ]
-                                    );
-                                } else {
-                                    ToastAndroid.show('没有节点可删除', ToastAndroid.SHORT);
-                                }
-                            }}
-                        >
-                            <Text style={styles.dropMenuItem}>删除全部节点</Text>
-                        </Pressable>
-                        <Pressable
-                            android_ripple={{ color: '#9CA3AF' }}
-                            style={styles.dropMenuItemButton}
-                            onPress={() => {
-                                setShowDropMenuModal(false);
-                                const newNodes = nodes.map(node => ({ ...node, latency: '-' }));
-                                setNodes(newNodes)
-                                // 测试所有节点，每次最多测试5个
-                                handleBatchTest(newNodes);
-                            }}
-                        >
-                            <Text style={styles.dropMenuItem}>测试全部节点</Text>
-                        </Pressable>
-                        <Pressable
-                            android_ripple={{ color: '#9CA3AF' }}
-                            style={styles.dropMenuItemButton}
-                            onPress={() => {
-                                setShowDropMenuModal(false);
-                                // 按测试结果排序
-                                const sortedNodes = [...nodes].sort((a, b) => {
-                                    // 处理未测试的节点（latency为'-'）
-                                    if (a.latency === '-' && b.latency !== '-') return 1; // 未测试的排在后面
-                                    if (a.latency !== '-' && b.latency === '-') return -1; // 已测试的排在前面
-
-                                    // 首先将正常节点排在异常节点前面
-                                    if (a.latency !== '异常' && b.latency === '异常') return -1;
-                                    if (a.latency === '异常' && b.latency !== '异常') return 1;
-
-                                    // 如果两个节点状态相同且都是正常（非'-'和非'异常'），按延迟时间排序
-                                    if (a.latency !== '异常' && b.latency !== '异常' &&
-                                        a.latency !== '-' && b.latency !== '-') {
-                                        const latencyA = parseInt(a.latency);
-                                        const latencyB = parseInt(b.latency);
-                                        return latencyA - latencyB; // 从小到大排序
-                                    }
-
-                                    // 其他情况保持原有顺序
-                                    return 0;
-                                });
-
-                                setNodes(sortedNodes);
-                                ToastAndroid.show('已按测试结果排序', ToastAndroid.SHORT);
-                            }}
-                        >
-                            <Text style={styles.dropMenuItem}>按测试结果排序</Text>
-                        </Pressable>
-                    </View>
-                </Pressable>
             </Modal>
         </SafeAreaView>
     );
@@ -849,22 +821,6 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 14,
         fontWeight: '500',
-    },
-    dropMenuModalOverlay: {
-        position: 'absolute',
-        right: 2,
-        paddingTop: 8,
-        paddingBottom: 8,
-        backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    },
-    dropMenuItemButton: {
-        marginBottom: 4,
-    },
-    dropMenuItem: {
-        fontSize: 14,
-        color: '#f5f6f7',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
     },
 });
 

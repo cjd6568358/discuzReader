@@ -186,14 +186,14 @@ const ForumView = ({ route }) => {
       headerRight: () => (
         <View style={styles.navbarRight}>
           {/* <Pressable style={styles.starButton} onPress={toggleFavorite}>
-            <Icon name={isFavorite ? "star" : "star-o"} size={18} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
+            <Icon name={isFavorite ? "star" : "star-o"} size={20} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
           </Pressable> */}
           <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Home', { screen: 'Message' })}>
-            <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
+            <Icon name="envelope" size={20} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
             {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
           </Pressable>
           {pageData.fid > 0 && <Pressable style={styles.newSpecialButton} onPress={() => navigation.navigate('Post', { href: pageData.new_special, fid: pageData.fid })}>
-            <Icon name="file-text-o" size={18} color="#9CA3AF" />
+            <Icon name="file-text-o" size={20} color="#9CA3AF" />
           </Pressable>}
         </View>
       ),
