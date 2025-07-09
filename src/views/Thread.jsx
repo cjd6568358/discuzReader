@@ -87,45 +87,32 @@ const Thread = ({ route }) => {
           }
         </View>
       </View>,
-      headerRight: () => (
-        <View style={styles.navbarRight}>
-          <Pressable style={styles.starButton} onPress={toggleFavorite}>
-            <Icon name={isFavorite ? "star" : "star-o"} size={18} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
-          </Pressable>
-          <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Home', { screen: 'Message' })}>
-            <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
-            {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
-          </Pressable>
-          {pageData.cached && <Pressable style={styles.starButton} onPress={clearCache}>
-            <Icon name="paint-brush" size={18} color="#9CA3AF" />
-          </Pressable>}
-          <Pressable style={styles.starButton} onPress={block}>
-            <Icon name="ban" size={18} color="#9CA3AF" />
-          </Pressable>
-        </View>
-      ),
-      headerRight: () => <HeaderButtons style={styles.navbarRight} HeaderButtonComponent={FontAwesomeHeaderButton}>
-        <Pressable style={styles.starButton} onPress={toggleFavorite}>
-          <Icon name={isFavorite ? "star" : "star-o"} size={20} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
-        </Pressable>
-        <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Home', { screen: 'Message' })}>
-          <Icon name="envelope" size={20} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
-          {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
-        </Pressable>
-        {/* <Item
+      // headerRight: () => (
+      //   <View style={styles.navbarRight}>
+      //     <Pressable style={styles.starButton} onPress={toggleFavorite}>
+      //       <Icon name={isFavorite ? "star" : "star-o"} size={18} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
+      //     </Pressable>
+      //     <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Home', { screen: 'Message' })}>
+      //       <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
+      //       {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
+      //     </Pressable>
+      //     {pageData.cached && <Pressable style={styles.starButton} onPress={clearCache}>
+      //       <Icon name="paint-brush" size={18} color="#9CA3AF" />
+      //     </Pressable>}
+      //     <Pressable style={styles.starButton} onPress={block}>
+      //       <Icon name="ban" size={18} color="#9CA3AF" />
+      //     </Pressable>
+      //   </View>
+      // ),
+      headerRight: () => <HeaderButtons HeaderButtonComponent={FontAwesomeHeaderButton}>
+        <Item
           title=""
           iconName={isFavorite ? "star" : "star-o"}
           size={20}
           color={isFavorite ? "#f7ba2a" : "#9CA3AF"}
           onPress={toggleFavorite}
+          style={{ paddingHorizontal: 10, marginHorizontal: -10 }}
         />
-        <Item
-          title=""
-          iconName="envelope"
-          size={20}
-          color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"}
-          onPress={() => navigation.navigate('Home', { screen: 'Message' })}
-        /> */}
         <OverflowMenu
           OverflowIcon={({ color }) => (
             <Icon style={{ padding: 10 }} name="ellipsis-v" size={20} color={color} />
@@ -912,10 +899,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   navbarRight: {
-    // flexDirection: 'row',
-    // alignItems: 'center',
-    // paddingRight: 12,
-    columnGap:1
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 12,
   },
   starButton: {
     alignSelf: 'center',
