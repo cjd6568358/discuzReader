@@ -1,7 +1,7 @@
 import axios from 'axios';
 import iconv from 'iconv-lite';
 import { ToastAndroid } from 'react-native';
-import { storage, userAgent, UTF8ToGBK, decodeHtmlEntity, logout } from './index';
+import { storage, userAgent, UTF8ToGBK, decodeHtmlEntity, logout, htmlShaking } from './index';
 import temme from '../lib/temme';
 
 /**
@@ -57,7 +57,7 @@ instance.interceptors.response.use(response => {
         return Promise.reject('redirect login');
     } else if (response.config.selector) {
         const t1 = Date.now();
-        response.data = temme(response.data, response.config.selector);
+        response.data = temme(htmlShaking(response.data), response.config.selector);
         console.log('temme time:', Date.now() - t1);
         if (response.data.error) {
             ToastAndroid.show(response.data.error, ToastAndroid.SHORT);
