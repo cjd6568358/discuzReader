@@ -9,7 +9,6 @@ import {
   StatusBar,
   FlatList,
   Pressable,
-  ScrollView,
   Alert,
   ToastAndroid,
   useWindowDimensions,
@@ -188,7 +187,7 @@ const Thread = ({ route }) => {
       }).finally(() => {
         hideLoading();
         resolve();
-        scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: true });
+        scrollViewRef.current.scrollToOffset({ offset: 0, animated: true });
       });
     })
   })
@@ -499,39 +498,38 @@ const Thread = ({ route }) => {
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
       {/* 主要内容区域 */}
-      <ScrollView style={styles.scrollView} ref={view => scrollViewRef.current = view}>
-        {/* 回复列表 */}
-        <FlatList
-          data={pageData.posts}
-          renderItem={renderPostItem}
-          keyExtractor={(item) => item.pid}
-          scrollEnabled={false}
-          style={styles.postList}
-        />
-
-        {pageData.pagination && <View style={styles.pageContainer}>
-          <Text style={styles.pageCount}>{pageData.pagination.current} / {pageData.pagination.last}</Text>
-        </View>}
-      </ScrollView>
-
-      {/* 底部评论栏 */}
-      <View style={styles.commentBar}>
-        <View style={styles.commentInputContainer}>
-          <Icon name="comment-o" size={16} color="#9CA3AF" style={styles.commentIcon} />
-          <TextInput
-            placeholder="写下你的评论..."
-            style={styles.commentInput}
-            placeholderTextColor="#9CA3AF"
-            value={postContent}
-            onChangeText={setPostContent}
-            multiline={true}
-            numberOfLines={4}
-          />
-        </View>
-        <Pressable style={styles.sendButton} onPress={handlePostPress}>
-          <Text style={styles.sendButtonText}>发送</Text>
-        </Pressable>
-      </View>
+      <FlatList
+        ref={view => scrollViewRef.current = view}
+        data={pageData.posts}
+        renderItem={renderPostItem}
+        keyExtractor={(item) => item.pid}
+        style={styles.scrollView}
+        contentContainerStyle={styles.postList}
+        ListFooterComponent={
+          <>
+            {pageData.pagination && <View style={styles.pageContainer}>
+              <Text style={styles.pageCount}>{pageData.pagination.current} / {pageData.pagination.last}</Text>
+            </View>}
+            <View style={styles.commentBar}>
+              <View style={styles.commentInputContainer}>
+                <Icon name="comment-o" size={16} color="#9CA3AF" style={styles.commentIcon} />
+                <TextInput
+                  placeholder="写下你的评论..."
+                  style={styles.commentInput}
+                  placeholderTextColor="#9CA3AF"
+                  value={postContent}
+                  onChangeText={setPostContent}
+                  multiline={true}
+                  numberOfLines={4}
+                />
+              </View>
+              <Pressable style={styles.sendButton} onPress={handlePostPress}>
+                <Text style={styles.sendButtonText}>发送</Text>
+              </Pressable>
+            </View>
+          </>
+        }
+      />
 
       {/* 悬浮分页控制器 */}
       {pageData?.pagination && <Pagination {...pageData.pagination} onPrevPress={onPrevPress} onNextPress={onNextPress} ></Pagination>}
@@ -1057,10 +1055,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#111827',
     marginRight: 4,
-  },
-  pageCount: {
-    fontSize: 14,
-    color: '#6B7280',
   },
   commentBar: {
     flexDirection: 'row',
