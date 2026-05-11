@@ -36,7 +36,9 @@ instance.interceptors.request.use(config => {
 // 添加响应拦截器
 instance.interceptors.response.use(response => {
     if (response.config.responseType === 'arraybuffer') {
+        const t1 = Date.now();
         response.data = decodeHtmlEntity(iconv.decode(new Uint8Array(response.data), "GBK"));
+        console.log('decode time:', Date.now() - t1);
     }
     if (response.headers['content-Length'] < 500) {
         const errorStack = response.data
@@ -58,7 +60,7 @@ instance.interceptors.response.use(response => {
     } else if (response.config.selector) {
         const t1 = Date.now();
         response.data = temme(htmlShaking(response.data), response.config.selector);
-        console.log('temme time:', Date.now() - t1);
+        console.log('temme time:', Date.now() - t1, response.config.url);
         if (response.data.error) {
             ToastAndroid.show(response.data.error, ToastAndroid.SHORT);
             return Promise.reject('not forbidden');
