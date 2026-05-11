@@ -188,7 +188,7 @@ const NodesView = () => {
                     const linkUrl = match[2];
                     const linkTitle = match[3].trim();
                     if (nodes.some(node => node.url === linkUrl)) {
-                        return
+                        continue
                     }
                     matches[linkUrl] = linkTitle || `未命名链接 ${Object.keys(matches).length + 1}`;
                 }

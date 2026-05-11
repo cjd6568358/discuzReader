@@ -304,7 +304,7 @@ const Thread = ({ route }) => {
         uri: rendererProps.source.uri,
         headers: {
           'User-Agent': userAgent,
-          'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
+          'Cookie': `cdb3_auth=${cookies.cdb3_auth?.value};`,
         }
       }} onPress={onPress} />
     );
@@ -405,7 +405,7 @@ const Thread = ({ route }) => {
                         uri: item.url || item.link,
                         headers: {
                           'User-Agent': userAgent,
-                          'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
+                          'Cookie': `cdb3_auth=${cookies.cdb3_auth?.value};`,
                         }
                       }}
                       style={styles.carouselImage}
@@ -560,7 +560,7 @@ const Thread = ({ route }) => {
               uri: currentImage,
               headers: {
                 'User-Agent': userAgent,
-                'Cookie': `cdb3_auth=${cookies.cdb3_auth.value};`,
+                'Cookie': `cdb3_auth=${cookies.cdb3_auth?.value};`,
               }
             }}
             style={styles.imageViewerImage}

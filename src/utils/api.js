@@ -64,9 +64,8 @@ export const messageAction = async ({ action = 'view', id, data }) => {
         } else if (action === 'send') {
             const res = await http.post(`pm.php?action=send&inajax=1`, data)
         } else if (action === 'reply') {
-            http.get(`pm.php?action=send&pmid=${data.pmid}&do=reply`, { selector: selectors.reply }).then(res => {
-                http.post(`pm.php?action=send&pmsubmit=yes`, { ...data, formhash: res.data.formhash })
-            })
+            const res = await http.get(`pm.php?action=send&pmid=${data.pmid}&do=reply`, { selector: selectors.reply })
+            await http.post(`pm.php?action=send&pmsubmit=yes`, { ...data, formhash: res.data.formhash })
         }
 
     } catch (error) {
@@ -173,8 +172,9 @@ export const getThreadPage = async (href) => {
             }
         }
         // redirect.php?tid=6379736(&goto=lastpost(#pid110991881)) 不参与缓存 
-        // 第一页和最后一页不参与缓存
-        if (!/^redirect\.php\?tid=\d*&goto=lastpost/.test(href) || !pagination || newData.pagination.current === newData.pagination.last) {
+        // 最后一页和只有一页的情况下不参与缓存
+        if (/^redirect\.php\?tid=\d*&goto=lastpost/.test(href) || !pagination || newData.pagination.current === newData.pagination.last) {
+        } else {
             MMStore.cached[href] = result
         }
         console.log('imgSrcList', imgSrcList)

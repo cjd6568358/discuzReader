@@ -35,6 +35,7 @@ const Profile = () => {
       count: JSON.parse(storage.getString('history') || '[]')?.length + ''
     }
   ];
+  
   const onMenuItemPress = (item) => {
     if (item.title === '主题回复') {
       navigation.navigate('Search', {

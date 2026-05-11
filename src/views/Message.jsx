@@ -8,7 +8,7 @@ import {
   StatusBar,
   Pressable,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import ActionSheet from '../components/ActionSheet';
 import ReplyModal from '../components/ReplyModal';
@@ -16,6 +16,7 @@ import { useLoading } from '../components/Loading';
 import { getPMPage, messageAction } from '../utils/api';
 
 const MessageView = () => {
+  const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState([]); // 存储选中的消息索引
@@ -117,7 +118,7 @@ const MessageView = () => {
       await messageAction({ action: 'delete', id: longPressKey });
       setMessages(prev => {
         const newMessages = [...prev];
-        const index = newMessages.findIndex(item => item.id === key);
+        const index = newMessages.findIndex(item => item.id === longPressKey);
         if (index !== -1) {
           newMessages.splice(index, 1);
         }
@@ -127,7 +128,7 @@ const MessageView = () => {
       await messageAction({ action: 'markunread', id: longPressKey });
       setMessages(prev => {
         const newMessages = [...prev];
-        const index = newMessages.findIndex(item => item.id === key);
+        const index = newMessages.findIndex(item => item.id === longPressKey);
         newMessages[index].unread = 1;
         return newMessages;
       });

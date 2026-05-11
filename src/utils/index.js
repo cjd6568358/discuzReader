@@ -1,8 +1,10 @@
-import { PermissionsAndroid, ToastAndroid } from 'react-native';
+import { Platform, PermissionsAndroid, ToastAndroid } from 'react-native';
 import CookieManager from '@react-native-cookies/cookies';
 import { MMKV } from 'react-native-mmkv';
 import RNFS from 'react-native-fs';
 import iconv from 'iconv-lite'
+import he from 'he';
+import axios from 'axios';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const storage = new MMKV();
@@ -65,15 +67,7 @@ export const decodeHtmlEntity = (html) => {
     if (!html) {
         return '';
     }
-    return html.replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, "\"")
-        .replace(/&#39;/g, "\'")
-        .replace(/&nbsp;/g, " ")
-        .replace(/&#(\d+);/, function (match, dec) {
-            return String.fromCharCode(+dec);
-        })
+    return he.decode(html);
 }
 
 const getFileNameFromUrl = (url) => {

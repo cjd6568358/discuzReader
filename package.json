@@ -20,6 +20,7 @@
     "@react-navigation/native-stack": "^7.3.10",
     "@types/invariant": "^2.2.37",
     "axios": "^1.9.0",
+    "he": "^1.2.0",
     "iconv-lite": "^0.6.3",
     "invariant": "^2.2.4",
     "react": "19.0.0",
