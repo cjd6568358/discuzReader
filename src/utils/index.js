@@ -152,15 +152,3 @@ export const loadImageBase64 = async (uri) => {
         throw error;
     }
 };
-
-export const htmlShaking = (html) => {
-    return (
-        html
-            .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, "")
-            .replace(/<!DOCTYPE[^>]*>/gi, "")
-            // .replace(/>\s+</g, "><")
-            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-            .replace(/<!--[\s\S]*?-->/g, "")
-    );
-}

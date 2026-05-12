@@ -33,6 +33,20 @@ const temmeParser: TemmeParser = parser as unknown as TemmeParser
 
 export { cheerio, temmeParser }
 
+/** 预处理 HTML：移除 script/style/comment 块，减少 parse5 tokenizer 工作量。
+ *  这些内容不影响 temme 选择器的匹配结果。 */
+export function htmlShaking(html: string): string {
+  return (
+    html
+      .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, "")
+      .replace(/<!DOCTYPE[^>]*>/gi, "")
+      // .replace(/>\s+</g, "><")
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
+  );
+}
+
 // 缓存已解析的选择器字符串，避免重复解析
 const selectorCache = new Map<string, TemmeSelector[]>()
 // 缓存展开的片段选择器，避免重复计算
@@ -48,11 +62,11 @@ export default function temme(
   // 优化cheerio加载，减少不必要的DOM操作
   let $: CheerioStatic
   if (typeof html === 'string') {
-    $ = cheerio.load(html, { decodeEntities: true, _useHtmlParser2: false })
+    $ = cheerio.load(htmlShaking(html), { decodeEntities: true, _useHtmlParser2: true })
   } else if (isCheerioStatic(html)) {
     $ = html
   } else {
-    $ = cheerio.load(html, { _useHtmlParser2: false })
+    $ = cheerio.load(html, { _useHtmlParser2: true })
   }
 
   // 使用缓存获取选择器数组
