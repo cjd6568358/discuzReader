@@ -37,10 +37,11 @@ instance.interceptors.request.use(config => {
 instance.interceptors.response.use(response => {
     if (response.config.responseType === 'arraybuffer') {
         const t1 = Date.now();
-        response.data = decodeHtmlEntity(iconv.decode(new Uint8Array(response.data), "GBK"));
+        response.data = iconv.decode(new Uint8Array(response.data), "GBK");
         console.log('decode time:', Date.now() - t1);
     }
     if (response.headers['content-Length'] < 500) {
+        response.data = decodeHtmlEntity(response.data);
         const errorStack = response.data
             // 合并 <br> 和 <br/> 的处理，并去掉多余空格
             .replace(/<br\s*\/?>\s*/g, '<br/>')
