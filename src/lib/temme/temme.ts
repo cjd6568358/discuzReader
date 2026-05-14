@@ -1,4 +1,4 @@
-import cheerio from 'react-native-cheerio'
+import { load as lexborLoad } from '../lexbor/lexbor'
 import invariant from 'invariant'
 import { defaultFilterDict, FilterFn } from './filters'
 import { defaultProcedureDict, ProcedureFn } from './procedures'
@@ -31,7 +31,7 @@ import parser from './grammar.js'
 
 const temmeParser: TemmeParser = parser as unknown as TemmeParser
 
-export { cheerio, temmeParser }
+export { lexborLoad as cheerio, temmeParser }
 
 /** 预处理 HTML：移除 script/style/comment 块，减少 HtmlParser2 工作量。
  *  这些内容不影响 temme 选择器的匹配结果。 */
@@ -63,30 +63,39 @@ export default function temme(
   extraModifiers: Dict<ModifierFn> = {},
   extraProcedures: Dict<ProcedureFn> = {},
 ) {
-  // 优化cheerio加载，减少不必要的DOM操作
-  let $: CheerioStatic
+  console.log('[temme] start, html length:', typeof html === 'string' ? html.length : 'N/A')
+
+  let $: any
   if (typeof html === 'string') {
-    $ = cheerio.load(htmlShaking(html), { decodeEntities: false, _useHtmlParser2: true })
+    const t0 = Date.now()
+    const shaken = htmlShaking(html)
+    console.log('[temme] htmlShaking done:', Date.now() - t0, 'ms, shaken length:', shaken.length)
+    const t1 = Date.now()
+    $ = lexborLoad(shaken)
+    console.log('[temme] lexborLoad done:', Date.now() - t1, 'ms')
   } else if (isCheerioStatic(html)) {
     $ = html
   } else {
-    $ = cheerio.load(html, { decodeEntities: false, _useHtmlParser2: true })
+    $ = lexborLoad(String(html))
   }
 
-  // 使用缓存获取选择器数组
   let rootSelectorArray: TemmeSelector[]
   if (typeof selector === 'string') {
     if (selectorCache.has(selector)) {
       rootSelectorArray = selectorCache.get(selector)!
+      console.log('[temme] selector cache hit')
     } else {
+      const t2 = Date.now()
       rootSelectorArray = temmeParser.parse(selector)
+      console.log('[temme] temmeParser.parse done:', Date.now() - t2, 'ms')
       selectorCache.set(selector, rootSelectorArray)
     }
   } else {
     rootSelectorArray = selector
   }
-  
+
   if (!rootSelectorArray || rootSelectorArray.length === 0) {
+    console.log('[temme] empty selector, returning null')
     return null
   }
 
@@ -95,18 +104,20 @@ export default function temme(
     rootSelectorArray.forEach(checkRootSelector)
   }
 
-  // 减少对象创建，使用Object.assign一次性合并
   const filterDict: Dict<FilterFn> = Object.keys(extraFilters).length > 0 ? Object.assign({}, defaultFilterDict, extraFilters) : defaultFilterDict
   const modifierDict: Dict<ModifierFn> = Object.keys(extraModifiers).length > 0 ? Object.assign({}, defaultModifierDict, extraModifiers) : defaultModifierDict
   const procedureDict: Dict<ProcedureFn> = Object.keys(extraProcedures).length > 0 ? Object.assign({}, defaultProcedureDict, extraProcedures) : defaultProcedureDict
   const snippetsMap = new Map<string, SnippetDefine>()
-  
-  // 缓存展开后的选择器
+
   const expandedSelectorCache = new Map<TemmeSelector[], ExpandedTemmeSelector[]>()
+
+  const t3 = Date.now()
+  const result = helper($.root(), rootSelectorArray).getResult()
+  console.log('[temme] helper done:', Date.now() - t3, 'ms')
+  console.log('[temme] total done')
+  return result
   
-  return helper($.root(), rootSelectorArray).getResult()
-  
-  function helper(cntCheerio: Cheerio, selectorArray: TemmeSelector[]): CaptureResult {
+  function helper(cntCheerio: any, selectorArray: TemmeSelector[]): CaptureResult {
     const result = new CaptureResult(filterDict, modifierDict)
 
     // First pass: process SnippetDefine / FilterDefine / ModifierDefine / ProcedureDefine
@@ -138,19 +149,22 @@ export default function temme(
       expandedSelectorCache.set(selectorArray, expandedSelectors);
     }
 
-    // Second pass: process match and capture
     for (const selector of expandedSelectors) {
       if (selector.type === 'normal-selector') {
         const cssSelector = makeNormalCssSelector(selector.sections)
+        const t = Date.now()
         const subCheerio = cntCheerio.find(cssSelector)
+        const elapsed = Date.now() - t
+        if (elapsed > 100) {
+          console.log(`[temme] SLOW find "${cssSelector}" took ${elapsed}ms, matched ${subCheerio.length}`)
+        }
         if (subCheerio.length > 0) {
-          // Only the first element will be captured.
           capture(result, subCheerio.first(), selector)
         }
         if (selector.arrayCapture) {
           const capturedResults: any[] = []
           subCheerio.each((_, elem) => {
-            capturedResults.push(helper($(elem), selector.children).getResult())
+            capturedResults.push(helper(elem, selector.children).getResult())
           })
           result.add(selector.arrayCapture, capturedResults)
         }
@@ -202,7 +216,7 @@ export default function temme(
   /** Capture the node according to the selector. */
   function capture(
     result: CaptureResult,
-    node: Cheerio,
+    node: any,
     selector: NormalSelector | ParentRefSelector,
   ) {
     const section = selector.type === 'normal-selector' ? last(selector.sections) : selector.section
