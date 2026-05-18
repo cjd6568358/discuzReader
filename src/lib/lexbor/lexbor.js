@@ -1,4 +1,4 @@
-import { NativeModules, Platform } from 'react-native';
+import { NativeModules } from 'react-native';
 
 const { LexborModule } = NativeModules;
 
@@ -9,6 +9,68 @@ function getLexborModule() {
   return LexborModule;
 }
 
+function isHandle(handle) {
+  return (
+    typeof handle === 'string' &&
+    /^-?[0-9]+$/.test(handle) &&
+    handle !== '0' &&
+    handle !== '-0'
+  );
+}
+
+function scopedFind(mod, docHandle, sel, nodeHandle) {
+  if (sel.charAt(0) !== '>') {
+    return mod.querySelectorAll(docHandle, sel, nodeHandle);
+  }
+  // Split by '>' (respecting parentheses) to handle direct-child combinators.
+  // Each part may contain descendant spaces — those work as normal descendant selectors.
+  const parts = [];
+  let depth = 0, start = 0;
+  for (let i = 0; i < sel.length; i++) {
+    const ch = sel.charAt(i);
+    if (ch === '(') depth++;
+    else if (ch === ')') depth--;
+    else if (ch === '>' && depth === 0) {
+      const part = sel.substring(start, i).trim();
+      if (part) parts.push(part);
+      start = i + 1;
+    }
+  }
+  const last = sel.substring(start).trim();
+  if (last) parts.push(last);
+
+  let currentHandles = [nodeHandle];
+  for (const part of parts) {
+    const nextHandles = [];
+    // Extract the first CSS component (before any descendant space) for direct-child check.
+    // e.g. "thead.separation td:nth-child(3)" → first component = "thead.separation"
+    const spaceIdx = part.indexOf(' ');
+    const firstComponent = spaceIdx >= 0 ? part.substring(0, spaceIdx) : part;
+
+    for (const parentH of currentHandles) {
+      const found = mod.querySelectorAll(docHandle, part, parentH);
+      for (const h of found) {
+        // Walk up from h to find the ancestor that is a direct child of parentH,
+        // then verify that ancestor matches the first component.
+        let cur = h;
+        while (cur) {
+          const p = mod.getParent(cur);
+          if (p === parentH) {
+            if (mod.matches(docHandle, cur, firstComponent)) {
+              nextHandles.push(h);
+            }
+            break;
+          }
+          cur = p;
+        }
+      }
+    }
+    currentHandles = nextHandles;
+    if (currentHandles.length === 0) break;
+  }
+  return currentHandles;
+}
+
 function wrapNode(nodeHandle, docHandle) {
   const mod = getLexborModule();
   const node = {
@@ -16,34 +78,34 @@ function wrapNode(nodeHandle, docHandle) {
     _doc: docHandle,
 
     find(sel) {
-      if (!nodeHandle) return wrapList([], docHandle);
-      const handles = mod.querySelectorAll(docHandle, sel, nodeHandle);
+      if (!isHandle(nodeHandle)) return wrapList([], docHandle);
+      const handles = scopedFind(mod, docHandle, sel, nodeHandle);
       return wrapList(handles, docHandle);
     },
 
     is(sel) {
-      if (!nodeHandle) return false;
+      if (!isHandle(nodeHandle)) return false;
       return mod.matches(docHandle, nodeHandle, sel);
     },
 
     attr(name) {
-      if (!nodeHandle) return undefined;
+      if (!isHandle(nodeHandle)) return undefined;
       const val = mod.getAttribute(nodeHandle, name);
       return val !== null && val !== undefined ? val : undefined;
     },
 
     text() {
-      if (!nodeHandle) return '';
+      if (!isHandle(nodeHandle)) return '';
       return mod.getText(nodeHandle);
     },
 
     html() {
-      if (!nodeHandle) return '';
+      if (!isHandle(nodeHandle)) return '';
       return mod.getInnerHtml(nodeHandle);
     },
 
-    get nodeName() {
-      if (!nodeHandle) return null;
+    getNodeName() {
+      if (!isHandle(nodeHandle)) return null;
       const nodeType = mod.getNodeType(nodeHandle);
       if (nodeType === 1) {
         return mod.getNodeName(nodeHandle) || null;
@@ -51,8 +113,8 @@ function wrapNode(nodeHandle, docHandle) {
       return null;
     },
 
-    get type() {
-      if (!nodeHandle) return null;
+    getType() {
+      if (!isHandle(nodeHandle)) return null;
       const nodeType = mod.getNodeType(nodeHandle);
       if (nodeType === 1) return 'tag';
       if (nodeType === 3) return 'text';
@@ -60,14 +122,14 @@ function wrapNode(nodeHandle, docHandle) {
       return null;
     },
 
-    get parent() {
-      if (!nodeHandle) return null;
+    getParent() {
+      if (!isHandle(nodeHandle)) return null;
       const parentHandle = mod.getParent(nodeHandle);
       return parentHandle ? wrapNode(parentHandle, docHandle) : null;
     },
 
-    get children() {
-      if (!nodeHandle) return [];
+    getChildren() {
+      if (!isHandle(nodeHandle)) return [];
       const result = [];
       let child = mod.getFirstChild(nodeHandle);
       while (child) {
@@ -78,7 +140,7 @@ function wrapNode(nodeHandle, docHandle) {
     },
 
     get length() {
-      return nodeHandle ? 1 : 0;
+      return isHandle(nodeHandle) ? 1 : 0;
     },
 
     first() {
@@ -108,7 +170,7 @@ function wrapNode(nodeHandle, docHandle) {
 
 function wrapList(handles, docHandle) {
   const mod = getLexborModule();
-  const arr = (handles || []).filter(h => h > 0);
+  const arr = (handles || []).filter(h => isHandle(h));
 
   const list = {
     _handles: arr,
@@ -121,7 +183,7 @@ function wrapList(handles, docHandle) {
     find(sel) {
       const allResults = [];
       for (const h of arr) {
-        const results = mod.querySelectorAll(docHandle, sel, h);
+        const results = scopedFind(mod, docHandle, sel, h);
         allResults.push(...results);
       }
       return wrapList(allResults, docHandle);
@@ -153,7 +215,7 @@ function wrapList(handles, docHandle) {
       return mod.getInnerHtml(arr[0]);
     },
 
-    get nodeName() {
+    getNodeName() {
       if (arr.length === 0) return null;
       const nodeType = mod.getNodeType(arr[0]);
       if (nodeType === 1) {
@@ -162,7 +224,7 @@ function wrapList(handles, docHandle) {
       return null;
     },
 
-    get type() {
+    getType() {
       if (arr.length === 0) return null;
       const nodeType = mod.getNodeType(arr[0]);
       if (nodeType === 1) return 'tag';
@@ -171,13 +233,13 @@ function wrapList(handles, docHandle) {
       return null;
     },
 
-    get parent() {
+    getParent() {
       if (arr.length === 0) return null;
       const parentHandle = mod.getParent(arr[0]);
       return parentHandle ? wrapNode(parentHandle, docHandle) : null;
     },
 
-    get children() {
+    getChildren() {
       if (arr.length === 0) return [];
       const result = [];
       let child = mod.getFirstChild(arr[0]);
@@ -233,26 +295,32 @@ function wrapList(handles, docHandle) {
   return list;
 }
 
-function load(html) {
+export function load(html) {
   const mod = getLexborModule();
-  const docHandle = mod.parse(html);
+  const docHandle = mod.parseSync(html);
 
-  if (!docHandle || docHandle <= 0) {
+  if (!isHandle(docHandle)) {
     throw new Error('Failed to parse HTML with lexbor');
   }
 
   const rootHandle = mod.getRoot(docHandle);
+  if (!isHandle(rootHandle)) {
+    throw new Error('Failed to get lexbor root handle');
+  }
 
   function $(selectorOrHandle) {
+    if (selectorOrHandle && selectorOrHandle._handle) {
+      return selectorOrHandle;
+    }
+    if (typeof selectorOrHandle === 'number' && selectorOrHandle > 0) {
+      return wrapNode(String(selectorOrHandle), docHandle);
+    }
+    if (typeof selectorOrHandle === 'string' && isHandle(selectorOrHandle)) {
+      return wrapNode(selectorOrHandle, docHandle);
+    }
     if (typeof selectorOrHandle === 'string') {
       const handles = mod.querySelectorAll(docHandle, selectorOrHandle, rootHandle);
       return wrapList(handles, docHandle);
-    }
-    if (typeof selectorOrHandle === 'number' && selectorOrHandle > 0) {
-      return wrapNode(selectorOrHandle, docHandle);
-    }
-    if (selectorOrHandle && selectorOrHandle._handle) {
-      return selectorOrHandle;
     }
     return wrapList([], docHandle);
   }
@@ -310,8 +378,11 @@ function load(html) {
   };
 
   $.node = (handle) => {
-    if (handle && handle > 0) {
+    if (isHandle(handle)) {
       return wrapNode(handle, docHandle);
+    }
+    if (typeof handle === 'number' && handle > 0) {
+      return wrapNode(String(handle), docHandle);
     }
     return null;
   };
@@ -325,11 +396,11 @@ function load(html) {
   return $;
 }
 
-function isLexborInstance(obj) {
+export function isLexborInstance(obj) {
   return obj && typeof obj === 'function' && typeof obj.root === 'function';
 }
 
-module.exports = {
+export default {
   load,
   isLexborInstance,
 };

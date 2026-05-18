@@ -32,7 +32,7 @@ import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
 import ReplyModal from '../components/ReplyModal';
 import { getThreadPage, favoriteAction, threadAction, messageAction } from '../utils/api'
-import { MMStore, storage, decodeHtmlEntity, downloadFile, userAgent } from '../utils/index';
+import { MMStore, storage, downloadFile, userAgent } from '../utils/index';
 
 const FontAwesomeHeaderButton = (props) => (
   // the `props` here come from <Item ... />
@@ -339,7 +339,7 @@ const Thread = ({ route }) => {
       <View style={styles.postContent}>
         <RenderHtml
           contentWidth={width}
-          source={{ html: decodeHtmlEntity(item.content) }}
+          source={{ html: item.content }}
           tagsStyles={htmlStyles}
           customHTMLElementModels={{
             font: HTMLElementModel.fromCustomModel({

@@ -4,6 +4,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.WritableArray
 import com.facebook.react.module.annotations.ReactModule
 
 @ReactModule(name = LexborModule.NAME)
@@ -33,73 +34,77 @@ class LexborModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     external fun nativeGetFirstChild(nodeHandle: Long): Long
     external fun nativeGetNextSibling(nodeHandle: Long): Long
 
-    @ReactMethod(isBlockingSynchronousMethod = true)
-    fun parse(html: String): Double {
-        return nativeParse(html).toDouble()
+    private fun parseHandle(handle: String): Long {
+        return handle.toLongOrNull() ?: 0L
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun destroy(handle: Double) {
-        nativeDestroy(handle.toLong())
+    fun parseSync(html: String): String {
+        return nativeParse(html).toString()
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun getRoot(handle: Double): Double {
-        return nativeGetRoot(handle.toLong()).toDouble()
+    fun destroy(handle: String) {
+        nativeDestroy(parseHandle(handle))
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun querySelectorAll(handle: Double, selector: String, rootHandle: Double): com.facebook.react.bridge.WritableArray {
-        val results = nativeQuerySelectorAll(handle.toLong(), selector, rootHandle.toLong())
+    fun getRoot(handle: String): String {
+        return nativeGetRoot(parseHandle(handle)).toString()
+    }
+
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun querySelectorAll(handle: String, selector: String, rootHandle: String): WritableArray {
+        val results = nativeQuerySelectorAll(parseHandle(handle), selector, parseHandle(rootHandle))
         val array = Arguments.createArray()
         for (r in results) {
-            array.pushDouble(r.toDouble())
+            array.pushString(r.toString())
         }
         return array
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun matches(handle: Double, nodeHandle: Double, selector: String): Boolean {
-        return nativeMatches(handle.toLong(), nodeHandle.toLong(), selector)
+    fun matches(handle: String, nodeHandle: String, selector: String): Boolean {
+        return nativeMatches(parseHandle(handle), parseHandle(nodeHandle), selector)
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun getNodeType(nodeHandle: Double): Int {
-        return nativeGetNodeType(nodeHandle.toLong())
+    fun getNodeType(nodeHandle: String): Int {
+        return nativeGetNodeType(parseHandle(nodeHandle))
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun getNodeName(nodeHandle: Double): String {
-        return nativeGetNodeName(nodeHandle.toLong()) ?: ""
+    fun getNodeName(nodeHandle: String): String {
+        return nativeGetNodeName(parseHandle(nodeHandle)) ?: ""
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun getAttribute(nodeHandle: Double, attrName: String): String? {
-        return nativeGetAttribute(nodeHandle.toLong(), attrName)
+    fun getAttribute(nodeHandle: String, attrName: String): String? {
+        return nativeGetAttribute(parseHandle(nodeHandle), attrName)
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun getText(nodeHandle: Double): String {
-        return nativeGetText(nodeHandle.toLong())
+    fun getText(nodeHandle: String): String {
+        return nativeGetText(parseHandle(nodeHandle))
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun getInnerHtml(nodeHandle: Double): String {
-        return nativeGetInnerHtml(nodeHandle.toLong())
+    fun getInnerHtml(nodeHandle: String): String {
+        return nativeGetInnerHtml(parseHandle(nodeHandle))
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun getParent(nodeHandle: Double): Double {
-        return nativeGetParent(nodeHandle.toLong()).toDouble()
+    fun getParent(nodeHandle: String): String {
+        return nativeGetParent(parseHandle(nodeHandle)).toString()
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun getFirstChild(nodeHandle: Double): Double {
-        return nativeGetFirstChild(nodeHandle.toLong()).toDouble()
+    fun getFirstChild(nodeHandle: String): String {
+        return nativeGetFirstChild(parseHandle(nodeHandle)).toString()
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
-    fun getNextSibling(nodeHandle: Double): Double {
-        return nativeGetNextSibling(nodeHandle.toLong()).toDouble()
+    fun getNextSibling(nodeHandle: String): String {
+        return nativeGetNextSibling(parseHandle(nodeHandle)).toString()
     }
 }

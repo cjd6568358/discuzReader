@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <unordered_set>
 #include <cstring>
 #include <mutex>
 
@@ -40,6 +39,9 @@ static lxb_status_t serializeCallback(const lxb_char_t* data, size_t len, void* 
 }
 
 static lxb_status_t matchCallback(lxb_dom_node_t* node, lxb_css_selector_specificity_t spec, void* ctx) {
+    if (ctx) {
+        *static_cast<bool*>(ctx) = true;
+    }
     return LXB_STATUS_OK;
 }
 
@@ -165,6 +167,7 @@ Java_com_discuzreader_LexborModule_nativeQuerySelectorAll(
         ctx = getContext(handle);
     }
     if (!ctx) {
+        LOGE("querySelectorAll: ctx is null for handle=%ld", handle);
         return env->NewLongArray(0);
     }
 
@@ -179,7 +182,10 @@ Java_com_discuzreader_LexborModule_nativeQuerySelectorAll(
     }
 
     lxb_dom_node_t* root = reinterpret_cast<lxb_dom_node_t*>(rootHandle);
-    if (!root) return env->NewLongArray(0);
+    if (!root) {
+        LOGE("querySelectorAll: root is null");
+        return env->NewLongArray(0);
+    }
 
     std::vector<lxb_dom_node_t*> results;
     auto collectCallback = [](lxb_dom_node_t* node, lxb_css_selector_specificity_t spec, void* userData) -> lxb_status_t {
@@ -234,17 +240,13 @@ Java_com_discuzreader_LexborModule_nativeMatches(
     lxb_dom_node_t* node = reinterpret_cast<lxb_dom_node_t*>(nodeHandle);
     if (!node) return JNI_FALSE;
 
-    jboolean matched = JNI_FALSE;
+    bool matched = false;
     lxb_selectors_opt_set(ctx->selectors, LXB_SELECTORS_OPT_DEFAULT);
     lxb_status_t status = lxb_selectors_match_node(
-        ctx->selectors, node, list, matchCallback, nullptr
+        ctx->selectors, node, list, matchCallback, &matched
     );
 
-    if (status == LXB_STATUS_OK) {
-        matched = JNI_TRUE;
-    }
-
-    return matched;
+    return matched ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jint JNICALL

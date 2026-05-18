@@ -63,16 +63,10 @@ export default function temme(
   extraModifiers: Dict<ModifierFn> = {},
   extraProcedures: Dict<ProcedureFn> = {},
 ) {
-  console.log('[temme] start, html length:', typeof html === 'string' ? html.length : 'N/A')
-
   let $: any
   if (typeof html === 'string') {
-    const t0 = Date.now()
     const shaken = htmlShaking(html)
-    console.log('[temme] htmlShaking done:', Date.now() - t0, 'ms, shaken length:', shaken.length)
-    const t1 = Date.now()
     $ = lexborLoad(shaken)
-    console.log('[temme] lexborLoad done:', Date.now() - t1, 'ms')
   } else if (isCheerioStatic(html)) {
     $ = html
   } else {
@@ -83,11 +77,8 @@ export default function temme(
   if (typeof selector === 'string') {
     if (selectorCache.has(selector)) {
       rootSelectorArray = selectorCache.get(selector)!
-      console.log('[temme] selector cache hit')
     } else {
-      const t2 = Date.now()
       rootSelectorArray = temmeParser.parse(selector)
-      console.log('[temme] temmeParser.parse done:', Date.now() - t2, 'ms')
       selectorCache.set(selector, rootSelectorArray)
     }
   } else {
@@ -95,7 +86,6 @@ export default function temme(
   }
 
   if (!rootSelectorArray || rootSelectorArray.length === 0) {
-    console.log('[temme] empty selector, returning null')
     return null
   }
 
@@ -111,12 +101,9 @@ export default function temme(
 
   const expandedSelectorCache = new Map<TemmeSelector[], ExpandedTemmeSelector[]>()
 
-  const t3 = Date.now()
   const result = helper($.root(), rootSelectorArray).getResult()
-  console.log('[temme] helper done:', Date.now() - t3, 'ms')
-  console.log('[temme] total done')
   return result
-  
+
   function helper(cntCheerio: any, selectorArray: TemmeSelector[]): CaptureResult {
     const result = new CaptureResult(filterDict, modifierDict)
 
@@ -152,19 +139,14 @@ export default function temme(
     for (const selector of expandedSelectors) {
       if (selector.type === 'normal-selector') {
         const cssSelector = makeNormalCssSelector(selector.sections)
-        const t = Date.now()
         const subCheerio = cntCheerio.find(cssSelector)
-        const elapsed = Date.now() - t
-        if (elapsed > 100) {
-          console.log(`[temme] SLOW find "${cssSelector}" took ${elapsed}ms, matched ${subCheerio.length}`)
-        }
         if (subCheerio.length > 0) {
           capture(result, subCheerio.first(), selector)
         }
         if (selector.arrayCapture) {
           const capturedResults: any[] = []
           subCheerio.each((_, elem) => {
-            capturedResults.push(helper(elem, selector.children).getResult())
+            capturedResults.push(helper($(elem), selector.children).getResult())
           })
           result.add(selector.arrayCapture, capturedResults)
         }
@@ -227,13 +209,11 @@ export default function temme(
         const { attribute, value: capture } = qualifier
         const attributeValue = node.attr(attribute)
         if (attributeValue !== undefined) {
-          // capture only when attribute exists
           result.add(capture, attributeValue)
         }
       }
     }
 
-    // 优化过程调用
     if (selector.procedure != null) {
       const { name, args } = selector.procedure
       const fn = procedureDict[name]
