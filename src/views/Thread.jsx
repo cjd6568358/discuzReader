@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import {
   Item,
   HiddenItem,
   OverflowMenu,
-  Divider,
   HeaderButton,
 } from 'react-navigation-header-buttons';
 import Swiper from 'react-native-swiper';
@@ -32,7 +31,201 @@ import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
 import ReplyModal from '../components/ReplyModal';
 import { getThreadPage, favoriteAction, threadAction, messageAction } from '../utils/api'
-import { MMStore, storage, decodeHtmlEntity, downloadFile, userAgent } from '../utils/index';
+import { MMStore, storage, downloadFile, userAgent } from '../utils/index';
+
+const customHTMLElementModels = {
+  font: HTMLElementModel.fromCustomModel({
+    contentModel: HTMLContentModel.block
+  }),
+  marquee: HTMLElementModel.fromCustomModel({
+    contentModel: HTMLContentModel.block
+  }),
+  object: HTMLElementModel.fromCustomModel({
+    contentModel: HTMLContentModel.block
+  }),
+  fieldset: HTMLElementModel.fromCustomModel({
+    contentModel: HTMLContentModel.block
+  }),
+  legend: HTMLElementModel.fromCustomModel({
+    contentModel: HTMLContentModel.block
+  }),
+}
+
+const baseStyle = { fontSize: 16, lineHeight: 24, color: '#374151' };
+const defaultViewProps = { style: { marginVertical: 8 } };
+
+const PostItem = React.memo(({ item, width, cookies, pageData, swiperRef, onReplyPress, onLinkPress, onImageSwiperOpen, onImageViewerOpen }) => {
+  const imageAttachments = []
+  const otherAttachments = []
+  item.attachments.forEach((att) => {
+    if (att.icon.includes('image.gif')) {
+      imageAttachments.push(att);
+    } else {
+      otherAttachments.push(att);
+    }
+  })
+  const isFirstPost = item.floor === 1;
+
+  const CustomImageRenderer = useCallback((props) => {
+    const { Renderer, rendererProps } = useInternalRenderer('img', props);
+    const onPress = () => {
+      onImageSwiperOpen();
+      setTimeout(() => {
+        swiperRef.current.scrollBy(pageData.imgSrcList.indexOf(rendererProps.source.uri), true);
+      }, 10);
+    };
+    return (
+      <Renderer {...rendererProps} source={{
+        uri: rendererProps.source.uri,
+        headers: {
+          'User-Agent': userAgent,
+          'Cookie': `cdb3_auth=${cookies.cdb3_auth?.value};`,
+        }
+      }} onPress={onPress} />
+    );
+  }, [cookies, pageData.imgSrcList, swiperRef, onImageSwiperOpen]);
+
+  const renderers = useMemo(() => ({ img: CustomImageRenderer }), [CustomImageRenderer]);
+
+  const renderersProps = useMemo(() => ({
+    a: { onPress: (event, href) => onLinkPress(href) },
+    img: { enableExperimentalPercentWidth: true },
+  }), [onLinkPress]);
+
+  return <Pressable onPress={() => onReplyPress(item)} style={styles.postContainer}>
+    <View style={styles.authorContainer}>
+      <Image source={{ uri: item.author.avatar }} style={styles.authorAvatar} />
+      <View style={styles.authorInfo}>
+        <View style={styles.authorNameContainer}>
+          <Text style={styles.authorName}>{item.author.name}</Text>
+          <View style={styles.authorBadge}>
+            <Text style={styles.authorBadgeText}>{item.author.level}</Text>
+          </View>
+          <Text style={styles.replyNumber}>#{item.floor}</Text>
+        </View>
+        <Text style={styles.postTime}>{item.date}</Text>
+      </View>
+    </View>
+
+    <View style={styles.postContent}>
+      <RenderHtml
+        contentWidth={width}
+        source={{ html: item.content }}
+        tagsStyles={htmlStyles}
+        customHTMLElementModels={customHTMLElementModels}
+        renderersProps={renderersProps}
+        renderers={renderers}
+        baseStyle={baseStyle}
+        defaultViewProps={defaultViewProps}
+      />
+    </View>
+    {item.attachments.length > 0 && (
+      <View style={styles.attachmentContainer}>
+        <Text style={styles.attachmentTitle}>附件</Text>
+        {imageAttachments.length > 0 && cookies.cdb3_auth?.value && (
+          <View style={styles.imageCarouselContainer}>
+            <Swiper
+              height={240}
+              loop={true}
+              autoplay={false}
+              autoplayTimeout={4}
+              showsButtons={false}
+              paginationStyle={styles.swiperPagination}
+              dotStyle={styles.swiperDot}
+              activeDotStyle={styles.swiperActiveDot}
+            >
+              {imageAttachments.map((imgItem, index) => (
+                <Pressable
+                  key={index}
+                  style={styles.imageSlide}
+                  onPress={() => onImageViewerOpen(imgItem.url || imgItem.link)}
+                  onLongPress={() => downloadFile(imgItem.url || imgItem.link, imgItem.name)}
+                >
+                  <Image
+                    source={{
+                      uri: imgItem.url || imgItem.link,
+                      headers: {
+                        'User-Agent': userAgent,
+                        'Cookie': `cdb3_auth=${cookies.cdb3_auth?.value};`,
+                      }
+                    }}
+                    style={styles.carouselImage}
+                    resizeMode="cover"
+                  />
+                  <Text style={styles.imageCaption} numberOfLines={1}>{imgItem.name}</Text>
+                </Pressable>
+              ))}
+            </Swiper>
+          </View>
+        )}
+        {otherAttachments.length > 0 && <FlatList
+          data={otherAttachments}
+          keyExtractor={(att) => att.name}
+          scrollEnabled={false}
+          renderItem={({ item: att }) => (
+            <Pressable
+              style={styles.attachmentItem}
+              onPress={() => downloadFile(att.url || att.link, att.name)}
+            >
+              <View style={styles.attachmentIconContainer}>
+                {att.icon.includes('zip.gif') ? (
+                  <Icon name="file-archive-o" size={20} color="#D97706" />
+                ) : (
+                  <Icon name="file-o" size={20} color="#6B7280" />
+                )}
+              </View>
+              <View style={styles.attachmentInfo}>
+                <Text style={styles.attachmentName} numberOfLines={1}>{att.name}</Text>
+                <View style={styles.attachmentMeta}>
+                  <Text style={styles.attachmentSize}>{att.size}</Text>
+                  <Text style={styles.attachmentDate}>{att.date}</Text>
+                </View>
+              </View>
+              {att.icon.includes('zip.gif') && <Icon name="download" size={16} color="#6B7280" />}
+            </Pressable>
+          )}
+        />}
+      </View>
+    )}
+    {item.legend.length > 0 && (
+      <View style={styles.rateContainer}>
+        <Text style={styles.rateTitle}>评分</Text>
+        {item.legend.map((rateItem, index) => (
+          <View key={index} style={styles.rateItem}>
+            <Icon name="trophy" size={14} color="#f7ba2a" style={styles.rateIcon} />
+            <Text style={styles.rateText}>{rateItem}</Text>
+          </View>
+        ))}
+      </View>
+    )}
+    {isFirstPost ?
+      <View style={styles.postStats}>
+        {item.thanks > 0 && <>
+          <View style={styles.statItem}>
+            <Icon name="heart" size={12} color="#FF0000" style={styles.statIcon} />
+            <Text style={styles.statText}>{item.thanks} 感谢</Text>
+          </View>
+          <Text style={styles.statDivider}>|</Text>
+        </>}
+        <View style={styles.statItem}>
+          <Icon name="comment-o" size={14} color="#6B7280" style={styles.statIcon} />
+          <Text style={styles.statText}>{(pageData?.pagination?.total || pageData.posts.length) - 1} 回复</Text>
+        </View>
+      </View>
+      :
+      <View style={styles.replyFooter}>
+        <View style={styles.replyActions}>
+          <Pressable style={styles.replyAction} onPress={() => {
+            onReplyPress(item, `回复 ${item.floor}楼 的帖子`);
+          }}>
+            <Icon name="comment-o" size={14} color="#6B7280" style={styles.actionIcon} />
+            <Text style={styles.actionText}>回复</Text>
+          </Pressable>
+        </View>
+      </View>
+    }
+  </Pressable>;
+});
 
 const FontAwesomeHeaderButton = (props) => (
   // the `props` here come from <Item ... />
@@ -156,10 +349,6 @@ const Thread = ({ route }) => {
       getThreadPage(href).then(data => {
         console.log(data);
         setPageData(data);
-        // const { pagination } = data
-        // if (pagination) {
-        //   ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
-        // }
         let history = JSON.parse(storage.getString('history') || '[]')
         if (history.find(item => item.tid === data.tid)) {
           history = history.filter(item => item.tid !== data.tid)
@@ -212,37 +401,6 @@ const Thread = ({ route }) => {
     setActionSheetVisible(false);
   }
 
-  const handleLinkPress = (href, name) => {
-    if (href.startsWith('about:///')) {
-      href = href.replace('about:///', '')
-    }
-    console.log('handleLinkPress', href);
-    if (href.includes('thread-') || href.includes('viewthread') || href.includes('redirect.php?tid=')) {
-      // console.log('navigate1', href);
-      navigation.push('Thread', { href });
-    } else if (href.includes('forum-') || href.includes('forumdisplay')) {
-      // console.log('navigate2', href);
-      navigation.push('Forum', { href });
-    } else if (href.includes('attachment.php') && !/\.(png|jpg|jpeg|gif|webp)$/.test(name)) {
-      // console.log('navigate3', href);
-      downloadFile(href, name);
-    } else if (/\.(png|jpg|jpeg|gif|webp)$/.test(name) || /\.(png|jpg|jpeg|gif|webp)$/.test(href)) {
-      // console.log('navigate4', href);
-      // 处理附件图片点击，查看大图
-      setCurrentImage(href);
-      setImageViewerVisible(true);
-    } else {
-      // 其他类型的链接
-      console.log('未处理的链接类型:', href);
-      ToastAndroid.show('未支持的链接类型', ToastAndroid.SHORT);
-    }
-  }
-
-  const handleReplyPress = (key) => {
-    setLongPressKey(key);
-    setActionSheetVisible(true)
-  };
-
   const toggleFavorite = async () => {
     console.log('toggleFavorite');
     if (MMStore.favorites.map(item => item.tid).includes(pageData.tid)) {
@@ -289,205 +447,55 @@ const Thread = ({ route }) => {
     })
   }
 
-  const CustomImageRenderer = useCallback((props) => {
-    const { Renderer, rendererProps } = useInternalRenderer('img', props);
-    const onPress = (...args) => {
-      console.log('img onPress', rendererProps)
-      setImageSwiperVisible(true);
-      setTimeout(() => {
-        swiperRef.current.scrollBy(pageData.imgSrcList.indexOf(rendererProps.source.uri), true);
-      }, 10);
-    };
-    return (
-      <Renderer {...rendererProps} source={{
-        uri: rendererProps.source.uri,
-        headers: {
-          'User-Agent': userAgent,
-          'Cookie': `cdb3_auth=${cookies.cdb3_auth?.value};`,
-        }
-      }} onPress={onPress} />
-    );
-  })
+  const handleLinkPress = useCallback((href, name) => {
+    if (href.startsWith('about:///')) {
+      href = href.replace('about:///', '')
+    }
+    console.log('handleLinkPress', href);
+    if (href.includes('thread-') || href.includes('viewthread') || href.includes('redirect.php?tid=')) {
+      navigation.push('Thread', { href });
+    } else if (href.includes('forum-') || href.includes('forumdisplay')) {
+      navigation.push('Forum', { href });
+    } else if (href.includes('attachment.php') && !/\.(png|jpg|jpeg|gif|webp)$/.test(name)) {
+      downloadFile(href, name);
+    } else if (/\.(png|jpg|jpeg|gif|webp)$/.test(name) || /\.(png|jpg|jpeg|gif|webp)$/.test(href)) {
+      setCurrentImage(href);
+      setImageViewerVisible(true);
+    } else {
+      console.log('未处理的链接类型:', href);
+      ToastAndroid.show('未支持的链接类型', ToastAndroid.SHORT);
+    }
+  }, [navigation]);
 
-  const renderPostItem = ({ item }) => {
-    const imageAttachments = []
-    const otherAttachments = []
-    item.attachments.forEach((item) => {
-      if (item.icon.includes('image.gif')) {
-        imageAttachments.push(item);
-      } else {
-        otherAttachments.push(item);
-      }
-    })
-    const isFirstPost = item.floor === 1;
-    return <Pressable onPress={() => handleReplyPress(item)} style={styles.postContainer}>
-      <View style={styles.authorContainer}>
-        <Image source={{ uri: item.author.avatar }} style={styles.authorAvatar} />
-        <View style={styles.authorInfo}>
-          <View style={styles.authorNameContainer}>
-            <Text style={styles.authorName}>{item.author.name}</Text>
-            <View style={styles.authorBadge}>
-              <Text style={styles.authorBadgeText}>{item.author.level}</Text>
-            </View>
-            <Text style={styles.replyNumber}>#{item.floor}</Text>
-          </View>
-          <Text style={styles.postTime}>{item.date}</Text>
-        </View>
-      </View>
+  const handleReplyPress = useCallback((key, replyTitleText) => {
+    setLongPressKey(key);
+    if (replyTitleText) {
+      setReplyTitle(replyTitleText);
+      setReplyModalVisible(true);
+    } else {
+      setActionSheetVisible(true);
+    }
+  }, []);
 
-      {/* 帖子内容 */}
-      <View style={styles.postContent}>
-        <RenderHtml
-          contentWidth={width}
-          source={{ html: decodeHtmlEntity(item.content) }}
-          tagsStyles={htmlStyles}
-          customHTMLElementModels={{
-            font: HTMLElementModel.fromCustomModel({
-              contentModel: HTMLContentModel.block
-            }),
-            marquee: HTMLElementModel.fromCustomModel({
-              contentModel: HTMLContentModel.block
-            }),
-            object: HTMLElementModel.fromCustomModel({
-              contentModel: HTMLContentModel.block
-            }),
-            fieldset: HTMLElementModel.fromCustomModel({
-              contentModel: HTMLContentModel.block
-            }),
-            legend: HTMLElementModel.fromCustomModel({
-              contentModel: HTMLContentModel.block
-            }),
-          }}
-          renderersProps={{
-            a: {
-              onPress: (event, href) => handleLinkPress(href)
-            },
-            img: {
-              enableExperimentalPercentWidth: true,
-            }
-          }}
-          renderers={{
-            img: CustomImageRenderer
-          }}
-          baseStyle={{ fontSize: 16, lineHeight: 24, color: '#374151' }}
-          defaultViewProps={{ style: { marginVertical: 8 } }}
-        />
-      </View>
-      {item.attachments.length > 0 && (
-        <View style={styles.attachmentContainer}>
-          <Text style={styles.attachmentTitle}>附件</Text>
-          {/* 图片附件轮播图 */}
-          {imageAttachments.length > 0 && cookies.cdb3_auth?.value && (
-            <View style={styles.imageCarouselContainer}>
-              <Swiper
-                height={240}
-                loop={true}
-                autoplay={false}
-                autoplayTimeout={4}
-                showsButtons={false}
-                paginationStyle={styles.swiperPagination}
-                dotStyle={styles.swiperDot}
-                activeDotStyle={styles.swiperActiveDot}
-              >
-                {imageAttachments.map((item, index) => (
-                  <Pressable
-                    key={index}
-                    style={styles.imageSlide}
-                    onPress={() => {
-                      setCurrentImage(item.url || item.link);
-                      setImageViewerVisible(true);
-                    }}
-                    onLongPress={() => downloadFile(item.url || item.link, item.name)}
-                  >
-                    <Image
-                      source={{
-                        uri: item.url || item.link,
-                        headers: {
-                          'User-Agent': userAgent,
-                          'Cookie': `cdb3_auth=${cookies.cdb3_auth?.value};`,
-                        }
-                      }}
-                      style={styles.carouselImage}
-                      resizeMode="cover"
-                    />
-                    <Text style={styles.imageCaption} numberOfLines={1}>{item.name}</Text>
-                  </Pressable>
-                ))
-                }
-              </Swiper>
-            </View>
-          )}
-          {/* 非图片附件列表 */}
-          {otherAttachments.length > 0 && <FlatList
-            data={otherAttachments}
-            keyExtractor={(item) => item.name}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <Pressable
-                style={styles.attachmentItem}
-                onPress={() => downloadFile(item.url || item.link, item.name)}
-              >
-                <View style={styles.attachmentIconContainer}>
-                  {item.icon.includes('zip.gif') ? (
-                    <Icon name="file-archive-o" size={20} color="#D97706" />
-                  ) : (
-                    <Icon name="file-o" size={20} color="#6B7280" />
-                  )}
-                </View>
-                <View style={styles.attachmentInfo}>
-                  <Text style={styles.attachmentName} numberOfLines={1}>{item.name}</Text>
-                  <View style={styles.attachmentMeta}>
-                    <Text style={styles.attachmentSize}>{item.size}</Text>
-                    <Text style={styles.attachmentDate}>{item.date}</Text>
-                  </View>
-                </View>
-                {item.icon.includes('zip.gif') && <Icon name="download" size={16} color="#6B7280" />}
-              </Pressable>
-            )}
-          />}
-        </View>
-      )}
-      {item.legend.length > 0 && (
-        <View style={styles.rateContainer}>
-          <Text style={styles.rateTitle}>评分</Text>
-          {item.legend.map((item, index) => (
-            <View key={index} style={styles.rateItem}>
-              <Icon name="trophy" size={14} color="#f7ba2a" style={styles.rateIcon} />
-              <Text style={styles.rateText}>{item}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-      {/* 帖子数据 */}
-      {isFirstPost ?
-        <View style={styles.postStats}>
-          {item.thanks > 0 && <>
-            <View style={styles.statItem}>
-              <Icon name="heart" size={12} color="#FF0000" style={styles.statIcon} />
-              <Text style={styles.statText}>{item.thanks} 感谢</Text>
-            </View>
-            <Text style={styles.statDivider}>|</Text>
-          </>}
-          <View style={styles.statItem}>
-            <Icon name="comment-o" size={14} color="#6B7280" style={styles.statIcon} />
-            <Text style={styles.statText}>{(pageData?.pagination?.total || pageData.posts.length) - 1} 回复</Text>
-          </View>
-        </View>
-        :
-        <View style={styles.replyFooter}>
-          <View style={styles.replyActions}>
-            <Pressable style={styles.replyAction} onPress={() => {
-              setReplyTitle(`回复 ${item.floor}楼 的帖子`);
-              setReplyModalVisible(true)
-            }}>
-              <Icon name="comment-o" size={14} color="#6B7280" style={styles.actionIcon} />
-              <Text style={styles.actionText}>回复</Text>
-            </Pressable>
-          </View>
-        </View>
-      }
-    </Pressable>
-  };
+  const handleImageSwiperOpen = useCallback(() => setImageSwiperVisible(true), []);
+  const handleImageViewerOpen = useCallback((uri) => {
+    setCurrentImage(uri);
+    setImageViewerVisible(true);
+  }, []);
+
+  const renderPostItem = useCallback(({ item }) => (
+    <PostItem
+      item={item}
+      width={width}
+      cookies={cookies}
+      pageData={pageData}
+      swiperRef={swiperRef}
+      onReplyPress={handleReplyPress}
+      onLinkPress={handleLinkPress}
+      onImageSwiperOpen={handleImageSwiperOpen}
+      onImageViewerOpen={handleImageViewerOpen}
+    />
+  ), [width, cookies, pageData, handleReplyPress, handleLinkPress, handleImageSwiperOpen, handleImageViewerOpen]);
 
   if (!pageData) {
     return null
@@ -505,6 +513,10 @@ const Thread = ({ route }) => {
         keyExtractor={(item) => item.pid}
         style={styles.scrollView}
         contentContainerStyle={styles.postList}
+        initialNumToRender={3}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        removeClippedSubviews={true}
         ListFooterComponent={
           <>
             {pageData.pagination && <View style={styles.pageContainer}>
