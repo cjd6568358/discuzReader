@@ -132,6 +132,52 @@ export const downloadFile = async (fromUrl, fileName = '') => {
     }
 };
 
+/**
+ * 深度对比两个对象，返回不一致的结构
+ * @param {*} obj1
+ * @param {*} obj2
+ * @returns {Array|null} 差异数组，每项为 { path, type, value1, value2 }，无差异返回 null
+ */
+export const deepDiff = (obj1, obj2) => {
+    const diffs = [];
+
+    const compare = (a, b, path = '') => {
+        if (a === b) return;
+        if (typeof a === 'number' && typeof b === 'number' && isNaN(a) && isNaN(b)) return;
+
+        if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
+            diffs.push({ path: path || 'root', type: 'value', value1: a, value2: b });
+            return;
+        }
+
+        if (Array.isArray(a) !== Array.isArray(b)) {
+            diffs.push({ path: path || 'root', type: 'type', value1: Array.isArray(a) ? 'array' : 'object', value2: Array.isArray(b) ? 'array' : 'object' });
+            return;
+        }
+
+        const keysA = Object.keys(a);
+        const keysB = Object.keys(b);
+        const allKeys = new Set([...keysA, ...keysB]);
+
+        for (const key of allKeys) {
+            const childPath = path ? `${path}.${key}` : key;
+            const inA = key in a;
+            const inB = key in b;
+
+            if (inA && !inB) {
+                diffs.push({ path: childPath, type: 'missing', value1: a[key], value2: undefined });
+            } else if (!inA && inB) {
+                diffs.push({ path: childPath, type: 'missing', value1: undefined, value2: b[key] });
+            } else {
+                compare(a[key], b[key], childPath);
+            }
+        }
+    };
+
+    compare(obj1, obj2);
+    return diffs.length > 0 ? diffs : null;
+};
+
 export const loadImageBase64 = async (uri) => {
     try {
         const response = await axios({

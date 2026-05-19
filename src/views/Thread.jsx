@@ -511,7 +511,7 @@ const Thread = ({ route }) => {
         ref={view => scrollViewRef.current = view}
         data={pageData.posts}
         renderItem={renderPostItem}
-        keyExtractor={(item) => item.pid}
+        keyExtractor={(item) => item.floor}
         style={styles.scrollView}
         contentContainerStyle={styles.postList}
         initialNumToRender={3}

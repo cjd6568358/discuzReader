@@ -40,7 +40,6 @@ function scopedFind(mod, docHandle, sel, nodeHandle) {
   if (sel.charAt(0) !== '>') {
     return mod.querySelectorAll(docHandle, sel, nodeHandle);
   }
-  // Unified strategy (same as lexbor-native.js on Windows):
   // Prepend parent tag name to make a valid CSS selector, search from parent,
   // then filter results to only include descendants of nodeHandle.
   const tagName = getTagNameById(mod, nodeHandle);
@@ -50,7 +49,6 @@ function scopedFind(mod, docHandle, sel, nodeHandle) {
   const effectiveSel = tagName + ' ' + sel;
   const found = mod.querySelectorAll(docHandle, effectiveSel, parentHandle);
   if (found.length === 0) return [];
-  // Batch filter: C-level ancestor walk (single JNI call)
   return mod.filterDescendants(found, nodeHandle);
 }
 
