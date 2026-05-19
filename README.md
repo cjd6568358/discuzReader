@@ -1,5 +1,8 @@
 ### TODO
 [x] navigation header需要重构
+[x] imageSwiperVisible初始化锚点错误
+[x] Thread View 性能太差，需要优化
+[x] 样式优化，Forum/Thread
 
 ### lexbor调试指南
 
