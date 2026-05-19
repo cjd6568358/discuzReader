@@ -151,7 +151,7 @@ const ForumView = ({ route }) => {
           }
           threadMap.set(thread.href, ({ ...thread, colors: colorMap[thread.tag?.id] }));
         });
-      }, [])
+      })
       setThreads(Array.from(threadMap.values()))
     }).catch(error => {
       console.log(error);
