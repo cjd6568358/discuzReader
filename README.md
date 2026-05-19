@@ -6,9 +6,9 @@
 #### 每次对话调试都需要在 src\lib\lexbor\debug 目录下记录生成对话调试记录，同时需要标识该对话涉及到的bug是否已解决，以便于后续问题排查
 
 #### lexbor文档参考
-1. src\lib\lexbor\lexbor-native.js 是window端高性能的 HTML 解析引擎包装，提供 cheerio 兼容的 API，并且已经成功通过测试用例
+1. src\lib\lexbor\lexbor-window.js 是window端高性能的 HTML 解析引擎包装，提供 cheerio 兼容的 API，并且已经成功通过测试用例
 
-2. src\lib\lexbor\lexbor.js 是android端类似lexbor-native.js实现，目前还未正常通过测试
+2. src\lib\lexbor\lexbor-android.js 是android端类似lexbor-window.js实现，目前正在测试
 
 3. src\lib\lexbor\bin\lexbor-android-arm64-v8a\lib\liblexbor.so 是 lexbor 的 C 库编译产物，针对 ARM64 (arm64-v8a) Android 设备的共享库，用于替换react-native-cheerio
 
@@ -23,4 +23,4 @@
 $ndkBin = "D:\Program Files\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin"
 & "$ndkBin\aarch64-linux-android24-clang++.cmd" -shared -fPIC -o "android\app\src\main\jniLibs\arm64-v8a\liblexbor_jni.so" "android\app\src\main\cpp\lexbor_jni.cpp" "-Isrc\lib\lexbor\bin\lexbor-android-arm64-v8a\include" "-Landroid\app\src\main\jniLibs\arm64-v8a" -llexbor -llog -std=c++17 -fexceptions -O2
 ```
-自行决定是否需要清除gradlew缓存
+由Agent自行决定是否需要清除gradlew缓存
