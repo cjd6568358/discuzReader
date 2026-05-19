@@ -2,7 +2,8 @@ import axios from 'axios';
 import iconv from 'iconv-lite';
 import { ToastAndroid } from 'react-native';
 import { storage, userAgent, UTF8ToGBK, decodeHtmlEntity, logout } from './index';
-import temme from '../lib/temme';
+import temme, { htmlShaking } from '../lib/temme';
+import cheerio from 'react-native-cheerio';
 
 /**
  * HTTP客户端封装
@@ -60,8 +61,14 @@ instance.interceptors.response.use(response => {
         return Promise.reject('redirect login');
     } else if (response.config.selector) {
         const t1 = Date.now();
-        response.data = temme(response.data, response.config.selector);
-        console.log('temme time:', Date.now() - t1, response.config.url);
+        const lexborResult = temme(response.data, response.config.selector);
+        console.log('lexbor temme time:', Date.now() - t1, response.config.url);
+        const t2 = Date.now();
+        const $ = cheerio.load(htmlShaking(response.data), { decodeEntities: false, _useHtmlParser2: true });
+        const cheerioResult = temme($, response.config.selector);
+        console.log('cheerio temme time:', Date.now() - t2, response.config.url);
+        console.log('cheerioResult vs lexborResult:', cheerioResult, lexborResult);
+        response.data = lexborResult
         if (response.data.error) {
             ToastAndroid.show(response.data.error, ToastAndroid.SHORT);
             return Promise.reject('not forbidden');
