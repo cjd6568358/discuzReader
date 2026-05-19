@@ -1,4 +1,4 @@
-import lexbor from '../lexbor/lexbor'
+import lexbor from '../lexbor/lexbor-android.js'
 import invariant from 'invariant'
 import { defaultFilterDict, FilterFn } from './filters'
 import { defaultProcedureDict, ProcedureFn } from './procedures'
