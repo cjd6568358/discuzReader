@@ -3,7 +3,7 @@
 [x] imageSwiperVisible初始化锚点错误
 [x] Thread View 性能太差，需要优化
 [x] 样式优化，Forum/Thread
-[x] Thread 中公告 主题 改为手风琴效果默认收起
+[x] Forum 中公告 主题 改为手风琴效果默认收起
 
 ### lexbor调试指南
 
