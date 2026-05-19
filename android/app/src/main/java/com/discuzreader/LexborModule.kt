@@ -4,6 +4,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableArray
 import com.facebook.react.module.annotations.ReactModule
 
@@ -33,6 +34,8 @@ class LexborModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     external fun nativeGetParent(nodeHandle: Long): Long
     external fun nativeGetFirstChild(nodeHandle: Long): Long
     external fun nativeGetNextSibling(nodeHandle: Long): Long
+    external fun nativeGetLocalNameId(nodeHandle: Long): Int
+    external fun nativeFilterDescendants(handles: LongArray, rootHandle: Long): LongArray
 
     private fun parseHandle(handle: String): Long {
         return handle.toLongOrNull() ?: 0L
@@ -106,5 +109,21 @@ class LexborModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     @ReactMethod(isBlockingSynchronousMethod = true)
     fun getNextSibling(nodeHandle: String): String {
         return nativeGetNextSibling(parseHandle(nodeHandle)).toString()
+    }
+
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun getLocalNameId(nodeHandle: String): String {
+        return nativeGetLocalNameId(parseHandle(nodeHandle)).toString()
+    }
+
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun filterDescendants(handles: ReadableArray, rootHandle: String): WritableArray {
+        val longHandles = LongArray(handles.size()) { i -> parseHandle(handles.getString(i) ?: "0") }
+        val results = nativeFilterDescendants(longHandles, parseHandle(rootHandle))
+        val array = Arguments.createArray()
+        for (r in results) {
+            array.pushString(r.toString())
+        }
+        return array
     }
 }

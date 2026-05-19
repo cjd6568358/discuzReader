@@ -86,12 +86,16 @@ function scopedFind(mod, docHandle, sel, nodeHandle) {
 }
 ```
 
-关键点：不能简单地把父节点标签名拼到选择器前面（如 `form>thead.separation`），因为父节点不一定是预期的元素（table 的父节点是 form，不是 table）。
+**更正 (2026-05-19):** 拼接父标签名是可行的。例如 `table` 节点的选择器 `>thead.separation`，拼接为 `table >thead.separation`，在父节点（form）上搜索。搜索范围虽扩大到祖父节点的整个子树，但通过 `filterDescendants` 过滤可保证只返回当前节点（table）的直接子树结果。原方案（按 `>` 拆分逐层查询）效率较低，已弃用。
 
-## 与 Windows 平台实现的差异
+## 与 Windows 平台实现的差异（已统一）
 
-Windows 平台 `lexbor-native.js` 的 `nativeSelectAll` 用类似思路处理 `>`：拼接父标签名 + 选择器，搜索后过滤后代。但 JNI 环境中父节点标签名拼接方式不可靠，改为按 `>` 拆分后逐层查找 + 直接子元素过滤。
+两个平台的 lexbor C 库行为一致，`lxb_css_selectors_parse` 均不接受以 `>` 开头的选择器。Windows 端之所以能工作，是因为在 JS 层预先拼接了父标签名。Android 端现已采用相同策略，通过 `nativeGetLocalNameId` 获取标签名 ID（配合 KNOWN_TAGS 查表），以及 `nativeFilterDescendants` 在 C 层批量过滤后代节点。详见 `2026-05-19-android-performance-optimization.md`。
 
 ## 涉及文件
 
-- `src/lib/lexbor/lexbor.js` - `scopedFind` 函数（核心修复）
+- `src/lib/lexbor/lexbor.js` - `scopedFind` 函数（已重写为拼接父标签名方案）
+- `src/lib/lexbor/tag-names.js` - 共享 KNOWN_TAGS 查找表
+- `src/lib/lexbor/lexbor-native.js` - Windows 端参考实现
+- `android/app/src/main/cpp/lexbor_jni.cpp` - `nativeGetLocalNameId`, `nativeFilterDescendants`
+- `android/app/src/main/java/com/discuzreader/LexborModule.kt` - Kotlin 层 JNI 桥接

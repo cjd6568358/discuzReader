@@ -1,4 +1,5 @@
 import { NativeModules } from 'react-native';
+import { KNOWN_TAGS } from './tag-names';
 
 const { LexborModule } = NativeModules;
 
@@ -18,61 +19,44 @@ function isHandle(handle) {
   );
 }
 
+const tagNameCache = new Map(); // local_name_id -> tag name string
+
+function getTagNameById(mod, nodeHandle) {
+  const id = parseInt(mod.getLocalNameId(nodeHandle), 10);
+  let cached = tagNameCache.get(id);
+  if (cached !== undefined) return cached;
+  cached = KNOWN_TAGS[id];
+  if (cached) {
+    tagNameCache.set(id, cached);
+    return cached;
+  }
+  // Fallback: JNI call for unknown tags
+  cached = mod.getNodeName(nodeHandle) || 'unknown';
+  tagNameCache.set(id, cached);
+  return cached;
+}
+
 function scopedFind(mod, docHandle, sel, nodeHandle) {
   if (sel.charAt(0) !== '>') {
     return mod.querySelectorAll(docHandle, sel, nodeHandle);
   }
-  // Split by '>' (respecting parentheses) to handle direct-child combinators.
-  // Each part may contain descendant spaces — those work as normal descendant selectors.
-  const parts = [];
-  let depth = 0, start = 0;
-  for (let i = 0; i < sel.length; i++) {
-    const ch = sel.charAt(i);
-    if (ch === '(') depth++;
-    else if (ch === ')') depth--;
-    else if (ch === '>' && depth === 0) {
-      const part = sel.substring(start, i).trim();
-      if (part) parts.push(part);
-      start = i + 1;
-    }
-  }
-  const last = sel.substring(start).trim();
-  if (last) parts.push(last);
-
-  let currentHandles = [nodeHandle];
-  for (const part of parts) {
-    const nextHandles = [];
-    // Extract the first CSS component (before any descendant space) for direct-child check.
-    // e.g. "thead.separation td:nth-child(3)" → first component = "thead.separation"
-    const spaceIdx = part.indexOf(' ');
-    const firstComponent = spaceIdx >= 0 ? part.substring(0, spaceIdx) : part;
-
-    for (const parentH of currentHandles) {
-      const found = mod.querySelectorAll(docHandle, part, parentH);
-      for (const h of found) {
-        // Walk up from h to find the ancestor that is a direct child of parentH,
-        // then verify that ancestor matches the first component.
-        let cur = h;
-        while (cur) {
-          const p = mod.getParent(cur);
-          if (p === parentH) {
-            if (mod.matches(docHandle, cur, firstComponent)) {
-              nextHandles.push(h);
-            }
-            break;
-          }
-          cur = p;
-        }
-      }
-    }
-    currentHandles = nextHandles;
-    if (currentHandles.length === 0) break;
-  }
-  return currentHandles;
+  // Unified strategy (same as lexbor-native.js on Windows):
+  // Prepend parent tag name to make a valid CSS selector, search from parent,
+  // then filter results to only include descendants of nodeHandle.
+  const tagName = getTagNameById(mod, nodeHandle);
+  if (!tagName) return [];
+  const parentHandle = mod.getParent(nodeHandle);
+  if (!parentHandle) return [];
+  const effectiveSel = tagName + ' ' + sel;
+  const found = mod.querySelectorAll(docHandle, effectiveSel, parentHandle);
+  if (found.length === 0) return [];
+  // Batch filter: C-level ancestor walk (single JNI call)
+  return mod.filterDescendants(found, nodeHandle);
 }
 
 function wrapNode(nodeHandle, docHandle) {
   const mod = getLexborModule();
+  let _cachedChildren = null;
   const node = {
     _handle: nodeHandle,
     _doc: docHandle,
@@ -108,7 +92,7 @@ function wrapNode(nodeHandle, docHandle) {
       if (!isHandle(nodeHandle)) return null;
       const nodeType = mod.getNodeType(nodeHandle);
       if (nodeType === 1) {
-        return mod.getNodeName(nodeHandle) || null;
+        return getTagNameById(mod, nodeHandle);
       }
       return null;
     },
@@ -130,12 +114,14 @@ function wrapNode(nodeHandle, docHandle) {
 
     getChildren() {
       if (!isHandle(nodeHandle)) return [];
+      if (_cachedChildren) return _cachedChildren;
       const result = [];
       let child = mod.getFirstChild(nodeHandle);
       while (child) {
         result.push(wrapNode(child, docHandle));
         child = mod.getNextSibling(child);
       }
+      _cachedChildren = result;
       return result;
     },
 
@@ -219,7 +205,7 @@ function wrapList(handles, docHandle) {
       if (arr.length === 0) return null;
       const nodeType = mod.getNodeType(arr[0]);
       if (nodeType === 1) {
-        return mod.getNodeName(arr[0]) || null;
+        return getTagNameById(mod, arr[0]);
       }
       return null;
     },

@@ -358,4 +358,48 @@ Java_com_discuzreader_LexborModule_nativeGetNextSibling(JNIEnv* env, jobject thi
     return reinterpret_cast<jlong>(node->next);
 }
 
+JNIEXPORT jint JNICALL
+Java_com_discuzreader_LexborModule_nativeGetLocalNameId(JNIEnv* env, jobject thiz, jlong nodeHandle) {
+    lxb_dom_node_t* node = reinterpret_cast<lxb_dom_node_t*>(nodeHandle);
+    if (!node) return 0;
+    lxb_dom_element_t* element = lxb_dom_interface_element(node);
+    if (!element) return 0;
+    return static_cast<jint>(element->node.local_name);
+}
+
+JNIEXPORT jlongArray JNICALL
+Java_com_discuzreader_LexborModule_nativeFilterDescendants(
+    JNIEnv* env, jobject thiz, jlongArray handles, jlong rootHandle) {
+
+    lxb_dom_node_t* root = reinterpret_cast<lxb_dom_node_t*>(rootHandle);
+    if (!root) return env->NewLongArray(0);
+
+    jsize count = env->GetArrayLength(handles);
+    if (count == 0) return env->NewLongArray(0);
+
+    jlong* elems = env->GetLongArrayElements(handles, nullptr);
+    std::vector<jlong> filtered;
+
+    for (jsize i = 0; i < count; i++) {
+        lxb_dom_node_t* node = reinterpret_cast<lxb_dom_node_t*>(elems[i]);
+        if (!node) continue;
+        lxb_dom_node_t* cur = node->parent;
+        while (cur) {
+            if (cur == root) {
+                filtered.push_back(elems[i]);
+                break;
+            }
+            cur = cur->parent;
+        }
+    }
+
+    env->ReleaseLongArrayElements(handles, elems, JNI_ABORT);
+
+    jlongArray result = env->NewLongArray(static_cast<jsize>(filtered.size()));
+    if (!filtered.empty()) {
+        env->SetLongArrayRegion(result, 0, static_cast<jsize>(filtered.size()), filtered.data());
+    }
+    return result;
+}
+
 }
