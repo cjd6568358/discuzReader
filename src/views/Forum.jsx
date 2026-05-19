@@ -153,9 +153,6 @@ const ForumView = ({ route }) => {
         });
       }, [])
       setThreads(Array.from(threadMap.values()))
-      // if (pagination) {
-      //   ToastAndroid.show(`${pagination.current}/${pagination.last}`, ToastAndroid.SHORT);
-      // }
     }).catch(error => {
       console.log(error);
       if (error === 'redirect login') {
@@ -522,24 +519,6 @@ const styles = StyleSheet.create({
   authorName: {
     fontSize: 12,
     color: '#6B7280',
-    marginRight: 8,
-  },
-  authorNameBlue: {
-    fontSize: 12,
-    color: '#2563EB',
-    fontWeight: '500',
-    marginRight: 8,
-  },
-  authorNameYellow: {
-    fontSize: 12,
-    color: '#F59E0B',
-    fontWeight: '500',
-    marginRight: 8,
-  },
-  authorNameGreen: {
-    fontSize: 12,
-    color: '#10B981',
-    fontWeight: '500',
     marginRight: 8,
   },
   dateText: {

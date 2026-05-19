@@ -229,28 +229,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  navbar: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-    zIndex: 50,
-  },
-  navbarContent: {
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  navbarTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-    flex: 1,
-  },
   content: {
     flex: 1,
     paddingTop: 12,

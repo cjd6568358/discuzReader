@@ -53,16 +53,7 @@ const styles = StyleSheet.create({
         top: '50%',
         marginTop: -20,
         zIndex: 10,
-    },
-    pageContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginVertical: 16,
-    },
-    pageCount: {
-        fontSize: 16,
-        marginLeft: 4,
-    },
+    }
 });
 
 export default Pagination;

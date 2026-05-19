@@ -259,30 +259,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#2563EB',
   },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  badge: {
-    position: 'absolute',
-    bottom: -4,
-    right: -4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
   searchContainer: {
     width: '50%',
   },

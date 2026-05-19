@@ -16,10 +16,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import {
     HeaderButtons,
-    Item,
     HiddenItem,
     OverflowMenu,
-    Divider,
     HeaderButton,
 } from 'react-navigation-header-buttons';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -571,13 +569,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F9FAFB',
     },
-    emptyText: {
-        textAlign: 'center',
-        color: '#9CA3AF',
-        marginTop: 20,
-        fontSize: 16,
-        padding: 16,
-    },
     // 移除分页加载相关样式
     inputSection: {
         padding: 16,
@@ -723,32 +714,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    emptyState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 64,
-        paddingBottom: 32,
-    },
-    emptyImage: {
-        width: 160,
-        height: 160,
-        marginBottom: 16,
-    },
     emptyText: {
         fontSize: 16,
         color: '#9CA3AF',
         marginBottom: 16,
-    },
-    emptyAddButton: {
-        backgroundColor: '#3B82F6',
-        paddingHorizontal: 24,
-        paddingVertical: 10,
-        borderRadius: 8,
-    },
-    emptyAddButtonText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '500',
     },
     modalOverlay: {
         flex: 1,

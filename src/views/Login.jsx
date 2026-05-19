@@ -187,10 +187,6 @@ const LoginView = () => {
             <Text style={styles.loginButtonText}>登 录</Text>
           </Pressable>
 
-          {/* <View style={styles.linksContainer}>
-            <Text style={styles.forgotPasswordText}>忘记密码？</Text>
-            <Text style={styles.registerText}>注册新账号</Text>
-          </View> */}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -279,25 +275,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     fontSize: 16,
-  },
-  linksContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 32,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: '#4B5563',
-  },
-  registerText: {
-    fontSize: 14,
-    color: '#2563EB',
-  },
-  settingIcon: {
-    position: 'absolute',
-    top: 12,
-    right: 20,
   },
   settingsButton: {
     position: 'absolute',

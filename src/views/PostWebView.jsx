@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, SafeAreaView, StatusBar, Pressable } from 'reac
 import { WebView } from 'react-native-webview';
 import CookieManager from '@react-native-cookies/cookies';
 import { useNavigation } from '@react-navigation/native';
-import { useLoading } from '../components/Loading';
+// import { useLoading } from '../components/Loading';
 import { storage, userAgent } from '../utils/index';
 
 const PostScreen = ({ route }) => {
   const navigation = useNavigation();
-  const { showLoading, hideLoading } = useLoading();
+  // const { showLoading, hideLoading } = useLoading();
   const [selectedNode] = useState(() => storage.getString('selectedNode'));
   const [cookies, setCookies] = useState({});
 

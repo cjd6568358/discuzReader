@@ -5,7 +5,6 @@ import RNFS from 'react-native-fs';
 import iconv from 'iconv-lite'
 import he from 'he';
 import axios from 'axios';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const storage = new MMKV();
 export const MMStore = {
