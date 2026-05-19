@@ -54,7 +54,7 @@ const customHTMLElementModels = {
 const baseStyle = { fontSize: 16, lineHeight: 24, color: '#374151' };
 const defaultViewProps = { style: { marginVertical: 8 } };
 
-const PostItem = React.memo(({ item, width, cookies, pageData, swiperRef, onReplyPress, onLinkPress, onImageSwiperOpen, onImageViewerOpen }) => {
+const PostItem = React.memo(({ item, width, cookies, pageData, onReplyPress, onLinkPress, onImageSwiperOpen, onImageViewerOpen }) => {
   const imageAttachments = []
   const otherAttachments = []
   item.attachments.forEach((att) => {
@@ -69,10 +69,8 @@ const PostItem = React.memo(({ item, width, cookies, pageData, swiperRef, onRepl
   const CustomImageRenderer = useCallback((props) => {
     const { Renderer, rendererProps } = useInternalRenderer('img', props);
     const onPress = () => {
-      onImageSwiperOpen();
-      setTimeout(() => {
-        swiperRef.current.scrollBy(pageData.imgSrcList.indexOf(rendererProps.source.uri), true);
-      }, 10);
+      const index = pageData.imgSrcList.indexOf(rendererProps.source.uri);
+      onImageSwiperOpen(index);
     };
     return (
       <Renderer {...rendererProps} source={{
@@ -83,7 +81,7 @@ const PostItem = React.memo(({ item, width, cookies, pageData, swiperRef, onRepl
         }
       }} onPress={onPress} />
     );
-  }, [cookies, pageData.imgSrcList, swiperRef, onImageSwiperOpen]);
+  }, [cookies, pageData.imgSrcList, onImageSwiperOpen]);
 
   const renderers = useMemo(() => ({ img: CustomImageRenderer }), [CustomImageRenderer]);
 
@@ -242,6 +240,7 @@ const Thread = ({ route }) => {
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [currentImage, setCurrentImage] = useState('');
   const [imageSwiperVisible, setImageSwiperVisible] = useState(false);
+  const [imageSwiperIndex, setImageSwiperIndex] = useState(0);
   const [postContent, setPostContent] = useState('');
   const swiperRef = useRef(null);
   const scrollViewRef = useRef(null);
@@ -477,7 +476,10 @@ const Thread = ({ route }) => {
     }
   }, []);
 
-  const handleImageSwiperOpen = useCallback(() => setImageSwiperVisible(true), []);
+  const handleImageSwiperOpen = useCallback((index = 0) => {
+    setImageSwiperIndex(index);
+    setImageSwiperVisible(true);
+  }, []);
   const handleImageViewerOpen = useCallback((uri) => {
     setCurrentImage(uri);
     setImageViewerVisible(true);
@@ -489,7 +491,6 @@ const Thread = ({ route }) => {
       width={width}
       cookies={cookies}
       pageData={pageData}
-      swiperRef={swiperRef}
       onReplyPress={handleReplyPress}
       onLinkPress={handleLinkPress}
       onImageSwiperOpen={handleImageSwiperOpen}
@@ -593,6 +594,7 @@ const Thread = ({ route }) => {
           <View style={styles.imageSwiperContainer}>
             <Swiper
               ref={swiperRef}
+              index={imageSwiperIndex}
               width={width}
               loop={true}
               autoplay={false}
