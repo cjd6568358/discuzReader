@@ -256,7 +256,7 @@ const Thread = ({ route }) => {
 
   useEffect(() => {
     pageData && renderHeader()
-  }, [pageData])
+  }, [pageData, renderHeader])
 
   useEffect(() => {
     CookieManager.get(selectedNode).then((cookies) => {
@@ -315,7 +315,7 @@ const Thread = ({ route }) => {
         </OverflowMenu>
       </HeaderButtons>,
     })
-  })
+  }, [pageData, navigation, clearCache, block])
 
   const clearCache = useCallback(() => {
     delete MMStore.cached[`thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`]
@@ -323,7 +323,7 @@ const Thread = ({ route }) => {
       renderPage(`thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`)
     }, ToastAndroid.SHORT);
     ToastAndroid.show('缓存已清除', ToastAndroid.SHORT);
-  })
+  }, [pageData, renderPage])
 
   const block = useCallback(() => {
     Alert.alert('提示', '确定要屏蔽此贴吗？', [
@@ -340,8 +340,7 @@ const Thread = ({ route }) => {
       },
       { cancelable: true }
     ])
-
-  })
+  }, [pageData])
 
   const renderPage = useCallback((href) => {
     return new Promise((resolve, reject) => {
@@ -379,7 +378,7 @@ const Thread = ({ route }) => {
         scrollViewRef.current.scrollToOffset({ offset: 0, animated: true });
       });
     })
-  })
+  }, [])
 
   const actionSheetOptions = [
     { text: '搜索', onPress: () => handleActionSheetItemPress('search') },

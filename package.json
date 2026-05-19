@@ -5,6 +5,7 @@
   "scripts": {
     "android": "react-native run-android --active-arch-only",
     "ios": "react-native run-ios",
+    "clean": "cd android && ./gradlew clean",
     "build": "cd ./android && ./gradlew assembleRelease",
     "lint": "eslint .",
     "start": "react-native start",
@@ -52,6 +53,7 @@
     "@types/jest": "^29.5.13",
     "@types/react": "^19.0.0",
     "@types/react-test-renderer": "^19.0.0",
+    "cheerio": "^1.2.0",
     "eslint": "^8.19.0",
     "jest": "^29.6.3",
     "prettier": "2.8.8",

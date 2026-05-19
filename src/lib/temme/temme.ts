@@ -1,4 +1,4 @@
-import cheerio from 'react-native-cheerio'
+import { load as lexborLoad } from '../lexbor/lexbor'
 import invariant from 'invariant'
 import { defaultFilterDict, FilterFn } from './filters'
 import { defaultProcedureDict, ProcedureFn } from './procedures'
@@ -31,7 +31,7 @@ import parser from './grammar.js'
 
 const temmeParser: TemmeParser = parser as unknown as TemmeParser
 
-export { cheerio, temmeParser }
+export { lexborLoad as cheerio, temmeParser }
 
 /** 预处理 HTML：移除 script/style/comment 块，减少 HtmlParser2 工作量。
  *  这些内容不影响 temme 选择器的匹配结果。 */
@@ -63,17 +63,16 @@ export default function temme(
   extraModifiers: Dict<ModifierFn> = {},
   extraProcedures: Dict<ProcedureFn> = {},
 ) {
-  // 优化cheerio加载，减少不必要的DOM操作
-  let $: CheerioStatic
+  let $: any
   if (typeof html === 'string') {
-    $ = cheerio.load(htmlShaking(html), { decodeEntities: false, _useHtmlParser2: true })
+    const shaken = htmlShaking(html)
+    $ = lexborLoad(shaken)
   } else if (isCheerioStatic(html)) {
     $ = html
   } else {
-    $ = cheerio.load(html, { decodeEntities: false, _useHtmlParser2: true })
+    $ = lexborLoad(String(html))
   }
 
-  // 使用缓存获取选择器数组
   let rootSelectorArray: TemmeSelector[]
   if (typeof selector === 'string') {
     if (selectorCache.has(selector)) {
@@ -85,7 +84,7 @@ export default function temme(
   } else {
     rootSelectorArray = selector
   }
-  
+
   if (!rootSelectorArray || rootSelectorArray.length === 0) {
     return null
   }
@@ -95,18 +94,17 @@ export default function temme(
     rootSelectorArray.forEach(checkRootSelector)
   }
 
-  // 减少对象创建，使用Object.assign一次性合并
   const filterDict: Dict<FilterFn> = Object.keys(extraFilters).length > 0 ? Object.assign({}, defaultFilterDict, extraFilters) : defaultFilterDict
   const modifierDict: Dict<ModifierFn> = Object.keys(extraModifiers).length > 0 ? Object.assign({}, defaultModifierDict, extraModifiers) : defaultModifierDict
   const procedureDict: Dict<ProcedureFn> = Object.keys(extraProcedures).length > 0 ? Object.assign({}, defaultProcedureDict, extraProcedures) : defaultProcedureDict
   const snippetsMap = new Map<string, SnippetDefine>()
-  
-  // 缓存展开后的选择器
+
   const expandedSelectorCache = new Map<TemmeSelector[], ExpandedTemmeSelector[]>()
-  
-  return helper($.root(), rootSelectorArray).getResult()
-  
-  function helper(cntCheerio: Cheerio, selectorArray: TemmeSelector[]): CaptureResult {
+
+  const result = helper($.root(), rootSelectorArray).getResult()
+  return result
+
+  function helper(cntCheerio: any, selectorArray: TemmeSelector[]): CaptureResult {
     const result = new CaptureResult(filterDict, modifierDict)
 
     // First pass: process SnippetDefine / FilterDefine / ModifierDefine / ProcedureDefine
@@ -138,13 +136,11 @@ export default function temme(
       expandedSelectorCache.set(selectorArray, expandedSelectors);
     }
 
-    // Second pass: process match and capture
     for (const selector of expandedSelectors) {
       if (selector.type === 'normal-selector') {
         const cssSelector = makeNormalCssSelector(selector.sections)
         const subCheerio = cntCheerio.find(cssSelector)
         if (subCheerio.length > 0) {
-          // Only the first element will be captured.
           capture(result, subCheerio.first(), selector)
         }
         if (selector.arrayCapture) {
@@ -202,7 +198,7 @@ export default function temme(
   /** Capture the node according to the selector. */
   function capture(
     result: CaptureResult,
-    node: Cheerio,
+    node: any,
     selector: NormalSelector | ParentRefSelector,
   ) {
     const section = selector.type === 'normal-selector' ? last(selector.sections) : selector.section
@@ -213,13 +209,11 @@ export default function temme(
         const { attribute, value: capture } = qualifier
         const attributeValue = node.attr(attribute)
         if (attributeValue !== undefined) {
-          // capture only when attribute exists
           result.add(capture, attributeValue)
         }
       }
     }
 
-    // 优化过程调用
     if (selector.procedure != null) {
       const { name, args } = selector.procedure
       const fn = procedureDict[name]

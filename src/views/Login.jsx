@@ -22,9 +22,9 @@ import selectors from '../utils/selectors';
 const LoginView = () => {
   const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [securityAnswer, setSecurityAnswer] = useState('');
+  const [username, setUsername] = useState('cjd610630890');
+  const [password, setPassword] = useState('cjd110109');
+  const [securityAnswer, setSecurityAnswer] = useState('3,建湖');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
 
