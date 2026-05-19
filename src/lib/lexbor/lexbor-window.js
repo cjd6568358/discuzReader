@@ -415,6 +415,13 @@ function wrapNode(node, doc) {
     },
     html() { return node._getSerializedHtml() || ''; },
     parent() { return node.parent ? wrapNode(node.parent, doc) : null; },
+    // Aliases for Android API compatibility
+    getNodeName() { return node.name || null; },
+    getType() { return node.type; },
+    getParent() { return node.parent ? wrapNode(node.parent, doc) : null; },
+    getChildren() { return (node.children || []).map(c => wrapNode(c, doc)); },
+    eq() { return w; },
+    data() { return node.data || ''; },
   };
   return w;
 }
@@ -457,6 +464,44 @@ function wrapList(nodes, doc) {
       const p = nodes[0].parent;
       return p ? wrapNode(p, doc) : wrapList([], doc);
     },
+    last() {
+      if (nodes.length === 0) return wrapList([], doc);
+      return wrapNode(nodes[nodes.length - 1], doc);
+    },
+    eq(index) {
+      if (index < 0) index += nodes.length;
+      if (index < 0 || index >= nodes.length) return wrapList([], doc);
+      return wrapNode(nodes[index], doc);
+    },
+    map(fn) {
+      const result = [];
+      for (let i = 0; i < nodes.length; i++) {
+        result.push(fn(i, wrapNode(nodes[i], doc)));
+      }
+      return result;
+    },
+    toArray() {
+      return nodes.map(n => wrapNode(n, doc));
+    },
+    // Aliases for Android API compatibility
+    getNodeName() {
+      if (nodes.length === 0) return null;
+      return nodes[0].name || null;
+    },
+    getType() {
+      if (nodes.length === 0) return null;
+      return nodes[0].type;
+    },
+    getParent() {
+      if (nodes.length === 0) return null;
+      const p = nodes[0].parent;
+      return p ? wrapNode(p, doc) : null;
+    },
+    getChildren() {
+      if (nodes.length === 0) return [];
+      return (nodes[0].children || []).map(c => wrapNode(c, doc));
+    },
+    data() { return ''; },
   };
   return w;
 }

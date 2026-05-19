@@ -68,39 +68,50 @@ declare module 'react-native-cheerio' {
   export default cheerio
 }
 
-declare module '../lexbor/lexbor' {
+declare module '../lexbor/lexbor-android' {
   interface LexborNode {
-    _handle: number
-    _doc: number
+    _handle: string
+    _doc: string
     find(selector: string): LexborList
     is(selector: string): boolean
     attr(name: string): string | undefined
     text(): string
     html(): string
-    nodeName: string | null
+    // Getter properties (shared by both platforms)
     type: string | null
-    parent: LexborNode | null
-    children: LexborNode[]
+    name: string | null
+    // Method aliases (shared by both platforms)
+    getNodeName(): string | null
+    getType(): string | null
+    getParent(): LexborNode | null
+    getChildren(): LexborNode[]
+    // Other
     length: number
     first(): LexborNode
     each(fn: (index: number, node: LexborNode) => void): LexborNode
     eq(): LexborNode
     data(): string
+    cheerio: string
   }
 
   interface LexborList {
-    _handles: number[]
-    _doc: number
+    _handles: string[]
+    _doc: string
     length: number
     find(selector: string): LexborList
     is(selector: string): boolean
     attr(name: string): string | undefined
     text(): string
     html(): string
-    nodeName: string | null
+    // Getter properties
     type: string | null
-    parent: LexborNode | null
-    children: LexborNode[]
+    name: string | null
+    // Method aliases
+    getNodeName(): string | null
+    getType(): string | null
+    getParent(): LexborNode | null
+    getChildren(): LexborNode[]
+    // List operations
     first(): LexborNode
     last(): LexborNode
     eq(index: number): LexborNode | LexborList
@@ -108,11 +119,12 @@ declare module '../lexbor/lexbor' {
     map(fn: (index: number, node: LexborNode) => any): any[]
     toArray(): LexborNode[]
     data(): string
+    cheerio: string
   }
 
   interface LexborStatic {
     (selector: string): LexborList
-    (handle: number): LexborNode
+    (handle: string): LexborNode
     root(): LexborNode & {
       find(selector: string): LexborList
       is(): boolean
@@ -122,12 +134,16 @@ declare module '../lexbor/lexbor' {
       length: number
       first(): LexborNode
       each(fn: (index: number, node: any) => void): any
+      eq(): LexborNode
+      data(): string
     }
     find(selector: string): LexborList
-    node(handle: number): LexborNode | null
+    node(handle: string): LexborNode | null
     destroy(): void
+    cheerio: string
   }
 
   export function load(html: string): LexborStatic
   export function isLexborInstance(obj: any): boolean
+  export default { load, isLexborInstance }
 }

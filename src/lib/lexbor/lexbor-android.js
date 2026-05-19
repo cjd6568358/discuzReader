@@ -151,6 +151,16 @@ function wrapNode(nodeHandle, docHandle) {
 
   Object.defineProperty(node, 'cheerio', { value: '[lexbor]', writable: false, configurable: true });
 
+  // Getter properties for Windows API compatibility
+  Object.defineProperty(node, 'type', {
+    get() { return node.getType(); },
+    configurable: true,
+  });
+  Object.defineProperty(node, 'name', {
+    get() { return node.getNodeName(); },
+    configurable: true,
+  });
+
   return node;
 }
 
