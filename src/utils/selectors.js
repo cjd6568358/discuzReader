@@ -171,8 +171,8 @@ export default {
           dt img[src=$icon];
           dt a[href=$link]{$name};
           dt em{$size};
-          dl p:first-child{$date|trim};
-          dl p:last-child img[src=$url];
+          p:first-child{$date|trim};
+          p:last-child img[src=$url];
         }
         .postcontent>.postmessage fieldset ul li@legend{
           &{$|trim|replace(/[\\t\\r]/g,'')|replace(/\\n/g,' ')};

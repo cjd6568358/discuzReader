@@ -15,7 +15,42 @@
 
 const koffi = require('koffi');
 const path = require('path');
-const { KNOWN_TAGS } = require('./tag-names');
+
+/**
+ * KNOWN_TAGS lookup table for lexbor local_name ID -> tag name mapping.
+ * IDs differ between x64 and ARM64 builds (different lexbor versions).
+ * Platform-specific mapping is selected at runtime.
+ */
+
+// x64 (Windows) - extracted from lexbor/x64/lexbor.dll at runtime
+const KNOWN_TAGS = {
+  6: 'a', 7: 'abbr', 9: 'address',
+  18: 'area', 19: 'article', 20: 'aside', 21: 'audio',
+  22: 'b', 23: 'base', 25: 'bdi', 26: 'bdo',
+  30: 'blockquote', 31: 'body', 32: 'br', 33: 'button',
+  34: 'canvas', 35: 'caption', 37: 'cite', 39: 'code',
+  40: 'col', 41: 'colgroup', 42: 'data', 43: 'datalist',
+  44: 'dd', 45: 'del', 47: 'details', 48: 'dfn',
+  49: 'dialog', 51: 'div', 52: 'dl', 53: 'dt',
+  54: 'em', 55: 'embed', 81: 'fieldset', 82: 'figcaption',
+  83: 'figure', 85: 'footer', 87: 'form',
+  91: 'h1', 92: 'h2', 93: 'h3', 94: 'h4', 95: 'h5', 96: 'h6',
+  97: 'head', 98: 'header', 100: 'hr', 101: 'html',
+  102: 'i', 103: 'iframe', 105: 'img', 106: 'input', 107: 'ins',
+  109: 'kbd', 112: 'legend', 113: 'li', 115: 'link',
+  117: 'main', 119: 'map', 120: 'mark', 124: 'meta', 125: 'meter',
+  134: 'nav', 140: 'object', 141: 'ol', 142: 'optgroup',
+  143: 'option', 144: 'output', 145: 'p', 146: 'param',
+  150: 'pre', 151: 'progress', 152: 'q', 155: 'rp', 156: 'rt',
+  158: 'ruby', 159: 's', 160: 'samp', 161: 'script',
+  162: 'section', 163: 'select', 164: 'slot', 165: 'small',
+  166: 'source', 168: 'span', 170: 'strong', 171: 'style',
+  172: 'sub', 173: 'summary', 174: 'sup',
+  176: 'table', 177: 'tbody', 178: 'td', 179: 'template',
+  180: 'textarea', 182: 'tfoot', 183: 'th', 184: 'thead',
+  185: 'time', 186: 'title', 187: 'tr', 188: 'track',
+  190: 'u', 191: 'ul', 192: 'var', 193: 'video', 194: 'wbr',
+};
 
 // ── FFI bindings ──
 const dllPath = path.join(__dirname, 'x64', 'lexbor.dll');
