@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,8 @@ const { height } = Dimensions.get('window');
 const ActionSheet = ({ visible, onClose, options, cancelText = '取消' }) => {
   const [modalVisible, setModalVisible] = useState(visible);
   const slideAnim = useState(new Animated.Value(height))[0];
-  
+  const pendingAction = useRef(null);
+
   useEffect(() => {
     if (visible) {
       setModalVisible(true);
@@ -30,13 +31,17 @@ const ActionSheet = ({ visible, onClose, options, cancelText = '取消' }) => {
         useNativeDriver: true
       }).start(() => {
         setModalVisible(false);
+        if (pendingAction.current) {
+          pendingAction.current();
+          pendingAction.current = null;
+        }
       });
     }
   }, [visible]);
 
   const handleOptionPress = (option) => {
     if (option.onPress) {
-      option.onPress();
+      pendingAction.current = option.onPress;
     }
     onClose();
   };

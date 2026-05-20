@@ -59,7 +59,8 @@ const ForumView = ({ route }) => {
   const [tags, setTags] = useState([])
   const [threads, setThreads] = useState([]);
   const [blockThreads, setBlockThreads] = useState(() => {
-    return (storage.getString('blockThreads') || '').split(',') || [];
+    const val = storage.getString('blockThreads') || '';
+    return val ? val.split(',') : [];
   })
   const scrollViewRef = useRef(null);
 
