@@ -87,8 +87,9 @@ const ForumView = ({ route }) => {
       delete MMStore.cached[longPressKey]
     } else if (action === 'block') {
       setBlockThreads(prev => {
-        const newBlockThreads = [...prev, longPressKey];
-        storage.setString('blockThreads', newBlockThreads.join(','));
+        const tid = longPressKey.split('-')[1];
+        const newBlockThreads = [...prev, tid];
+        storage.set('blockThreads', newBlockThreads.join(','));
         return newBlockThreads;
       })
     }
@@ -143,10 +144,6 @@ const ForumView = ({ route }) => {
       const threadMap = new Map();
       categorys.forEach((item) => {
         item.threads.forEach((thread) => {
-          const tid = thread.href.split('-')[1];
-          if (blockThreads.includes(tid)) {
-            return;
-          }
           if (thread.tag?.id && !colorMap[thread.tag.id]) {
             colorMap[thread.tag.id] = tmpTagColors.shift()
           }
@@ -273,7 +270,7 @@ const ForumView = ({ route }) => {
   );
 
   const renderThreads = () => {
-    return threads.map(thread => (
+    return threads.filter(thread => !blockThreads.includes(thread.tid)).map(thread => (
       <Pressable key={thread.href} onPress={() => onThreadPress(thread)} onLongPress={() => handleLongPress(thread.href)} style={styles.forumThreadCard}>
         <View style={styles.tagContainer}>
           {thread.forum ? <View>

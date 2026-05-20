@@ -34,7 +34,7 @@ export default {
             td.lastpost@lastPost|pack{
                 a[href=$id|replace(/^.*tid=(.*)&goto.*$/g,'$1')|Number]{$name}
                 cite a{$author}
-                cite{$date|split(' - ')|slice(1,2)|first}
+                cite{$date|split(' - ')|at(1)}
             }
         }
     };
@@ -60,6 +60,7 @@ export default {
     #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
     .mainbox form tbody tr@threads{
         td:nth-child(2) a[href=$href]{$title};
+        td:nth-child(2) a[href=$tid|split('-')|at(1)];
         td:nth-child(4){$reply|Number};
         td:nth-child(3)@forum|pack{
             a[href=$href]{$name}
@@ -77,7 +78,7 @@ export default {
     .box.message p b{$error};
     input[name=formhash][value=$formhash];
     #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
-    title{$title|split(' - ')|slice(0,1)|first};
+    title{$title|split(' - ')|at(0)};
     #newpmnum{$newMessage|Number};
     #nav p:first-child a@breadcrumb{
         &[href=$href]{$name}
@@ -115,12 +116,14 @@ export default {
                 &[href=$id|replace(/^.*typeid=/,'')]{$name}
             }
             th a[href=$href]{$title}
+            th a[href=$tid|split('-')|at(1)];
             th span[id^=thread_] a[href=$href]{$title}
+            th span[id^=thread_] a[href=$tid|split('-')|at(1)];
             th span[id^=thread_]+span.bold {$permission}
             th img[src*=attachicons]{$attach=1}
             th img[src*=digest]{$digest=1}
             td.author cite a{$author}
-            td.author cite{html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
+            td.author cite:has(img[src*=thankyou]){html($thanks|replace(/<a(.*)absmiddle">/g,'')|Number)}
             td.author em{$date}
             td.nums strong{$reply|Number}
             td.nums em{$view|Number}
@@ -151,7 +154,7 @@ export default {
     };
     #postform[action=$replyUrl];
     #ajax_favorite[href=$favoriteUrl];
-    #ajax_favorite[href=$tid|replace(/\\D/g,'')|Number];
+    #ajax_favorite[href=$tid|replace(/\\D/g,'')];
     .mainbox.viewthread@posts{
         .postauthor@author|pack{
             >cite{$name|trim};
@@ -212,7 +215,7 @@ export default {
     #menu li cite a{$username};
     .mainbox table:nth-of-type(1) tbody tr@recent_topics|compact{
         td:nth-child(1) a[href=$href]{$title}
-        td:nth-child(1) a[href=$tid|split('-')|slice(1,2)|first];
+        td:nth-child(1) a[href=$tid|split('-')|at(1)];
         td:nth-child(2) a@forum|pack{
             &[href=$href]{$name}
         }

@@ -317,10 +317,9 @@ const Thread = ({ route }) => {
   })
 
   const clearCache = useCallback(() => {
-    delete MMStore.cached[`thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`]
-    setTimeout(() => {
-      renderPage(`thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`)
-    }, ToastAndroid.SHORT);
+    const cacheKey = `thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`;
+    delete MMStore.cached[cacheKey];
+    setTimeout(() => renderPage(cacheKey), ToastAndroid.SHORT);
     ToastAndroid.show('缓存已清除', ToastAndroid.SHORT);
   })
 
@@ -333,7 +332,7 @@ const Thread = ({ route }) => {
           if (!newBlockThreads.includes(pageData.tid)) {
             newBlockThreads.push(pageData.tid);
           }
-          storage.setString('blockThreads', newBlockThreads.join(','));
+          storage.set('blockThreads', newBlockThreads.join(','));
           ToastAndroid.show('已屏蔽', ToastAndroid.SHORT);
         }
       },
@@ -511,7 +510,7 @@ const Thread = ({ route }) => {
         ref={view => scrollViewRef.current = view}
         data={pageData.posts}
         renderItem={renderPostItem}
-        keyExtractor={(item) => item.floor}
+        keyExtractor={(item) => item.pid || item.floor || ''}
         style={styles.scrollView}
         contentContainerStyle={styles.postList}
         initialNumToRender={3}

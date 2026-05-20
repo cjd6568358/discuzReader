@@ -83,7 +83,7 @@ export const getForumPage = async (href) => {
             breadcrumb: breadcrumb.map(item => ({
                 ...item,
                 name: item.name.replace(title_regex, '$1'),
-            })),
+            }))
         }
         if (href.includes('search.php?searchid=')) {
             newData.action_tags = []
