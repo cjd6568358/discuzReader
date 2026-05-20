@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(lexbor_jni)
 
-set(LEXBOR_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/lib/lexbor/bin/lexbor-android-arm64-v8a/include")
+set(LEXBOR_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../src/lib/lexbor/arm64-v8a/include")
 
 add_library(lexbor SHARED IMPORTED)
 set_target_properties(lexbor PROPERTIES

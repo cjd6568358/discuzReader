@@ -1,9 +1,8 @@
 ### TODO
 [x] navigation header需要重构
-[x] imageSwiperVisible初始化锚点错误
 [x] Thread View 性能太差，需要优化
-[x] 样式优化，Forum/Thread
-[x] Forum 中公告 主题 改为手风琴效果默认收起
+[x] Item样式优化，Forum/Thread
+[x] Forum 支持屏蔽,改为加载更多
 
 ### lexbor调试指南
 
@@ -14,7 +13,7 @@
 
 2. src\lib\lexbor\lexbor-android.js 是android端类似lexbor-window.js实现，目前正在测试
 
-3. src\lib\lexbor\bin\lexbor-android-arm64-v8a\lib\liblexbor.so 是 lexbor 的 C 库编译产物，针对 ARM64 (arm64-v8a) Android 设备的共享库，用于替换react-native-cheerio
+3. src\lib\lexbor\arm64-v8a\lib\liblexbor.so 是 lexbor 的 C 库编译产物，针对 ARM64 (arm64-v8a) Android 设备的共享库，用于替换react-native-cheerio
 
 4. src\lib\lexbor\docs 是lexbor的API文档，尤其关注src\lib\lexbor\docs\modules\selectors.md 选择器部分
 
@@ -25,6 +24,6 @@
 #### 修改了 lexbor_jni.cpp ，需要重新编译 .so 文件。windows平台可以用以下命令：
 ```
 $ndkBin = "D:\Program Files\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin"
-& "$ndkBin\aarch64-linux-android24-clang++.cmd" -shared -fPIC -o "android\app\src\main\jniLibs\arm64-v8a\liblexbor_jni.so" "android\app\src\main\cpp\lexbor_jni.cpp" "-Isrc\lib\lexbor\bin\lexbor-android-arm64-v8a\include" "-Landroid\app\src\main\jniLibs\arm64-v8a" -llexbor -llog -std=c++17 -fexceptions -O2
+& "$ndkBin\aarch64-linux-android24-clang++.cmd" -shared -fPIC -o "android\app\src\main\jniLibs\arm64-v8a\liblexbor_jni.so" "android\app\src\main\cpp\lexbor_jni.cpp" "-Isrc\lib\lexbor\arm64-v8a\include" "-Landroid\app\src\main\jniLibs\arm64-v8a" -llexbor -llog -std=c++17 -fexceptions -O2
 ```
 由Agent自行决定是否需要清除gradlew缓存

@@ -86,6 +86,6 @@ Windows 的 `lexbor-window.js` 使用相同的 `KNOWN_TAGS` 表，同样会 miss
 
 - `src/lib/lexbor/tag-names.js` — **修复文件**，KNOWN_TAGS 表 ID 从 lexbor `tag/const.h` 重新生成
 - `src/lib/lexbor/lexbor-android.js` — `scopedFind` 使用 `getTagNameById` 构造 `>` 选择器
-- `src/lib/lexbor/bin/lexbor-android-arm64-v8a/include/lexbor/tag/const.h` — lexbor tag 枚举定义（权威来源）
+- `src/lib/lexbor/arm64-v8a/include/lexbor/tag/const.h` — lexbor tag 枚举定义（权威来源）
 - `src/utils/selectors.js` — thread 选择器第 163 行：`>table[id=$pid|...]`
 - `src/lib/lexbor/debug/2026-05-19-scoped-find-direct-child.md` — 之前关于 `scopedFind` 的调试记录
