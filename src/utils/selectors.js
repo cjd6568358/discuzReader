@@ -164,8 +164,8 @@ export default {
         .postcontent .postinfo strong{$floor|replace(/\\D/g,'')|Number}
         .postcontent .postinfo{$date|match(/(\\d{4}.*\\d{2})/)|first}
         .postcontent>.postmessage>.postratings b{$thanks|Number}
-        .postcontent>.postmessage .t_msgfont[id^=postmessage_]{html($content|replace(/\\r/g,'')|replace(/&nbsp;/g,' '))}
-        .postcontent>.postmessage .t_msgfont .t_msgfont[id^=postmessage_]{html($content|replace(/&nbsp;/g,' '))}
+        .postcontent>.postmessage .t_msgfont[id^=postmessage_]{html($content|replace(/\\r/g,'')|replace(/&nbsp;/g,' ')|replace(/&amp;/g,'&'))}
+        .postcontent>.postmessage .t_msgfont .t_msgfont[id^=postmessage_]{html($content|replace(/&nbsp;/g,' ')|replace(/&amp;/g,'&'))}
         .postcontent>.postmessage>.notice{html($notice)}
         .postcontent>.postmessage .postattachlist .t_attachlist@attachments{
           dt img[src=$icon];
