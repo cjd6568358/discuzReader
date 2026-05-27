@@ -60,7 +60,7 @@ export default {
     #menu ul li:first-child cite a[href=$uid|replace(/\\D/g,'')]{$username};
     .mainbox form tbody tr@threads{
         td:nth-child(2) a[href=$href]{$title};
-        td:nth-child(2) a[href=$tid|split('-')|at(1)];
+        $tid=$href|split('-')|at(1);
         td:nth-child(4){$reply|Number};
         td:nth-child(3)@forum|pack{
             a[href=$href]{$name}
@@ -116,9 +116,8 @@ export default {
                 &[href=$id|replace(/^.*typeid=/,'')]{$name}
             }
             th a[href=$href]{$title}
-            th a[href=$tid|split('-')|at(1)];
             th span[id^=thread_] a[href=$href]{$title}
-            th span[id^=thread_] a[href=$tid|split('-')|at(1)];
+            $tid=$href|split('-')|at(1);
             th span[id^=thread_]+span.bold {$permission}
             th img[src*=attachicons]{$attach=1}
             th img[src*=digest]{$digest=1}
@@ -154,7 +153,7 @@ export default {
     };
     #postform[action=$replyUrl];
     #ajax_favorite[href=$favoriteUrl];
-    #ajax_favorite[href=$tid|replace(/\\D/g,'')];
+    $tid=$favoriteUrl|replace(/\\D/g,'');
     .mainbox.viewthread@posts{
         .postauthor@author|pack{
             >cite{$name|trim};
@@ -215,7 +214,7 @@ export default {
     #menu li cite a{$username};
     .mainbox table:nth-of-type(1) tbody tr@recent_topics|compact{
         td:nth-child(1) a[href=$href]{$title}
-        td:nth-child(1) a[href=$tid|split('-')|at(1)];
+        $tid=$href|split('-')|at(1);
         td:nth-child(2) a@forum|pack{
             &[href=$href]{$name}
         }
@@ -227,7 +226,7 @@ export default {
     };
     .mainbox table:nth-of-type(2) tbody tr@recent_replys|compact{
         td:nth-child(1) a[href=$href]{$title}
-        td:nth-child(1) a[href=$tid|replace(/^redirect.*ptid=/g,'')|Number];
+        $tid=$href|replace(/^redirect.*ptid=/g,'')|Number;
         td:nth-child(2) a@forum|pack{
             &[href=$href]{$name}
         }
@@ -264,7 +263,7 @@ export default {
     searchResult: `
     .mainbox.threadlist tbody@threads{
         th a[href=$href]{$title};
-        th a[href=$tid|replace(/^.*tid=|&highlight.*$/g,'')|Number];
+        $tid=$href|replace(/^.*tid=|&highlight.*$/g,'')|Number;
         th img[src*=attachicons]{$attach=1}
         th img[src*=digest]{$digest=1}
         td.forum@forum|pack{

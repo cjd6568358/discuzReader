@@ -11,6 +11,7 @@ import {
   isCheerioStatic,
   last,
   makeNormalCssSelector,
+  htmlShaking,
 } from './utils'
 import {
   Dict,
@@ -29,27 +30,9 @@ export interface TemmeParser {
 // @ts-ignore
 import parser from './grammar.js'
 
-const temmeParser: TemmeParser = parser as unknown as TemmeParser
+const temmeParser: TemmeParser = parser
 
 export { lexbor, temmeParser }
-
-/** 预处理 HTML：移除 script/style/comment 块，减少 HtmlParser2 工作量。
- *  这些内容不影响 temme 选择器的匹配结果。 */
-export function htmlShaking(html: string): string {
-  return (
-    html
-      .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, "")
-      .replace(/<!DOCTYPE[^>]*>/gi, "")
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<!--[\s\S]*?-->/g, "")
-      .replace(/&amp;/g, "&")
-      .replace(/&apos;/g, "'")
-      .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
-      .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
-      .replace(/ (alt|checked|disabled|selected|readonly|multiple|nowrap|noshade|noresize|declare|defer|ismap)=""/g, ' $1')
-  );
-}
 
 // 缓存已解析的选择器字符串，避免重复解析
 const selectorCache = new Map<string, TemmeSelector[]>()
@@ -102,8 +85,8 @@ export default function temme(
 
   return helper($.root(), rootSelectorArray).getResult()
 
-  function helper(cntCheerio: any, selectorArray: TemmeSelector[]): CaptureResult {
-    const result = new CaptureResult(filterDict, modifierDict)
+  function helper(cntCheerio: any, selectorArray: TemmeSelector[], parentResult?: CaptureResult): CaptureResult {
+    const result = new CaptureResult(filterDict, modifierDict, parentResult)
 
     // First pass: process SnippetDefine / FilterDefine / ModifierDefine / ProcedureDefine
     for (const selector of selectorArray) {
@@ -144,7 +127,7 @@ export default function temme(
         if (selector.arrayCapture) {
           const capturedResults: any[] = []
           subCheerio.each((_, elem) => {
-            capturedResults.push(helper($(elem), selector.children).getResult())
+            capturedResults.push(helper($(elem), selector.children, result).getResult())
           })
           result.add(selector.arrayCapture, capturedResults)
         }
@@ -154,7 +137,18 @@ export default function temme(
           capture(result, cntCheerio, selector)
         }
       } else if (selector.type === 'assignment') {
-        result.forceAdd(selector.capture, selector.value)
+        if (isCapture(selector.value)) {
+          if ('_literal' in selector.value) {
+            const resolvedValue = result.applyFilterList(selector.value._literal, selector.value.filterList)
+            result.forceAdd(selector.capture, resolvedValue)
+          } else {
+            const sourceValue = result.get(selector.value.name)
+            const resolvedValue = result.applyFilterList(sourceValue, selector.value.filterList)
+            result.forceAdd(selector.capture, resolvedValue)
+          }
+        } else {
+          result.forceAdd(selector.capture, selector.value)
+        }
       } // else selector.type is 'xxx-define'. Do nothing.
     }
     return result

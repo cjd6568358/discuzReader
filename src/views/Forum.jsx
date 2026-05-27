@@ -87,6 +87,7 @@ const ForumView = ({ route }) => {
       delete MMStore.cached[longPressKey]
     } else if (action === 'block') {
       setBlockThreads(prev => {
+        // longPressKey 格式：thread-12345-1-1.html
         const tid = longPressKey.split('-')[1];
         const newBlockThreads = [...prev, tid];
         storage.set('blockThreads', newBlockThreads.join(','));

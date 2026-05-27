@@ -11,11 +11,20 @@ const forceAddModifier: Modifier = { name: 'forceAdd', args: [] }
 
 export class CaptureResult {
   private readonly result: any = {}
+  private parent: CaptureResult | null = null
 
-  constructor(readonly filterDict: Dict<FilterFn>, readonly modifierDict: Dict<ModifierFn>) {}
+  constructor(readonly filterDict: Dict<FilterFn>, readonly modifierDict: Dict<ModifierFn>, parent?: CaptureResult) {
+    this.parent = parent || null
+  }
 
   get(key: string) {
-    return this.result[key]
+    if (key in this.result) {
+      return this.result[key]
+    }
+    if (this.parent) {
+      return this.parent.get(key)
+    }
+    return undefined
   }
 
   set(key: string, value: any) {
@@ -69,17 +78,20 @@ export class CaptureResult {
     return filterFn.apply(value, filter.args);
   }
 
-  private applyFilterList(initValue: any, filterList: Filter[]) {
+  applyFilterList(initValue: any, filterList: Filter[]) {
     if (filterList.length === 0) {
       return initValue;
     }
 
+    if (initValue == null) {
+      return initValue;
+    }
     let value = initValue;
     for (let i = 0; i < filterList.length; i++) {
       const filter = filterList[i];
       if (filter.isArrayFilter) {
         invariant(Array.isArray(value), msg.arrayFilterAppliedToNonArrayValue(filter.name));
-        const result = [];
+        const result: any[] = [];
         for (let j = 0; j < value.length; j++) {
           result.push(this.applyFilter(value[j], filter));
         }
