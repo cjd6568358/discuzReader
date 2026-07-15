@@ -7,7 +7,9 @@ import {
   SafeAreaView,
   StatusBar,
   Pressable,
+  useWindowDimensions,
 } from 'react-native';
+import RenderHtml from 'react-native-render-html';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import ActionSheet from '../components/ActionSheet';
@@ -17,6 +19,7 @@ import { getPMPage, messageAction } from '../utils/api';
 
 const MessageView = () => {
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
   const { showLoading, hideLoading } = useLoading();
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState([]); // 存储选中的消息索引
@@ -163,22 +166,25 @@ const MessageView = () => {
           <View style={{ flex: 1, marginRight: 8 }} >
             <Text numberOfLines={2} style={styles.messageName}>{item.title}</Text>
           </View>
+          {item.expanded && <Pressable
+            onPress={() => toggleMessage(index)}
+            style={styles.collapseButton}
+          >
+            <Text style={styles.collapseButtonText}>收起</Text>
+          </Pressable>}
+        </View>
+        {item.expanded && <View style={styles.messageText}>
+          <RenderHtml
+            contentWidth={width - 32}
+            source={{ html: item.content }}
+            tagsStyles={htmlStyles}
+            baseStyle={{ fontSize: 14, color: '#9CA3AF', lineHeight: 20 }}
+          />
+        </View>}
+        <View style={styles.collapseButtonContainer}>
+          <Text style={styles.messageTime}>{item.from}</Text>
           <Text style={styles.messageTime}>{item.date}</Text>
         </View>
-        {item.expanded && <Text style={styles.messageText} ellipsizeMode="tail" >
-          {item.content}
-        </Text>}
-        {item.expanded && (
-          <View style={styles.collapseButtonContainer}>
-            <Text>来自：{item.from}</Text>
-            <Pressable
-              onPress={() => toggleMessage(index)}
-              style={styles.collapseButton}
-            >
-              <Text style={styles.collapseButtonText}>收起</Text>
-            </Pressable>
-          </View>
-        )}
       </Pressable>
       {item.unread === 1 && <View style={styles.unreadIndicator} />}
     </View>
@@ -247,6 +253,23 @@ const MessageView = () => {
   );
 };
 
+const htmlStyles = {
+  a: {
+    color: '#2563EB',
+    textDecorationLine: 'none',
+  },
+  blockquote: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#D1D5DB',
+    paddingLeft: 8,
+    marginVertical: 4,
+    color: '#6B7280',
+  },
+  strong: {
+    fontWeight: '600',
+  },
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -290,7 +313,7 @@ const styles = StyleSheet.create({
   },
   messageItem: {
     flexDirection: 'row',
-    paddingVertical: 16,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
@@ -317,7 +340,6 @@ const styles = StyleSheet.create({
   messageHeader: {
     display: 'flex',
     flexDirection: 'row',
-    marginBottom: 4,
   },
   messageName: {
     fontSize: 15,
@@ -325,22 +347,19 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   messageTime: {
-    flexShrink: 0,
     fontSize: 12,
     color: '#9CA3AF',
   },
   messageText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    lineHeight: 20,
+    marginTop: 4,
   },
   collapseButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 4,
   },
   collapseButton: {
-    padding: 4,
+    paddingHorizontal: 4,
   },
   collapseButtonText: {
     fontSize: 12,
