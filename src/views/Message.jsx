@@ -1,45 +1,74 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
+  Alert,
   StyleSheet,
   FlatList,
   SafeAreaView,
   StatusBar,
   Pressable,
-  useWindowDimensions,
 } from 'react-native';
-import RenderHtml from 'react-native-render-html';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import ActionSheet from '../components/ActionSheet';
-import ReplyModal from '../components/ReplyModal';
 import { useLoading } from '../components/Loading';
 import { getPMPage, messageAction } from '../utils/api';
 
 const MessageView = () => {
   const navigation = useNavigation();
-  const { width } = useWindowDimensions();
   const { showLoading, hideLoading } = useLoading();
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
-  const [selectedMessages, setSelectedMessages] = useState([]); // 存储选中的消息索引
-  const [batchMode, setBatchMode] = useState(false)
+  const [selectedMessages, setSelectedMessages] = useState([]);
+  const [batchMode, setBatchMode] = useState(false);
   const [messages, setMessages] = useState(null);
+  const [groupedMessages, setGroupedMessages] = useState([]);
   const [longPressKey, setLongPressKey] = useState(null);
-  const [replyModalVisible, setReplyModalVisible] = useState(false);
-  const [replyTitle, setReplyTitle] = useState('');
+  const [longPressUserName, setLongPressUserName] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const actionSheetOptions = [
-    { text: '回复', onPress: () => handleActionSheetItemPress('reply') },
+    { text: '删除所有消息', destructive: true, onPress: () => handleActionSheetItemPress('deleteAll') },
     { text: '标为未读', onPress: () => handleActionSheetItemPress('markunread') },
-    { text: '删除', destructive: true, onPress: () => handleActionSheetItemPress('delete') },
-    { text: '批量删除', destructive: true, onPress: () => handleActionSheetItemPress('batchDelete') }
   ];
+
+  // 按用户聚合消息
+  const aggregateMessages = (messageList) => {
+    const grouped = {};
+
+    messageList.forEach(msg => {
+      const userName = msg.from;
+      if (!grouped[userName]) {
+        grouped[userName] = {
+          userName,
+          messages: [],
+          unreadCount: 0,
+          latestDate: msg.date,
+          latestIndex: 0,
+        };
+      }
+      grouped[userName].messages.push(msg);
+      if (msg.unread === 1) {
+        grouped[userName].unreadCount++;
+      }
+    });
+
+    // 转换为数组并按最新消息排序
+    return Object.values(grouped).map(group => ({
+      ...group,
+      // 保持最新的消息在前面
+      messages: group.messages.sort((a, b) => new Date(b.date) - new Date(a.date)),
+    })).sort((a, b) => new Date(b.latestDate) - new Date(a.latestDate));
+  };
 
   useFocusEffect(
     useCallback(() => {
       !messages && showLoading()
       getPMPage().then(data => {
-        setMessages(data.pmList || [])
+        const pmList = data.pmList || [];
+        setMessages(pmList);
+        setGroupedMessages(aggregateMessages(pmList));
+        setCurrentUser(data.username);
       }).catch(error => {
         console.log(error);
         if (error === 'redirect login') {
@@ -88,107 +117,132 @@ const MessageView = () => {
     setBatchMode(false)
   };
 
-  const toggleMessage = (index) => {
-    if (messages[index].expanded === true || Reflect.has(messages[index], 'content')) {
-      setMessages(prev => {
-        const newMessages = [...prev];
-        newMessages[index].expanded = !newMessages[index].expanded;
-        return newMessages;
-      });
-    } else {
-      showLoading()
-      messageAction({ action: 'view', id: messages[index].id }).then(content => {
-        setMessages(prev => {
-          const newMessages = [...prev];
-          newMessages[index].expanded = !newMessages[index].expanded;
-          newMessages[index].content = content;
-          return newMessages;
-        });
-        hideLoading()
-      })
-    }
-  };
-
-  const handleLongPress = (key) => {
-    setLongPressKey(key);
-    setActionSheetVisible(true)
+  const handleLongPress = (msgId, userName) => {
+    setLongPressKey(msgId);
+    setLongPressUserName(userName);
+    setActionSheetVisible(true);
   };
 
   const handleActionSheetItemPress = async (action) => {
-    if (action === 'batchDelete') {
-      setBatchMode(true);
-    } else if (action === 'delete') {
-      await messageAction({ action: 'delete', id: longPressKey });
-      setMessages(prev => {
-        const newMessages = [...prev];
-        const index = newMessages.findIndex(item => item.id === longPressKey);
-        if (index !== -1) {
-          newMessages.splice(index, 1);
-        }
-        return newMessages;
-      });
+    if (action === 'deleteAll') {
+      // 删除该用户所有消息（带二次确认）
+      Alert.alert(
+        '确认删除',
+        `确定要删除与 ${longPressUserName} 的所有消息吗？`,
+        [
+          { text: '取消', style: 'cancel' },
+          {
+            text: '删除',
+            style: 'destructive',
+            onPress: async () => {
+              const userMessages = messages.filter(msg => msg.from === longPressUserName);
+              await Promise.all(userMessages.map(msg => messageAction({ action: 'delete', id: msg.id })));
+              setMessages(prev => {
+                const newMessages = prev.filter(msg => msg.from !== longPressUserName);
+                setGroupedMessages(aggregateMessages(newMessages));
+                return newMessages;
+              });
+            }
+          }
+        ]
+      );
     } else if (action === 'markunread') {
       await messageAction({ action: 'markunread', id: longPressKey });
       setMessages(prev => {
         const newMessages = [...prev];
         const index = newMessages.findIndex(item => item.id === longPressKey);
-        newMessages[index].unread = 1;
+        if (index !== -1) {
+          newMessages[index].unread = 1;
+        }
+        setGroupedMessages(aggregateMessages(newMessages));
         return newMessages;
       });
-    } else if (action === 'reply') {
-      const messageIndex = messages.findIndex(item => item.id === longPressKey);
-      if (messageIndex !== -1) {
-        setReplyTitle('Re: ' + messages[messageIndex].title);
-        setReplyModalVisible(true);
-      }
     }
-    if (action !== 'reply') {
-      setLongPressKey(null)
-    }
-  }
+    setLongPressKey(null);
+    setLongPressUserName(null);
+  };
 
-  const renderMessageItem = ({ item, index }) => (
-    <View key={item.id} style={styles.messageItem}>
-      {
-        batchMode && <View style={styles.selectContainer}>
-          <Pressable
-            style={[styles.checkbox, selectedMessages.includes(index) && styles.checkboxSelected]}
-            onPress={() => toggleSelect(index)}
-          >
-            {selectedMessages.includes(index) && (
-              <Icon name="check" size={12} color="#FFFFFF" />
-            )}
-          </Pressable>
-        </View>
-      }
-      <Pressable style={styles.messageContent} onPress={() => toggleMessage(index)} onLongPress={() => handleLongPress(item.id)} >
-        <View style={styles.messageHeader}>
-          <View style={{ flex: 1, marginRight: 8 }} >
-            <Text numberOfLines={2} style={styles.messageName}>{item.title}</Text>
+  // 跳转到消息详情并标记为已读
+  const navigateToDetail = async (item) => {
+    showLoading();
+    try {
+      // 加载所有消息内容并标记为已读
+      const loadedMessages = await Promise.all(
+        item.messages.map(async (msg) => {
+          const content = await messageAction({ action: 'view', id: msg.id });
+          return { ...msg, content, unread: 0 };
+        })
+      );
+
+      // 更新本地状态
+      setMessages(prev => {
+        const newMessages = [...prev];
+        loadedMessages.forEach(loadedMsg => {
+          const index = newMessages.findIndex(m => m.id === loadedMsg.id);
+          if (index !== -1) {
+            newMessages[index] = { ...newMessages[index], content: loadedMsg.content, unread: 0 };
+          }
+        });
+        setGroupedMessages(aggregateMessages(newMessages));
+        return newMessages;
+      });
+
+      navigation.navigate('MessageDetail', {
+        userName: item.userName,
+        messages: loadedMessages,
+        currentUser,
+        onDeleteAll: () => {
+          // 删除该用户所有消息后刷新列表
+          setMessages(prev => {
+            const newMessages = prev.filter(msg => msg.from !== item.userName);
+            setGroupedMessages(aggregateMessages(newMessages));
+            return newMessages;
+          });
+        }
+      });
+    } catch (error) {
+      console.log('Failed to load message content:', error);
+    } finally {
+      hideLoading();
+    }
+  };
+
+  const renderMessageItem = ({ item, index }) => {
+    const latestMessage = item.messages[0]; // 最新的一条消息
+    return (
+      <View key={item.userName} style={styles.messageItem}>
+        {
+          batchMode && <View style={styles.selectContainer}>
+            <Pressable
+              style={[styles.checkbox, selectedMessages.includes(index) && styles.checkboxSelected]}
+              onPress={() => toggleSelect(index)}
+            >
+              {selectedMessages.includes(index) && (
+                <Icon name="check" size={12} color="#FFFFFF" />
+              )}
+            </Pressable>
           </View>
-          {item.expanded && <Pressable
-            onPress={() => toggleMessage(index)}
-            style={styles.collapseButton}
-          >
-            <Text style={styles.collapseButtonText}>收起</Text>
-          </Pressable>}
-        </View>
-        {item.expanded && <View style={styles.messageText}>
-          <RenderHtml
-            contentWidth={width - 32}
-            source={{ html: item.content }}
-            tagsStyles={htmlStyles}
-            baseStyle={{ fontSize: 14, color: '#9CA3AF', lineHeight: 20 }}
-          />
-        </View>}
-        <View style={styles.collapseButtonContainer}>
-          <Text style={styles.messageTime}>{item.from}</Text>
-          <Text style={styles.messageTime}>{item.date}</Text>
-        </View>
-      </Pressable>
-      {item.unread === 1 && <View style={styles.unreadIndicator} />}
-    </View>
-  );
+        }
+        {/* 用户头像 */}
+        <Image
+          source={{ uri: `https://ucenter.zhonghui.la/avatar.php?username=${item.userName}&size=middle` }}
+          style={styles.avatar}
+        />
+        <Pressable
+          style={styles.messageContent}
+          onPress={() => navigateToDetail(item)}
+          onLongPress={() => handleLongPress(latestMessage.id, item.userName)}
+        >
+          <View style={styles.messageHeader}>
+            <Text style={styles.messageName} numberOfLines={1}>{item.userName}</Text>
+            <Text style={styles.messageTime}>{latestMessage.date}</Text>
+          </View>
+          <Text numberOfLines={1} style={styles.messageTitle}>{latestMessage.title}</Text>
+          {item.unreadCount > 0 && <View style={styles.unreadIndicator} />}
+        </Pressable>
+      </View>
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
@@ -223,9 +277,9 @@ const MessageView = () => {
 
       {/* 消息列表 */}
       <FlatList
-        data={messages || []}
+        data={groupedMessages}
         renderItem={renderMessageItem}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.userName}
         contentContainerStyle={styles.messageList}
         ListEmptyComponent={renderEmptyState}
       />
@@ -235,39 +289,8 @@ const MessageView = () => {
         onClose={() => setActionSheetVisible(false)}
         cancelText="取消"
       />
-      {/* 回复模态框 */}
-      <ReplyModal
-        visible={replyModalVisible}
-        onClose={() => { setReplyModalVisible(false); setLongPressKey(null) }}
-        onSend={(content) => {
-          // 这里处理发送回复的逻辑
-          const messageIndex = messages.findIndex(item => item.id === longPressKey);
-          if (messageIndex !== -1) {
-            messageAction({ action: 'reply', data: { pmid: longPressKey, msgto: messages[messageIndex].from, subject: replyTitle, message: content } });
-          }
-        }}
-        title={replyTitle}
-        placeholder="请输入回复内容"
-      />
     </SafeAreaView>
   );
-};
-
-const htmlStyles = {
-  a: {
-    color: '#2563EB',
-    textDecorationLine: 'none',
-  },
-  blockquote: {
-    borderLeftWidth: 3,
-    borderLeftColor: '#D1D5DB',
-    paddingLeft: 8,
-    marginVertical: 4,
-    color: '#6B7280',
-  },
-  strong: {
-    fontWeight: '600',
-  },
 };
 
 const styles = StyleSheet.create({
@@ -316,9 +339,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    alignItems: 'center',
   },
   selectContainer: {
     marginRight: 12,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+    backgroundColor: '#E5E7EB',
   },
   checkbox: {
     width: 20,
@@ -338,40 +369,33 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   messageHeader: {
-    display: 'flex',
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   messageName: {
     fontSize: 15,
     fontWeight: '500',
     color: '#111827',
+    flex: 1,
+  },
+  messageTitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
   },
   messageTime: {
     fontSize: 12,
     color: '#9CA3AF',
-  },
-  messageText: {
-    marginTop: 4,
-  },
-  collapseButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  collapseButton: {
-    paddingHorizontal: 4,
-  },
-  collapseButtonText: {
-    fontSize: 12,
-    color: '#3B82F6',
   },
   unreadIndicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: '#EF4444',
-    marginTop: 4,
-    marginLeft: 4,
+    position: 'absolute',
+    left: 44,
+    top: 10,
   },
   emptyContainer: {
     alignItems: 'center',

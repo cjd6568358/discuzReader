@@ -41,6 +41,10 @@ export const getPMPage = async () => {
         return {
             // 消息列表
             pmList: res.data.pmList,
+            // 当前用户名
+            username: res.data.username,
+            // 表单hash
+            formhash: res.data.formhash,
         }
     } catch (error) {
         console.log('getPMPage', error);

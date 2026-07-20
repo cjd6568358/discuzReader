@@ -5,6 +5,7 @@ import HomeView from './views/Home'
 import LoginView from './views/Login'
 import NodesView from './views/Nodes'
 import MessageView from './views/Message'
+import MessageDetail from './views/MessageDetail'
 import ForumView from './views/Forum'
 import ThreadView from './views/Thread'
 import PostView from './views/PostWebView'
@@ -55,6 +56,7 @@ export const RootStack = ({ initialRouteName = 'Home' }) => {
             headerShown: true,
             headerTitle: '搜索',
         }} />
+        <Stack.Screen name="MessageDetail" component={MessageDetail} />
         <Stack.Screen name="Login" component={LoginView} />
         <Stack.Screen name="Nodes" component={NodesView} options={{
             headerShown: true,
