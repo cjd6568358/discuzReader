@@ -1,4 +1,4 @@
-import React, { useState, useRef, createContext, useContext } from 'react';
+import React, { useState, useRef, useCallback, createContext, useContext } from 'react';
 import LoadingComponent from './component';
 
 const LoadingContext = createContext();
@@ -10,20 +10,20 @@ export const LoadingProvider = ({ children }) => {
   });
   const timerRef = useRef(null);
 
-  const showLoading = (msg = '加载中...') => {
+  const showLoading = useCallback((msg = '加载中...') => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setProps({
       visible: true,
       message: msg,
     })
-  };
+  }, []);
 
-  const hideLoading = () => {
-    setProps({
-      ...props,
+  const hideLoading = useCallback(() => {
+    setProps(prev => ({
+      ...prev,
       visible: false,
-    })
-  };
+    }))
+  }, []);
 
   return (
     <LoadingContext.Provider value={{ showLoading, hideLoading, isLoading: props.visible }}>
