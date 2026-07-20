@@ -46,7 +46,7 @@ export default {
     #pmlist tr[id]@pmList{
         td:nth-child(2) a[id=$id|replace('pm_view_','')|Number]{$title};
         td:nth-child(2)[style]{$unread = 1};
-        td:nth-child(3) a{$from};
+        td:nth-child(3) a[href=$uid|replace(/\\D/g,'')]{$name};
         td:nth-child(4){$date};
     }
     `,
@@ -254,6 +254,12 @@ export default {
       }
       td.time{$time}
     }
+    `,
+
+    space: `
+    #module_userinfo .status span{ $status };
+    #module_userinfo .info img[src=$avatar];
+    #module_userinfo .username{$username};
     `,
 
     search: `

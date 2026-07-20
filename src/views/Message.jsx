@@ -14,7 +14,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
-import { getPMPage, messageAction } from '../utils/api';
+import { getPMPage, getPMSentPage, getSpacePage, getProfilePage, messageAction } from '../utils/api';
 
 const MessageView = () => {
   const navigation = useNavigation();
@@ -26,10 +26,9 @@ const MessageView = () => {
   const [groupedMessages, setGroupedMessages] = useState([]);
   const [longPressKey, setLongPressKey] = useState(null);
   const [longPressUserName, setLongPressUserName] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
   const actionSheetOptions = [
-    { text: '删除所有消息', destructive: true, onPress: () => handleActionSheetItemPress('deleteAll') },
-    { text: '标为未读', onPress: () => handleActionSheetItemPress('markunread') },
+    { text: '删除与该用户所有消息', destructive: true, onPress: () => handleActionSheetItemPress('deleteAll') },
+    // { text: '标为未读', onPress: () => handleActionSheetItemPress('markunread') },
   ];
 
   // 按用户聚合消息
@@ -37,14 +36,14 @@ const MessageView = () => {
     const grouped = {};
 
     messageList.forEach(msg => {
-      const userName = msg.from;
+      const userName = msg.name;
       if (!grouped[userName]) {
         grouped[userName] = {
           userName,
+          uid: msg.uid,
           messages: [],
           unreadCount: 0,
           latestDate: msg.date,
-          latestIndex: 0,
         };
       }
       grouped[userName].messages.push(msg);
@@ -64,11 +63,14 @@ const MessageView = () => {
   useFocusEffect(
     useCallback(() => {
       !messages && showLoading()
+      // getPMSentPage().then(data => {
+      //   const pmList = data.pmList || [];
+      //   console.log('sent messages:', pmList);
+      // })
       getPMPage().then(data => {
         const pmList = data.pmList || [];
         setMessages(pmList);
         setGroupedMessages(aggregateMessages(pmList));
-        setCurrentUser(data.username);
       }).catch(error => {
         console.log(error);
         if (error === 'redirect login') {
@@ -135,10 +137,10 @@ const MessageView = () => {
             text: '删除',
             style: 'destructive',
             onPress: async () => {
-              const userMessages = messages.filter(msg => msg.from === longPressUserName);
+              const userMessages = messages.filter(msg => msg.name === longPressUserName);
               await Promise.all(userMessages.map(msg => messageAction({ action: 'delete', id: msg.id })));
               setMessages(prev => {
-                const newMessages = prev.filter(msg => msg.from !== longPressUserName);
+                const newMessages = prev.filter(msg => msg.name !== longPressUserName);
                 setGroupedMessages(aggregateMessages(newMessages));
                 return newMessages;
               });
@@ -173,7 +175,8 @@ const MessageView = () => {
           return { ...msg, content, unread: 0 };
         })
       );
-
+      const leftUser = await getSpacePage(item.uid);
+      const rightUser = await getProfilePage();
       // 更新本地状态
       setMessages(prev => {
         const newMessages = [...prev];
@@ -188,17 +191,9 @@ const MessageView = () => {
       });
 
       navigation.navigate('MessageDetail', {
-        userName: item.userName,
-        messages: loadedMessages,
-        currentUser,
-        onDeleteAll: () => {
-          // 删除该用户所有消息后刷新列表
-          setMessages(prev => {
-            const newMessages = prev.filter(msg => msg.from !== item.userName);
-            setGroupedMessages(aggregateMessages(newMessages));
-            return newMessages;
-          });
-        }
+        leftUser,
+        rightUser,
+        messages: loadedMessages
       });
     } catch (error) {
       console.log('Failed to load message content:', error);
@@ -223,11 +218,6 @@ const MessageView = () => {
             </Pressable>
           </View>
         }
-        {/* 用户头像 */}
-        <Image
-          source={{ uri: `https://ucenter.zhonghui.la/avatar.php?username=${item.userName}&size=middle` }}
-          style={styles.avatar}
-        />
         <Pressable
           style={styles.messageContent}
           onPress={() => navigateToDetail(item)}
@@ -343,13 +333,6 @@ const styles = StyleSheet.create({
   },
   selectContainer: {
     marginRight: 12,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
-    backgroundColor: '#E5E7EB',
   },
   checkbox: {
     width: 20,

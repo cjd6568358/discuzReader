@@ -17,21 +17,24 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useLoading } from '../components/Loading';
 import { messageAction } from '../utils/api';
+import { storage } from '../utils/index';
 
 const MessageDetail = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { width } = useWindowDimensions();
   const { showLoading, hideLoading } = useLoading();
-  const { userName, messages: initialMessages, currentUser, onDeleteAll } = route.params;
+  const { leftUser, messages: initialMessages, rightUser } = route.params;
   const [messages, setMessages] = useState(initialMessages);
+  const [selectedNode] = useState(() => storage.getString('selectedNode'));
+
   const [inputText, setInputText] = useState('');
 
   // 删除所有消息
   const handleDeleteAll = () => {
     Alert.alert(
       '确认删除',
-      `确定要删除与 ${userName} 的所有消息吗？`,
+      `确定要删除与 ${leftUser.username} 的所有消息吗？`,
       [
         { text: '取消', style: 'cancel' },
         {
@@ -41,7 +44,6 @@ const MessageDetail = () => {
             showLoading();
             try {
               await Promise.all(messages.map(msg => messageAction({ action: 'delete', id: msg.id })));
-              onDeleteAll && onDeleteAll();
               navigation.goBack();
             } catch (error) {
               console.log('Failed to delete messages:', error);
@@ -64,7 +66,7 @@ const MessageDetail = () => {
         action: 'reply',
         data: {
           pmid: lastMessage.id,
-          msgto: userName,
+          msgto: leftUser.username,
           subject: '',
           message: inputText.trim()
         }
@@ -76,12 +78,12 @@ const MessageDetail = () => {
   };
 
   const renderMessageItem = ({ item }) => {
-    const isSelf = item.from === currentUser;
+    const isSelf = item.name === rightUser.username;
     return (
       <View style={[styles.messageItem, isSelf ? styles.selfItem : styles.otherItem]}>
         {!isSelf && (
           <Image
-            source={{ uri: `https://ucenter.zhonghui.la/avatar.php?username=${item.from}&size=middle` }}
+            source={{ uri: `${selectedNode}/bbs/${leftUser.avatar}` }}
             style={styles.avatar}
           />
         )}
@@ -104,7 +106,7 @@ const MessageDetail = () => {
         </View>
         {isSelf && (
           <Image
-            source={{ uri: `https://ucenter.zhonghui.la/avatar.php?username=${currentUser}&size=middle` }}
+            source={{ uri: `${selectedNode}/bbs/${rightUser.avatar}` }}
             style={styles.avatar}
           />
         )}
@@ -124,7 +126,7 @@ const MessageDetail = () => {
           <Icon name="chevron-left" size={16} color="#374151" />
         </Pressable>
         <Text style={styles.navTitle} numberOfLines={1}>
-          {userName}
+          {leftUser.username}({leftUser.status})
         </Text>
         <Pressable
           onPress={handleDeleteAll}
@@ -140,7 +142,7 @@ const MessageDetail = () => {
         renderItem={renderMessageItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.messageList}
-        inverted={false}
+        inverted={true}  // 反转列表，使最新消息在底部
       />
 
       {/* 底部输入框 */}

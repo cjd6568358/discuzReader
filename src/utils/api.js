@@ -41,13 +41,22 @@ export const getPMPage = async () => {
         return {
             // 消息列表
             pmList: res.data.pmList,
-            // 当前用户名
-            username: res.data.username,
-            // 表单hash
-            formhash: res.data.formhash,
         }
     } catch (error) {
         console.log('getPMPage', error);
+        return Promise.reject(error)
+    }
+}
+
+export const getPMSentPage = async () => {
+    try {
+        const res = await http.get(`pm.php?folder=track`, { selector: selectors.pm })
+        return {
+            // 消息列表
+            pmList: res.data.pmList,
+        }
+    } catch (error) {
+        console.log('getPMSentPage', error);
         return Promise.reject(error)
     }
 }
@@ -274,3 +283,14 @@ export const getSearchPage = async () => {
         return Promise.reject(error)
     }
 }
+
+export const getSpacePage = async (uid) => {
+    try {
+        const res = await http.get(`space-uid-${uid}.html`, { selector: selectors.space })
+        return res.data
+    } catch (error) {
+        console.log('getSpacePage', error);
+        return Promise.reject(error)
+    }
+}
+
