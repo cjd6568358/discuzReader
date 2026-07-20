@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -254,95 +254,13 @@ const Thread = ({ route }) => {
   }, [route.params.href])
 
   useEffect(() => {
-    pageData && renderHeader()
-  }, [pageData])
-
-  useEffect(() => {
     CookieManager.get(selectedNode).then((cookies) => {
-      // console.log('cookies', cookies);
       setCookies(cookies);
     });
   }, [selectedNode]);
 
-  const renderHeader = useCallback(() => {
-    const isFavorite = MMStore.favorites.map(item => item.tid).includes(pageData.tid);
-    navigation.setOptions({
-      headerTitle: () => <View style={styles.navTitleContainer}>
-        <Text style={styles.navTitle} numberOfLines={1} ellipsizeMode="tail" >{pageData.title}</Text>
-        <View style={styles.navSubtitle}>
-          {pageData.breadcrumb.slice(1)
-            .map((item, i, arr) => <View key={item.name + i} style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.navSubtitleText}>{item.name}</Text>
-              {i < arr.length - 1 && <Icon name="chevron-right" size={10} color="#9CA3AF" style={styles.navIcon} />}
-            </View>)
-          }
-        </View>
-      </View>,
-      // headerRight: () => (
-      //   <View style={styles.navbarRight}>
-      //     <Pressable style={styles.starButton} onPress={toggleFavorite}>
-      //       <Icon name={isFavorite ? "star" : "star-o"} size={18} color={isFavorite ? "#f7ba2a" : "#9CA3AF"} />
-      //     </Pressable>
-      //     <Pressable style={styles.messageButton} onPress={() => navigation.navigate('Home', { screen: 'Message' })}>
-      //       <Icon name="envelope" size={18} color={pageData.newMessage > 0 ? '#2563EB' : "#9CA3AF"} />
-      //       {pageData.newMessage > 0 && <Text style={styles.messageBage}>{pageData.newMessage}</Text>}
-      //     </Pressable>
-      //     {pageData.cached && <Pressable style={styles.starButton} onPress={clearCache}>
-      //       <Icon name="paint-brush" size={18} color="#9CA3AF" />
-      //     </Pressable>}
-      //     <Pressable style={styles.starButton} onPress={block}>
-      //       <Icon name="ban" size={18} color="#9CA3AF" />
-      //     </Pressable>
-      //   </View>
-      // ),
-      headerRight: () => <HeaderButtons HeaderButtonComponent={FontAwesomeHeaderButton}>
-        <Item
-          title=""
-          iconName={isFavorite ? "star" : "star-o"}
-          size={20}
-          color={isFavorite ? "#f7ba2a" : "#9CA3AF"}
-          onPress={toggleFavorite}
-          style={{ paddingHorizontal: 10, marginHorizontal: -10 }}
-        />
-        <OverflowMenu
-          OverflowIcon={({ color }) => (
-            <Icon style={{ padding: 10 }} name="ellipsis-v" size={20} color={color} />
-          )}
-        >
-          <HiddenItem title="清除缓存" onPress={clearCache} />
-          <HiddenItem title="加入黑名单" onPress={block} />
-        </OverflowMenu>
-      </HeaderButtons>,
-    })
-  })
-
-  const clearCache = useCallback(() => {
-    const cacheKey = `thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`;
-    delete MMStore.cached[cacheKey];
-    setTimeout(() => renderPage(cacheKey), ToastAndroid.SHORT);
-    ToastAndroid.show('缓存已清除', ToastAndroid.SHORT);
-  })
-
-  const block = useCallback(() => {
-    Alert.alert('提示', '确定要屏蔽此贴吗？', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '确定', style: 'destructive', onPress: () => {
-          const newBlockThreads = (storage.getString('blockThreads') || '').split(',') || [];
-          if (!newBlockThreads.includes(pageData.tid)) {
-            newBlockThreads.push(pageData.tid);
-          }
-          storage.set('blockThreads', newBlockThreads.join(','));
-          ToastAndroid.show('已屏蔽', ToastAndroid.SHORT);
-        }
-      },
-      { cancelable: true }
-    ])
-
-  })
-
   const renderPage = useCallback((href) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       showLoading()
       getThreadPage(href).then(data => {
         console.log(data);
@@ -377,7 +295,79 @@ const Thread = ({ route }) => {
         scrollViewRef.current.scrollToOffset({ offset: 0, animated: true });
       });
     })
-  })
+  }, [showLoading, hideLoading, navigation])
+
+  const clearCache = useCallback(() => {
+    const cacheKey = `thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`;
+    delete MMStore.cached[cacheKey];
+    setTimeout(() => renderPage(cacheKey), ToastAndroid.SHORT);
+    ToastAndroid.show('缓存已清除', ToastAndroid.SHORT);
+  }, [pageData, renderPage])
+
+  const block = useCallback(() => {
+    Alert.alert('提示', '确定要屏蔽此贴吗？', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '确定', style: 'destructive', onPress: () => {
+          const newBlockThreads = (storage.getString('blockThreads') || '').split(',') || [];
+          if (!newBlockThreads.includes(pageData.tid)) {
+            newBlockThreads.push(pageData.tid);
+          }
+          storage.set('blockThreads', newBlockThreads.join(','));
+          ToastAndroid.show('已屏蔽', ToastAndroid.SHORT);
+        }
+      },
+      { cancelable: true }
+    ])
+  }, [pageData])
+
+  const toggleFavorite = useCallback(async () => {
+    if (MMStore.favorites.map(item => item.tid).includes(pageData.tid)) {
+      await favoriteAction('del', pageData.favorite_href, pageData.formhash)
+    } else {
+      await favoriteAction('add', pageData.favorite_href)
+    }
+    ToastAndroid.show('操作成功', ToastAndroid.SHORT);
+    setPageData(prevData => ({
+      ...prevData,
+    }))
+  }, [pageData])
+
+  useLayoutEffect(() => {
+    if (!pageData) return;
+    const isFavorite = MMStore.favorites.map(item => item.tid).includes(pageData.tid);
+    navigation.setOptions({
+      headerTitle: () => <View style={styles.navTitleContainer}>
+        <Text style={styles.navTitle} numberOfLines={1} ellipsizeMode="tail" >{pageData.title}</Text>
+        <View style={styles.navSubtitle}>
+          {pageData.breadcrumb.slice(1)
+            .map((item, i, arr) => <View key={item.name + i} style={styles.navBreadcrumbItem}>
+              <Text style={styles.navSubtitleText}>{item.name}</Text>
+              {i < arr.length - 1 && <Icon name="chevron-right" size={10} color="#9CA3AF" style={styles.navIcon} />}
+            </View>)
+          }
+        </View>
+      </View>,
+      headerRight: () => <HeaderButtons HeaderButtonComponent={FontAwesomeHeaderButton}>
+        <Item
+          title=""
+          iconName={isFavorite ? "star" : "star-o"}
+          size={20}
+          color={isFavorite ? "#f7ba2a" : "#9CA3AF"}
+          onPress={toggleFavorite}
+          style={styles.headerStarButton}
+        />
+        <OverflowMenu
+          OverflowIcon={({ color }) => (
+            <Icon style={styles.headerOverflowIcon} name="ellipsis-v" size={20} color={color} />
+          )}
+        >
+          <HiddenItem title="清除缓存" onPress={clearCache} />
+          <HiddenItem title="加入黑名单" onPress={block} />
+        </OverflowMenu>
+      </HeaderButtons>,
+    })
+  }, [pageData, navigation, toggleFavorite, clearCache, block])
 
   const actionSheetOptions = [
     { text: '搜索', onPress: () => handleActionSheetItemPress('search') },
@@ -397,19 +387,6 @@ const Thread = ({ route }) => {
     }
     setLongPressKey(null)
     setActionSheetVisible(false);
-  }
-
-  const toggleFavorite = async () => {
-    console.log('toggleFavorite');
-    if (MMStore.favorites.map(item => item.tid).includes(pageData.tid)) {
-      await favoriteAction('del', pageData.favorite_href, pageData.formhash)
-    } else {
-      await favoriteAction('add', pageData.favorite_href)
-    }
-    ToastAndroid.show('操作成功', ToastAndroid.SHORT);
-    setPageData(prevData => ({
-      ...prevData,
-    }))
   }
 
   const onPrevPress = () => {
@@ -909,35 +886,16 @@ const styles = StyleSheet.create({
   navIcon: {
     marginHorizontal: 4,
   },
-  navbarRight: {
+  navBreadcrumbItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 12,
   },
-  starButton: {
-    alignSelf: 'center',
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerStarButton: {
+    paddingHorizontal: 10,
+    marginHorizontal: -10,
   },
-  messageButton: {
-    alignSelf: 'center',
-    position: 'relative',
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  messageBage: {
-    position: 'absolute',
-    fontSize: 8,
-    right: 0,
-    top: 4,
-    color: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    backgroundColor: 'red'
+  headerOverflowIcon: {
+    padding: 10,
   },
   scrollView: {
     flex: 1,

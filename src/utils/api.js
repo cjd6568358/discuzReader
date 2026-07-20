@@ -135,16 +135,24 @@ export const getThreadPage = async (href) => {
                 name: item.name.replace(title_regex, '$1'),
             })),
             posts: posts.map(item => {
-                let content = (item.content ?? '').replace(/[\t]/g, ``)
-                    .replace(/(\S)(<br>)(\S)/g, "$1$3")
-                    .replace(/="https?:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`)
-                    .replace(/="attachment/g, `="${http.defaults.baseURL}attachment`)
-                    .replace(/="images/g, `="${http.defaults.baseURL}images`) + '<br>' + (item.notice ?? '');
+                let content = (item.content ?? '')
+                    .replace(/[\t]/g, ``)// 移除tab字符
+                    .replace(/(\S)(<br>)(\S)/g, "$1$3")// 去掉非空白字符之间的<br>（修复Discuz常见的多余换行）
+                    .replace(/="https?:\/\/(.*)\/bbs\//g, `="${http.defaults.baseURL}`)// 把绝对URL转成相对路径（适配baseURL）
+                    .replace(/="attachment/g, `="${http.defaults.baseURL}attachment`)// 附件路径补全baseURL
+                    .replace(/="images/g, `="${http.defaults.baseURL}images`)// 图片路径补全baseURL
+                    // 移除 <style>、<script>、注释、<meta>、<link> 这些对渲染完全无用的标签
+                    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                    .replace(/<!--[\s\S]*?-->/g, '')
+                    .replace(/<meta[^>]*>/gi, '')
+                    .replace(/<link[^>]*>/gi, '')
+                    + '<br>' + (item.notice ?? '');// 拼接帖子底部的通知/提示信息
                 // 使用正则表达式提取 src 属性
                 const regex = /<img[^>]+src=["']([^"']+)["']/g;
                 let match;
                 while ((match = regex.exec(content)) !== null) {
-                    if (!/images\/[smilies|green|attachicons]/.test(match[1])) {
+                    if (!/images\/(smilies|green|attachicons)\//.test(match[1])) {
                         imgSrcList.push(match[1]); // match[1] 是捕获的 src 值
                     }
                 }
