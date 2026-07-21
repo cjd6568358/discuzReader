@@ -119,7 +119,6 @@ const MessageDetail = () => {
           onLongPress={() => handleDeleteOne(item.id)}
         >
           <View style={styles.messageHeader}>
-            <Text style={[styles.messageFrom, isSelf && styles.selfFrom]}>{item.from}</Text>
             <Text style={styles.messageDate}>{item.date}</Text>
           </View>
           <Text style={styles.messageTitle}>{item.title}</Text>
@@ -290,18 +289,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
-  messageFrom: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#3B82F6',
-  },
-  selfFrom: {
-    color: '#2563EB',
-  },
   messageDate: {
     fontSize: 11,
     color: '#9CA3AF',
-    marginLeft: 8,
   },
   messageTitle: {
     fontSize: 14,

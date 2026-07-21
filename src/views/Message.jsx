@@ -62,9 +62,10 @@ const MessageView = () => {
     })).sort((a, b) => new Date(b.latestDate) - new Date(a.latestDate));
   };
 
-  useEffect(async () => {
-    const rightUser = await getProfilePage();
-    setRightUser(rightUser);
+  useEffect(() => {
+    getProfilePage().then(setRightUser).catch(error => {
+      console.log(error);
+    });
   }, [])
 
   useFocusEffect(
@@ -237,8 +238,10 @@ const MessageView = () => {
             <Text style={styles.messageName} numberOfLines={1}>{item.userName}</Text>
             <Text style={styles.messageTime}>{latestMessage.date}</Text>
           </View>
-          <Text numberOfLines={1} style={styles.messageTitle}>{latestMessage.title}</Text>
-          {item.unreadCount > 0 && <View style={styles.unreadIndicator} />}
+          <View style={styles.messageTitleContainer}>
+            {item.unreadCount > 0 && <View style={styles.unreadIndicator} />}
+            <Text numberOfLines={1} style={styles.messageTitle}>{latestMessage.title}</Text>
+          </View>
         </Pressable>
       </View>
     );
@@ -381,14 +384,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
   },
+  messageTitleContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   unreadIndicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: '#EF4444',
-    position: 'absolute',
-    left: 44,
-    top: 10,
   },
   emptyContainer: {
     alignItems: 'center',
