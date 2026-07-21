@@ -49,7 +49,7 @@ const MessageView = () => {
         };
       }
       grouped[userName].messages.push(msg);
-      if (msg.unread === 1) {
+      if (msg.unread === 1 && msg.type === 'received') {
         grouped[userName].unreadCount++;
       }
     });
@@ -97,7 +97,7 @@ const MessageView = () => {
     }, []))
 
   const badgeCount = (messages || []).reduce((acc, cur) => {
-    if (cur.unread === 1) {
+    if (cur.unread === 1 && cur.type === 'received') {
       acc += 1;
     }
     return acc;

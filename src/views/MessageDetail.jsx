@@ -28,7 +28,6 @@ const MessageDetail = () => {
   const [messages, setMessages] = useState(initialMessages);
   const [selectedNode] = useState(() => storage.getString('selectedNode'));
   const [inputText, setInputText] = useState('');
-
   // 删除所有消息
   const handleDeleteAll = () => {
     Alert.alert(
@@ -94,10 +93,20 @@ const MessageDetail = () => {
         data: {
           pmid: latestMessage.id,
           msgto: leftUser.username,
-          subject: '',
+          subject: 'Re: ' + latestMessage.title,
           message: inputText.trim()
         }
       });
+      // 发送成功后，添加新消息到列表
+      const newMessage = {
+        ...latestMessage,
+        id: Date.now(), // 临时 ID，实际应由服务器返回
+        date: new Date().toISOString(),
+        title: 'Re: ' + latestMessage.title,
+        type: 'sent',
+        content: inputText.trim()
+      };
+      setMessages(prev => [newMessage, ...prev]);
       setInputText('');
     } catch (error) {
       console.log('Failed to send message:', error);
