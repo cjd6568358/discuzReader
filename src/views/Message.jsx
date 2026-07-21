@@ -1,8 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   Alert,
   StyleSheet,
   FlatList,
@@ -26,6 +25,9 @@ const MessageView = () => {
   const [groupedMessages, setGroupedMessages] = useState([]);
   const [longPressKey, setLongPressKey] = useState(null);
   const [longPressUserName, setLongPressUserName] = useState(null);
+  const [rightUser, setRightUser] = useState();
+
+
   const actionSheetOptions = [
     { text: '删除与该用户所有消息', destructive: true, onPress: () => handleActionSheetItemPress('deleteAll') },
     // { text: '标为未读', onPress: () => handleActionSheetItemPress('markunread') },
@@ -60,17 +62,26 @@ const MessageView = () => {
     })).sort((a, b) => new Date(b.latestDate) - new Date(a.latestDate));
   };
 
+  useEffect(async () => {
+    const rightUser = await getProfilePage();
+    setRightUser(rightUser);
+  }, [])
+
   useFocusEffect(
     useCallback(() => {
       !messages && showLoading()
-      // getPMSentPage().then(data => {
-      //   const pmList = data.pmList || [];
-      //   console.log('sent messages:', pmList);
-      // })
-      getPMPage().then(data => {
-        const pmList = data.pmList || [];
-        setMessages(pmList);
-        setGroupedMessages(aggregateMessages(pmList));
+      Promise.all([getPMPage(), getPMSentPage()]).then(([receivedMessages = [], sentMessages = []]) => {
+        const allMessages = [];
+        receivedMessages.forEach(msg => {
+          msg.type = 'received'
+          allMessages.push(msg);
+        });
+        sentMessages.forEach(msg => {
+          msg.type = 'sent'
+          allMessages.push(msg);
+        });
+        setMessages(allMessages);
+        setGroupedMessages(aggregateMessages(allMessages));
       }).catch(error => {
         console.log(error);
         if (error === 'redirect login') {
@@ -138,7 +149,7 @@ const MessageView = () => {
             style: 'destructive',
             onPress: async () => {
               const userMessages = messages.filter(msg => msg.name === longPressUserName);
-              await Promise.all(userMessages.map(msg => messageAction({ action: 'delete', id: msg.id })));
+              await messageAction({ action: 'delete', id: userMessages.map(msg => msg.id) });
               setMessages(prev => {
                 const newMessages = prev.filter(msg => msg.name !== longPressUserName);
                 setGroupedMessages(aggregateMessages(newMessages));
@@ -176,7 +187,6 @@ const MessageView = () => {
         })
       );
       const leftUser = await getSpacePage(item.uid);
-      const rightUser = await getProfilePage();
       // 更新本地状态
       setMessages(prev => {
         const newMessages = [...prev];

@@ -38,10 +38,7 @@ export const getHomePage = async () => {
 export const getPMPage = async () => {
     try {
         const res = await http.get(`pm.php`, { selector: selectors.pm })
-        return {
-            // 消息列表
-            pmList: res.data.pmList,
-        }
+        return res.data.pmList
     } catch (error) {
         console.log('getPMPage', error);
         return Promise.reject(error)
@@ -51,10 +48,7 @@ export const getPMPage = async () => {
 export const getPMSentPage = async () => {
     try {
         const res = await http.get(`pm.php?folder=track`, { selector: selectors.pm })
-        return {
-            // 消息列表
-            pmList: res.data.pmList,
-        }
+        return res.data.pmList
     } catch (error) {
         console.log('getPMSentPage', error);
         return Promise.reject(error)

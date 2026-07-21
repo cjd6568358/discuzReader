@@ -24,10 +24,9 @@ const MessageDetail = () => {
   const route = useRoute();
   const { width } = useWindowDimensions();
   const { showLoading, hideLoading } = useLoading();
-  const { leftUser, messages: initialMessages, rightUser } = route.params;
+  const { leftUser, rightUser, messages: initialMessages } = route.params;
   const [messages, setMessages] = useState(initialMessages);
   const [selectedNode] = useState(() => storage.getString('selectedNode'));
-
   const [inputText, setInputText] = useState('');
 
   // 删除所有消息
@@ -43,7 +42,7 @@ const MessageDetail = () => {
           onPress: async () => {
             showLoading();
             try {
-              await Promise.all(messages.map(msg => messageAction({ action: 'delete', id: msg.id })));
+              await messageAction({ action: 'delete', id: messages.map(msg => msg.id) });
               navigation.goBack();
             } catch (error) {
               console.log('Failed to delete messages:', error);
@@ -56,16 +55,44 @@ const MessageDetail = () => {
     );
   };
 
+  // 删除单条消息
+  const handleDeleteOne = (messageId) => {
+    Alert.alert(
+      '确认删除',
+      '确定要删除这条消息吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await messageAction({ action: 'delete', id: messageId });
+              const updated = messages.filter(msg => msg.id !== messageId);
+              if (updated.length === 0) {
+                navigation.goBack();
+              } else {
+                setMessages(updated);
+              }
+            } catch (error) {
+              console.log('Failed to delete message:', error);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   // 发送消息（使用 reply action，自动获取 formhash）
   const handleSend = async () => {
     if (!inputText.trim()) return;
     try {
-      // 使用最后一条消息的 id 作为 pmid 来回复
-      const lastMessage = messages[messages.length - 1];
+      // inverted=true 时，messages[0] 是最新消息（显示在底部）
+      const latestMessage = messages[0];
       await messageAction({
         action: 'reply',
         data: {
-          pmid: lastMessage.id,
+          pmid: latestMessage.id,
           msgto: leftUser.username,
           subject: '',
           message: inputText.trim()
@@ -78,7 +105,7 @@ const MessageDetail = () => {
   };
 
   const renderMessageItem = ({ item }) => {
-    const isSelf = item.name === rightUser.username;
+    const isSelf = item.type === 'sent'; // 判断消息是否为自己发送的
     return (
       <View style={[styles.messageItem, isSelf ? styles.selfItem : styles.otherItem]}>
         {!isSelf && (
@@ -87,7 +114,10 @@ const MessageDetail = () => {
             style={styles.avatar}
           />
         )}
-        <View style={[styles.messageBubble, isSelf ? styles.selfBubble : styles.otherBubble]}>
+        <Pressable
+          style={[styles.messageBubble, isSelf ? styles.selfBubble : styles.otherBubble]}
+          onLongPress={() => handleDeleteOne(item.id)}
+        >
           <View style={styles.messageHeader}>
             <Text style={[styles.messageFrom, isSelf && styles.selfFrom]}>{item.from}</Text>
             <Text style={styles.messageDate}>{item.date}</Text>
@@ -103,7 +133,7 @@ const MessageDetail = () => {
               />
             </View>
           )}
-        </View>
+        </Pressable>
         {isSelf && (
           <Image
             source={{ uri: `${selectedNode}/bbs/${rightUser.avatar}` }}
