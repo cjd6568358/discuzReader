@@ -5,7 +5,6 @@ import {
   Image,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   FlatList,
   Pressable,
@@ -13,8 +12,6 @@ import {
   ToastAndroid,
   useWindowDimensions,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import {
   HeaderButtons,
@@ -481,53 +478,47 @@ const Thread = ({ route }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-      >
-        {/* 主要内容区域 */}
-        <FlatList
-          ref={view => scrollViewRef.current = view}
-          data={pageData.posts}
-          renderItem={renderPostItem}
-          keyExtractor={(item) => item.pid || item.floor || ''}
-          style={styles.scrollView}
-          contentContainerStyle={styles.postList}
-          initialNumToRender={3}
-          maxToRenderPerBatch={5}
-          windowSize={5}
-          removeClippedSubviews={false}
-          keyboardShouldPersistTaps="always"
-          ListFooterComponent={
-            pageData.pagination && <View style={styles.pageContainer}>
-              <Text style={styles.pageCount}>{pageData.pagination.current} / {pageData.pagination.last}</Text>
-            </View>
-          }
-        />
-
-        {/* 评论栏 - 固定在底部，键盘弹起时自动上推 */}
-        <View style={styles.commentBar}>
-          <View style={styles.commentInputContainer}>
-            <Icon name="comment-o" size={16} color="#9CA3AF" style={styles.commentIcon} />
-            <TextInput
-              placeholder="写下你的评论..."
-              style={styles.commentInput}
-              placeholderTextColor="#9CA3AF"
-              value={postContent}
-              onChangeText={setPostContent}
-              multiline={true}
-              numberOfLines={4}
-            />
+      {/* 主要内容区域 */}
+      <FlatList
+        ref={view => scrollViewRef.current = view}
+        data={pageData.posts}
+        renderItem={renderPostItem}
+        keyExtractor={(item) => item.pid || item.floor || ''}
+        style={styles.scrollView}
+        contentContainerStyle={styles.postList}
+        initialNumToRender={3}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        removeClippedSubviews={false}
+        keyboardShouldPersistTaps="always"
+        ListFooterComponent={
+          pageData.pagination && <View style={styles.pageContainer}>
+            <Text style={styles.pageCount}>{pageData.pagination.current} / {pageData.pagination.last}</Text>
           </View>
-          <Pressable style={styles.sendButton} onPress={handlePostPress}>
-            <Text style={styles.sendButtonText}>发送</Text>
-          </Pressable>
+        }
+      />
+
+      {/* 评论栏 */}
+      <View style={styles.commentBar}>
+        <View style={styles.commentInputContainer}>
+          <Icon name="comment-o" size={16} color="#9CA3AF" style={styles.commentIcon} />
+          <TextInput
+            placeholder="写下你的评论..."
+            style={styles.commentInput}
+            placeholderTextColor="#9CA3AF"
+            value={postContent}
+            onChangeText={setPostContent}
+            multiline={true}
+            numberOfLines={4}
+          />
         </View>
-      </KeyboardAvoidingView>
+        <Pressable style={styles.sendButton} onPress={handlePostPress}>
+          <Text style={styles.sendButtonText}>发送</Text>
+        </Pressable>
+      </View>
 
       {/* 悬浮分页控制器 */}
       {pageData?.pagination && <Pagination {...pageData.pagination} onPrevPress={onPrevPress} onNextPress={onNextPress} ></Pagination>}
@@ -638,7 +629,7 @@ const Thread = ({ route }) => {
         }}
         title={replyTitle}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
