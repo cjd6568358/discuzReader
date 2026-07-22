@@ -35,36 +35,43 @@ export const getHomePage = async () => {
     }
 }
 
-export const getPMPage = async () => {
+export const getPMInboxPage = async () => {
     try {
-        const res = await http.get(`pm.php`, { selector: selectors.pm })
+        const res = await http.get(`pm.php?folder=inbox`, { selector: selectors.pm })
         return res.data.pmList
     } catch (error) {
-        console.log('getPMPage', error);
+        console.log('getPMInboxPage', error);
         return Promise.reject(error)
     }
 }
 
-export const getPMSentPage = async () => {
+export const getPMTrackPage = async () => {
     try {
         const res = await http.get(`pm.php?folder=track`, { selector: selectors.pm })
         return res.data.pmList
     } catch (error) {
-        console.log('getPMSentPage', error);
+        console.log('getPMTrackPage', error);
         return Promise.reject(error)
     }
 }
 
-export const messageAction = async ({ action = 'view', id, data }) => {
+export const messageAction = async ({ action = 'view', id, data, type }) => {
     try {
         if (action === 'view') {
             const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}&inajax=1`)
             return res.data.replace(/.*<!\[CDATA\[\s*<br\s*\/?>\s*(.*?)<div class="postactions".*/s, '$1')
         } else if (action === 'delete') {
             if (Array.isArray(id)) {
-                const res = await http.post(`pm.php?action=${action}&folder=inbox`, `formhash=24cbfa84&${id.map(key => `delete%5B%5D=${key}`).join('&')}&pmsend=true`)
+                const payload = {
+                    formhash: '02823f08',
+                    pmsend: true,
+                }
+                id.forEach(key => {
+                    payload[`delete[]`] = key;
+                })
+                const res = await http.post(`pm.php?action=${action}&folder=${type}`, payload)
             } else {
-                const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}`)
+                const res = await http.get(`pm.php?action=${action}&folder=${type}&pmid=${id}`)
             }
         } else if (action === 'markunread') {
             const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}`)

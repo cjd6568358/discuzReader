@@ -12,7 +12,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
-import { getPMPage, getPMSentPage, getSpacePage, getProfilePage, messageAction } from '../utils/api';
+import { getPMInboxPage, getPMTrackPage, getSpacePage, getProfilePage, messageAction } from '../utils/api';
 
 const MessageView = () => {
   const navigation = useNavigation();
@@ -44,7 +44,7 @@ const MessageView = () => {
         };
       }
       grouped[userName].messages.push(msg);
-      if (msg.unread === 1 && msg.type === 'received') {
+      if (msg.unread === 1 && msg.type === 'inbox') {
         grouped[userName].unreadCount++;
       }
     });
@@ -66,14 +66,14 @@ const MessageView = () => {
   useFocusEffect(
     useCallback(() => {
       !messages && showLoading()
-      Promise.all([getPMPage(), getPMSentPage()]).then(([receivedMessages = [], sentMessages = []]) => {
+      Promise.all([getPMInboxPage(), getPMTrackPage()]).then(([inboxMessages = [], trackMessages = []]) => {
         const allMessages = [];
-        receivedMessages.forEach(msg => {
-          msg.type = 'received'
+        inboxMessages.forEach(msg => {
+          msg.type = 'inbox'
           allMessages.push(msg);
         });
-        sentMessages.forEach(msg => {
-          msg.type = 'sent'
+        trackMessages.forEach(msg => {
+          msg.type = 'track'
           allMessages.push(msg);
         });
         setMessages(allMessages);
@@ -91,7 +91,7 @@ const MessageView = () => {
     }, []))
 
   const badgeCount = (messages || []).reduce((acc, cur) => {
-    if (cur.unread === 1 && cur.type === 'received') {
+    if (cur.unread === 1 && cur.type === 'inbox') {
       acc += 1;
     }
     return acc;
@@ -116,8 +116,15 @@ const MessageView = () => {
             onPress: async () => {
               // 这里拿到的是当前用户和该用户的所有消息对话
               const userMessages = groupedMessages.filter(item => item.userName === longPressUserName)[0]?.messages;
-              // 如果不行，尝试使用 userMessages.filter(msg => msg.type === 'received')过滤出仅接收到的消息
-              await messageAction({ action: 'delete', id: userMessages.map(msg => msg.id) });
+              // 如果不行，尝试使用 userMessages.filter(msg => msg.type === 'inbox')过滤出仅接收到的消息
+              const inboxMessages = userMessages.filter(msg => msg.type === 'inbox');
+              const trackMessages = userMessages.filter(msg => msg.type === 'track');
+              if (inboxMessages.length > 0) {
+                messageAction({ action: 'delete', id: inboxMessages.map(msg => msg.id), type: 'inbox' });
+              }
+              if (trackMessages.length > 0) {
+                messageAction({ action: 'delete', id: trackMessages.map(msg => msg.id), type: 'track' });
+              }
               setMessages(prev => prev.filter(msg => msg.name !== longPressUserName));
             }
           }

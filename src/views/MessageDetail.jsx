@@ -41,8 +41,14 @@ const MessageDetail = () => {
           onPress: async () => {
             showLoading();
             try {
-              // 如果不行，尝试使用 messages.filter(msg => msg.type === 'received')过滤出仅接收到的消息
-              await messageAction({ action: 'delete', id: messages.map(msg => msg.id) });
+              const inboxMessages = messages.filter(msg => msg.type === 'inbox');
+              if (inboxMessages.length > 0) {
+                await messageAction({ action: 'delete', id: inboxMessages.map(msg => msg.id), type: 'inbox' });
+              }
+              const trackMessages = messages.filter(msg => msg.type === 'track');
+              if (trackMessages.length > 0) {
+                await messageAction({ action: 'delete', id: trackMessages.map(msg => msg.id), type: 'track' });
+              }
               navigation.goBack();
             } catch (error) {
               console.log('Failed to delete messages:', error);
@@ -56,7 +62,7 @@ const MessageDetail = () => {
   };
 
   // 删除单条消息
-  const handleDeleteOne = (messageId) => {
+  const handleDeleteOne = (messageType, messageId) => {
     Alert.alert(
       '确认删除',
       '确定要删除这条消息吗？',
@@ -67,8 +73,11 @@ const MessageDetail = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // 目前的api貌似只支持删除接收到的消息，如果要删除自己发送的消息，可能需要再检查一次
-              await messageAction({ action: 'delete', id: messageId });
+              if (messageType === 'inbox') {
+                await messageAction({ action: 'delete', id: messageId, type: 'inbox' });
+              } else {
+                await messageAction({ action: 'delete', id: messageId, type: 'track' });
+              }
               const updated = messages.filter(msg => msg.id !== messageId);
               if (updated.length === 0) {
                 navigation.goBack();
@@ -105,7 +114,7 @@ const MessageDetail = () => {
         id: Date.now(), // 临时 ID，实际应由服务器返回
         date: new Date().toISOString(),
         title: 'Re: ' + latestMessage.title,
-        type: 'sent',
+        type: 'track',
         content: inputText.trim()
       };
       setMessages(prev => [newMessage, ...prev]);
@@ -116,7 +125,7 @@ const MessageDetail = () => {
   };
 
   const renderMessageItem = ({ item }) => {
-    const isSelf = item.type === 'sent'; // 判断消息是否为自己发送的
+    const isSelf = item.type === 'track'; // 判断消息是否为自己发送的
     return (
       <View style={[styles.messageItem, isSelf ? styles.selfItem : styles.otherItem]}>
         {!isSelf && (
@@ -127,7 +136,7 @@ const MessageDetail = () => {
         )}
         <Pressable
           style={[styles.messageBubble, isSelf ? styles.selfBubble : styles.otherBubble]}
-          onLongPress={() => handleDeleteOne(item.id)}
+          onLongPress={() => handleDeleteOne(item.type, item.id)}
         >
           <View style={styles.messageHeader}>
             <Text style={styles.messageDate}>{item.date}</Text>
