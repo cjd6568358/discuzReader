@@ -41,6 +41,7 @@ const MessageDetail = () => {
           onPress: async () => {
             showLoading();
             try {
+              // 如果不行，尝试使用 messages.filter(msg => msg.type === 'received')过滤出仅接收到的消息
               await messageAction({ action: 'delete', id: messages.map(msg => msg.id) });
               navigation.goBack();
             } catch (error) {
@@ -66,6 +67,7 @@ const MessageDetail = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              // 目前的api貌似只支持删除接收到的消息，如果要删除自己发送的消息，可能需要再检查一次
               await messageAction({ action: 'delete', id: messageId });
               const updated = messages.filter(msg => msg.id !== messageId);
               if (updated.length === 0) {

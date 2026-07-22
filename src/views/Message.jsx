@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Pressable,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/FontAwesome';
 import ActionSheet from '../components/ActionSheet';
 import { useLoading } from '../components/Loading';
 import { getPMPage, getPMSentPage, getSpacePage, getProfilePage, messageAction } from '../utils/api';
@@ -19,11 +18,7 @@ const MessageView = () => {
   const navigation = useNavigation();
   const { showLoading, hideLoading } = useLoading();
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
-  const [selectedMessages, setSelectedMessages] = useState([]);
-  const [batchMode, setBatchMode] = useState(false);
   const [messages, setMessages] = useState(null);
-  const [groupedMessages, setGroupedMessages] = useState([]);
-  const [longPressKey, setLongPressKey] = useState(null);
   const [longPressUserName, setLongPressUserName] = useState(null);
   const [rightUser, setRightUser] = useState();
 
@@ -82,7 +77,6 @@ const MessageView = () => {
           allMessages.push(msg);
         });
         setMessages(allMessages);
-        setGroupedMessages(aggregateMessages(allMessages));
       }).catch(error => {
         console.log(error);
         if (error === 'redirect login') {
@@ -103,36 +97,7 @@ const MessageView = () => {
     return acc;
   }, 0)
 
-  const toggleSelect = (index) => {
-    setSelectedMessages(prev => {
-      const existingIndex = prev.indexOf(index);
-      if (existingIndex === -1) {
-        return [...prev, index];
-      }
-      return prev.filter(i => i !== index);
-    });
-  };
-
-  const deleteSelected = async () => {
-    if (selectedMessages.length === 0) return;
-    await messageAction({ action: 'batchdelete', id: selectedMessages.map(index => messages[index].id) });
-    setMessages(prev => {
-      const newMessages = [...prev];
-      selectedMessages.sort((a, b) => b - a).forEach(index => {
-        newMessages.splice(index, 1);
-      });
-      return newMessages;
-    });
-    setSelectedMessages([]);
-  };
-
-  const cancelSelected = () => {
-    setSelectedMessages([]);
-    setBatchMode(false)
-  };
-
-  const handleLongPress = (msgId, userName) => {
-    setLongPressKey(msgId);
+  const handleLongPress = (userName) => {
     setLongPressUserName(userName);
     setActionSheetVisible(true);
   };
@@ -149,30 +114,28 @@ const MessageView = () => {
             text: '删除',
             style: 'destructive',
             onPress: async () => {
-              const userMessages = messages.filter(msg => msg.name === longPressUserName);
+              // 这里拿到的是当前用户和该用户的所有消息对话
+              const userMessages = groupedMessages.filter(item => item.userName === longPressUserName)[0]?.messages;
+              // 如果不行，尝试使用 userMessages.filter(msg => msg.type === 'received')过滤出仅接收到的消息
               await messageAction({ action: 'delete', id: userMessages.map(msg => msg.id) });
-              setMessages(prev => {
-                const newMessages = prev.filter(msg => msg.name !== longPressUserName);
-                setGroupedMessages(aggregateMessages(newMessages));
-                return newMessages;
-              });
+              setMessages(prev => prev.filter(msg => msg.name !== longPressUserName));
             }
           }
         ]
       );
     } else if (action === 'markunread') {
-      await messageAction({ action: 'markunread', id: longPressKey });
+      const userMessages = groupedMessages.filter(item => item.userName === longPressUserName)[0]?.messages;
+      const latestMessageId = userMessages?.[0]?.id;
+      await messageAction({ action: 'markunread', id: latestMessageId });
       setMessages(prev => {
         const newMessages = [...prev];
-        const index = newMessages.findIndex(item => item.id === longPressKey);
+        const index = newMessages.findIndex(item => item.id === latestMessageId);
         if (index !== -1) {
           newMessages[index].unread = 1;
         }
-        setGroupedMessages(aggregateMessages(newMessages));
         return newMessages;
       });
     }
-    setLongPressKey(null);
     setLongPressUserName(null);
   };
 
@@ -197,7 +160,6 @@ const MessageView = () => {
             newMessages[index] = { ...newMessages[index], content: loadedMsg.content, unread: 0 };
           }
         });
-        setGroupedMessages(aggregateMessages(newMessages));
         return newMessages;
       });
 
@@ -213,26 +175,16 @@ const MessageView = () => {
     }
   };
 
-  const renderMessageItem = ({ item, index }) => {
+  const groupedMessages = useMemo(() => aggregateMessages(messages || []), [messages]);
+
+  const renderMessageItem = ({ item }) => {
     const latestMessage = item.messages[0]; // 最新的一条消息
     return (
       <View key={item.userName} style={styles.messageItem}>
-        {
-          batchMode && <View style={styles.selectContainer}>
-            <Pressable
-              style={[styles.checkbox, selectedMessages.includes(index) && styles.checkboxSelected]}
-              onPress={() => toggleSelect(index)}
-            >
-              {selectedMessages.includes(index) && (
-                <Icon name="check" size={12} color="#FFFFFF" />
-              )}
-            </Pressable>
-          </View>
-        }
         <Pressable
           style={styles.messageContent}
           onPress={() => navigateToDetail(item)}
-          onLongPress={() => handleLongPress(latestMessage.id, item.userName)}
+          onLongPress={() => handleLongPress(item.userName)}
         >
           <View style={styles.messageHeader}>
             <Text style={styles.messageName} numberOfLines={1}>{item.userName}</Text>
@@ -259,23 +211,6 @@ const MessageView = () => {
       {/* 顶部导航栏 */}
       <View style={styles.navbar}>
         <Text style={styles.navTitle}>我的消息{badgeCount > 0 && `(${badgeCount})`}</Text>
-        {
-          batchMode &&
-          <>
-            <Pressable
-              onPress={cancelSelected}
-              style={[styles.deleteButton]}
-            >
-              <Text>取消</Text>
-            </Pressable>
-            <Pressable
-              onPress={deleteSelected}
-              style={[styles.deleteButton, !selectedMessages.length && styles.deleteButtonDisabled]}
-            >
-              <Text style={styles.deleteButtonText}>批量删除</Text>
-            </Pressable>
-          </>
-        }
       </View>
 
       {/* 消息列表 */}
@@ -321,16 +256,6 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginRight: 'auto'
   },
-  deleteButton: {
-    padding: 8,
-  },
-  deleteButtonText: {
-    fontSize: 14,
-    color: '#EF4444',
-  },
-  deleteButtonDisabled: {
-    opacity: 0.5,
-  },
   messageList: {
     paddingTop: 8,
     paddingBottom: 16,
@@ -343,22 +268,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
     alignItems: 'center',
-  },
-  selectContainer: {
-    marginRight: 12,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
   },
   messageContent: {
     flex: 1,
