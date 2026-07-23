@@ -148,7 +148,12 @@ const MessageView = () => {
           return { ...msg, content, unread: 0 };
         })
       );
-      const leftUser = await getSpacePage(item.uid);
+      const leftUser = { uid: item.uid, username: item.userName, avatar: '', status: '' };
+      try {
+        leftUser = await getSpacePage(item.uid);
+      } catch (e) {
+        console.log('Failed to get left user info:', e);
+      }
       // 更新本地状态
       setMessages(prev => {
         const newMessages = [...prev];

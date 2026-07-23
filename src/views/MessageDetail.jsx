@@ -164,7 +164,7 @@ const MessageDetail = () => {
           <Icon name="chevron-left" size={16} color="#374151" />
         </Pressable>
         <Text style={styles.navTitle} numberOfLines={1}>
-          {leftUser.username}({leftUser.status})
+          {leftUser.username}{leftUser.status ? ` (${leftUser.status})` : ''}
         </Text>
         <Pressable
           onPress={handleDeleteAll}
