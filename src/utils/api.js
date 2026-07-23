@@ -55,26 +55,48 @@ export const getPMTrackPage = async () => {
     }
 }
 
-export const messageAction = async ({ action = 'view', id, data, type }) => {
+export const messageAction = async ({ action = 'view', msg, data }) => {
     try {
         if (action === 'view') {
-            const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}&inajax=1`)
+            const { id, type } = msg;
+            const res = await http.get(`pm.php?action=${action}&folder=${type}&pmid=${id}&inajax=1`)
             return res.data.replace(/.*<!\[CDATA\[\s*<br\s*\/?>\s*(.*?)<div class="postactions".*/s, '$1')
         } else if (action === 'delete') {
-            if (Array.isArray(id)) {
-                const payload = {
-                    formhash: '02823f08',
-                    pmsend: true,
-                }
-                id.forEach(key => {
-                    payload[`delete[]`] = key;
+            if (Array.isArray(msg)) {
+                const inboxMsgs = []
+                const trackMsgs = []
+                msg.forEach(m => {
+                    if (m.type === 'inbox') {
+                        inboxMsgs.push(m)
+                    } else if (m.type === 'track') {
+                        trackMsgs.push(m)
+                    }
                 })
-                const res = await http.post(`pm.php?action=${action}&folder=${type}`, payload)
+                if (inboxMsgs.length > 0) {
+                    const data = new FormData();
+                    data.append('formhash', '02823f08');
+                    data.append('pmsend', true);
+                    inboxMsgs.forEach(({ id }) => {
+                        data.append('delete[]', id);
+                    })
+                    const res = await http.post(`pm.php?action=${action}&folder=inbox`, data)
+                }
+                if (trackMsgs.length > 0) {
+                    const data = new FormData();
+                    data.append('formhash', '02823f08');
+                    data.append('pmsend', true);
+                    trackMsgs.forEach(({ id }) => {
+                        data.append('delete[]', id);
+                    })
+                    const res = await http.post(`pm.php?action=${action}&folder=track`, data)
+                }
             } else {
+                const { id, type } = msg;
                 const res = await http.get(`pm.php?action=${action}&folder=${type}&pmid=${id}`)
             }
         } else if (action === 'markunread') {
-            const res = await http.get(`pm.php?action=${action}&folder=inbox&pmid=${id}`)
+            const { id, type } = msg;
+            const res = await http.get(`pm.php?action=${action}&folder=${type}&pmid=${id}`)
         } else if (action === 'send') {
             const res = await http.post(`pm.php?action=send&inajax=1`, data)
         } else if (action === 'reply') {

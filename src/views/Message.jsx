@@ -116,15 +116,7 @@ const MessageView = () => {
             onPress: async () => {
               // 这里拿到的是当前用户和该用户的所有消息对话
               const userMessages = groupedMessages.filter(item => item.userName === longPressUserName)[0]?.messages;
-              // 如果不行，尝试使用 userMessages.filter(msg => msg.type === 'inbox')过滤出仅接收到的消息
-              const inboxMessages = userMessages.filter(msg => msg.type === 'inbox');
-              const trackMessages = userMessages.filter(msg => msg.type === 'track');
-              if (inboxMessages.length > 0) {
-                messageAction({ action: 'delete', id: inboxMessages.map(msg => msg.id), type: 'inbox' });
-              }
-              if (trackMessages.length > 0) {
-                messageAction({ action: 'delete', id: trackMessages.map(msg => msg.id), type: 'track' });
-              }
+              messageAction({ action: 'delete', msg: userMessages });
               setMessages(prev => prev.filter(msg => msg.name !== longPressUserName));
             }
           }
@@ -132,8 +124,7 @@ const MessageView = () => {
       );
     } else if (action === 'markunread') {
       const userMessages = groupedMessages.filter(item => item.userName === longPressUserName)[0]?.messages;
-      const latestMessageId = userMessages?.[0]?.id;
-      await messageAction({ action: 'markunread', id: latestMessageId });
+      await messageAction({ action: 'markunread', msg: userMessages[0] });
       setMessages(prev => {
         const newMessages = [...prev];
         const index = newMessages.findIndex(item => item.id === latestMessageId);
@@ -153,7 +144,7 @@ const MessageView = () => {
       // 加载所有消息内容并标记为已读
       const loadedMessages = await Promise.all(
         item.messages.map(async (msg) => {
-          const content = await messageAction({ action: 'view', id: msg.id });
+          const content = await messageAction({ action: 'view', msg });
           return { ...msg, content, unread: 0 };
         })
       );

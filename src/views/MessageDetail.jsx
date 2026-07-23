@@ -41,14 +41,7 @@ const MessageDetail = () => {
           onPress: async () => {
             showLoading();
             try {
-              const inboxMessages = messages.filter(msg => msg.type === 'inbox');
-              if (inboxMessages.length > 0) {
-                await messageAction({ action: 'delete', id: inboxMessages.map(msg => msg.id), type: 'inbox' });
-              }
-              const trackMessages = messages.filter(msg => msg.type === 'track');
-              if (trackMessages.length > 0) {
-                await messageAction({ action: 'delete', id: trackMessages.map(msg => msg.id), type: 'track' });
-              }
+              await messageAction({ action: 'delete', msg: messages });
               navigation.goBack();
             } catch (error) {
               console.log('Failed to delete messages:', error);
@@ -62,7 +55,7 @@ const MessageDetail = () => {
   };
 
   // 删除单条消息
-  const handleDeleteOne = (messageType, messageId) => {
+  const handleDeleteOne = (msg) => {
     Alert.alert(
       '确认删除',
       '确定要删除这条消息吗？',
@@ -73,12 +66,8 @@ const MessageDetail = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              if (messageType === 'inbox') {
-                await messageAction({ action: 'delete', id: messageId, type: 'inbox' });
-              } else {
-                await messageAction({ action: 'delete', id: messageId, type: 'track' });
-              }
-              const updated = messages.filter(msg => msg.id !== messageId);
+              await messageAction({ action: 'delete', msg });
+              const updated = messages.filter(m => m.id !== msg.id);
               if (updated.length === 0) {
                 navigation.goBack();
               } else {
@@ -136,7 +125,7 @@ const MessageDetail = () => {
         )}
         <Pressable
           style={[styles.messageBubble, isSelf ? styles.selfBubble : styles.otherBubble]}
-          onLongPress={() => handleDeleteOne(item.type, item.id)}
+          onLongPress={() => handleDeleteOne(item)}
         >
           <View style={styles.messageHeader}>
             <Text style={styles.messageDate}>{item.date}</Text>
