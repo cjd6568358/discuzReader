@@ -73,7 +73,7 @@ export const messageAction = async ({ action = 'view', msg, data }) => {
                     }
                 })
                 if (inboxMsgs.length > 0) {
-                    const data = new FormData();
+                    const data = new URLSearchParams();
                     data.append('formhash', '02823f08');
                     data.append('pmsend', true);
                     inboxMsgs.forEach(({ id }) => {
@@ -82,7 +82,7 @@ export const messageAction = async ({ action = 'view', msg, data }) => {
                     const res = await http.post(`pm.php?action=${action}&folder=inbox`, data)
                 }
                 if (trackMsgs.length > 0) {
-                    const data = new FormData();
+                    const data = new URLSearchParams();
                     data.append('formhash', '02823f08');
                     data.append('pmsend', true);
                     trackMsgs.forEach(({ id }) => {
