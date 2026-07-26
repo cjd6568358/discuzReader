@@ -26,7 +26,16 @@ const instance = axios.create(defaultConfig);
 // 添加请求拦截器
 instance.interceptors.request.use(config => {
     if ('POST,PUT,PATCH'.includes(config.method.toUpperCase()) && !config.skipGBK) {
-        config.data = UTF8ToGBK(decodeURIComponent(new URLSearchParams(config.data).toString()));
+        if (typeof config.data === 'object') {
+            if (config.data instanceof URLSearchParams) {
+                config.data = config.data.toString();
+            } else {
+                config.data = new URLSearchParams(config.data).toString();
+            }
+        }
+        if (typeof config.data === 'string') {
+            config.data = UTF8ToGBK(decodeURIComponent(config.data));
+        }
     }
     return config;
 }, error => {
@@ -41,6 +50,7 @@ instance.interceptors.response.use(response => {
         response.data = iconv.decode(new Uint8Array(response.data), "GBK");
         console.log('decode time:', Date.now() - t1);
     }
+    // console.log('response.data', response.data)
     if (response.headers['content-Length'] < 500) {
         response.data = decodeHtmlEntity(response.data);
         const errorStack = response.data

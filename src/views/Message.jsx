@@ -148,7 +148,7 @@ const MessageView = () => {
           return { ...msg, content, unread: 0 };
         })
       );
-      const leftUser = { uid: item.uid, username: item.userName, avatar: '', status: '' };
+      let leftUser = { uid: item.uid, username: item.userName, avatar: '', status: '' };
       try {
         leftUser = await getSpacePage(item.uid);
       } catch (e) {
