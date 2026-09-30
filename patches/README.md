@@ -145,6 +145,40 @@ RNSScreenShadowNode.h:31:38: error: 'Shared' is deprecated:
 文件名里的版本必须和实际装到的版本一致，否则 patch-package 会报
 「Patch file found for package ... which is not present」，升级依赖后记得同步改名。
 
+### 附：`ViewBackgroundUtils.kt` 的死 import
+
+同一个文件里还有第二处改动，是**另一类问题**（编译期 Kotlin 报错）。
+
+`android/build.gradle` 会按 RN 版本从 `src/versioned/` 里挑一份源码加入编译
+（第 192–207 行）：`<=74` 用 `74/`，`<=76` 用 `76/`，**其余走 `latest/`**。
+RN 0.84 落进 `latest/`。
+
+`latest/ViewBackgroundUtils.kt` 里保留了 `CSSBackgroundDrawable` 的 import，
+但 RN 0.84 **已经把这个类删掉了**（现在只剩 `.../uimanager/drawable/BackgroundDrawable`
+等）。Kotlin 对未使用的 import 也会做解析，于是直接报错：
+
+```
+e: .../backgroundcolor/latest/ViewBackgroundUtils.kt:5:46
+   Unresolved reference 'CSSBackgroundDrawable'.
+```
+
+**改动**：删掉这行 import。
+
+**为什么只是删 import 就够了**：它是个**死 import**，函数体
+（`BackgroundStyleApplicator.getBackgroundColor(this)`）压根没用到它。
+而且要改的代码在 import 的**下面**，不能为了绕过报错删掉那句调用。
+
+**不需要加 `@OptIn`**：`BackgroundStyleApplicator` 虽然被
+`@RequiresOptIn(ERROR)` 的 `UnstableReactNativeAPI` 标注，但那是标注在
+**object 自身**上的（等于自带 opt-in），`getBackgroundColor` 上并没有。
+佐证：RN 0.84 自己的 `ReactEditText.kt` 直接 import 并调用它，没有任何 opt-in。
+
+**为什么不用 `76/` 那份**：`76/` 的写法是 `(this.background as? CSSBackgroundDrawable)?.color`，
+同样依赖这个已被删除的类，换成它照样报错。
+
+**这类问题为什么容易漏**：Kotlin 编译器遇错即停，只会报**第一个**错误。
+所以修完一个不能直接认为没了 —— 要重新跑一遍才知道。
+
 ---
 
 ## react-native-mmkv+3.3.0.patch

@@ -34,3 +34,14 @@ diff --git a/node_modules/react-native-screens/common/cpp/react/renderer/compone
    YogaLayoutableShadowNode::appendChild(child);
  #ifdef ANDROID
    const auto &stateData = getStateData();
+diff --git a/node_modules/react-native-screens/android/src/versioned/backgroundcolor/latest/ViewBackgroundUtils.kt b/node_modules/react-native-screens/android/src/versioned/backgroundcolor/latest/ViewBackgroundUtils.kt
+--- a/node_modules/react-native-screens/android/src/versioned/backgroundcolor/latest/ViewBackgroundUtils.kt
++++ b/node_modules/react-native-screens/android/src/versioned/backgroundcolor/latest/ViewBackgroundUtils.kt
+@@ -2,7 +2,6 @@
+ 
+ import com.facebook.react.common.annotations.UnstableReactNativeAPI
+ import com.facebook.react.uimanager.BackgroundStyleApplicator
+-import com.facebook.react.uimanager.drawable.CSSBackgroundDrawable
+ import com.facebook.react.views.view.ReactViewGroup
+ 
+ internal fun ReactViewGroup.resolveBackgroundColor(): Int? = BackgroundStyleApplicator.getBackgroundColor(this)
