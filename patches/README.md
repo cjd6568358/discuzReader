@@ -127,17 +127,60 @@ RNSScreenShadowNode.h:31:38: error: 'Shared' is deprecated:
 ```
 
 **改动**：`common/cpp/.../RNSScreenShadowNode.h` 第 31 行
-`const ShadowNode::Shared &child` → `const std::shared_ptr<const ShadowNode> &child`。
+`const ShadowNode::Shared &child` → `const std::shared_ptr<const ShadowNode> &child`；
+同目录 `RNSScreenShadowNode.cpp` 的 3 处（第 17、19、84 行）一并改掉。
+
+**为什么 `.cpp` 也必须改**：第 84 行是**被改的那句声明的定义**。
+只改 `.h` 会造成「声明与定义类型不一致」，即使编译通过也是错的；
+第 17/19 行则是同样的 `ShadowNode::Shared` 用法，会以同样的方式报错。
+注意编译器遇错即停，第一轮日志里**只显示了 `.h` 那一处 error**，
+不能据此认为 `.cpp` 没问题。
 
 **为什么等价**：同样是纯别名替换，`ShadowNode::Shared` 就是
-`std::shared_ptr<const ShadowNode>`。
+`std::shared_ptr<const ShadowNode>`。改完与 RN 基类
+`YogaLayoutableShadowNode::appendChild(const std::shared_ptr<const ShadowNode> &)`
+的签名完全一致，`override` 不会失效。
 
 **注意**：`package.json` 里写的是 `^4.10.0`，CI 解析到 **4.11.1**。
 文件名里的版本必须和实际装到的版本一致，否则 patch-package 会报
 「Patch file found for package ... which is not present」，升级依赖后记得同步改名。
 
-**只改了这一处**：screens 其余用到 `Shared` 的地方（如果有）
-会以 warning 而非 error 出现，日志里可见的 error 只有这一行。
+---
+
+## react-native-mmkv+3.3.0.patch
+
+**问题**：`react-native-mmkv@3.3.0` 的 `android/CMakeLists.txt` 把
+C++ 标准**钉死在 17**：
+
+```cmake
+set(CMAKE_CXX_STANDARD 17)
+```
+
+而 RN 0.84 的 `react/bridging/*.h` 用了 C++20 的 `requires` 概念
+（`Function.h` → `Base.h:63`），要求 **C++20**。
+于是 mmkv 自己的 `.cpp` 在包含 RN 头文件时，`requires` 被当成未知标识符：
+
+```
+react/bridging/Base.h:63:3: error: unknown type name 'requires'
+react/bridging/Class.h:38:19: error: static assertion failed:
+  Incompatible return type
+```
+
+**改动**：`set(CMAKE_CXX_STANDARD 17)` → `set(CMAKE_CXX_STANDARD 20)`。
+
+**为什么必须改成 20 而不是「别管」**：这个变量是**目录级**的，
+会写进 mmkv 目录下所有 target 的编译属性，且**在编译命令行里以
+`-std=c++17` 出现、排在 `reactnative_FLAGS` 的 `-std=c++20` 之后**，
+后写的覆盖先写的 —— 所以是它最终生效，RN 的 `-Werror` 也救不回来。
+实测该 target 的编译命令里压根看不到 `-std=c++20`。
+
+**其他模块不用改**：picker / screens / safe-area-context 的
+`jni/CMakeLists.txt` 本身就带 `-std=c++20`。
+全量扫过 `node_modules`，只剩 `react-native/ReactCommon/jsi/jsi/CMakeLists.txt`
+也写了 17，但它在 RN 内部、不参与我们的构建。
+
+**上游状态**：CI 构建时用的是 `^3.2.0` 解析出来的 **3.3.0**。
+上游若把标准提到 20，本补丁即可删除。
 
 ---
 

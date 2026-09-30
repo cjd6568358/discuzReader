@@ -1,0 +1,12 @@
+diff --git a/node_modules/react-native-mmkv/android/CMakeLists.txt b/node_modules/react-native-mmkv/android/CMakeLists.txt
+--- a/node_modules/react-native-mmkv/android/CMakeLists.txt
++++ b/node_modules/react-native-mmkv/android/CMakeLists.txt
+@@ -2,7 +2,7 @@
+ project(ReactNativeMmkv)
+
+ set(CMAKE_VERBOSE_MAKEFILE ON)
+-set(CMAKE_CXX_STANDARD 17)
++set(CMAKE_CXX_STANDARD 20)
+
+ # Compile sources
+ add_library(
