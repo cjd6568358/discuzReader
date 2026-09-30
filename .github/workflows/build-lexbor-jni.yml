@@ -18,11 +18,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
+      # 见 build-apk.yml 的同类说明：不用 android-actions/setup-android@v3，
+      # 它内部的 `sdkmanager tools` 在 "tools" 包被移除后必然失败。
       - name: Install NDK
-        run: sdkmanager --install "ndk;27.1.12297006"
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -mindepth 2 -maxdepth 3 -name sdkmanager -type f | head -1)
+          fi
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "::error::在 $SDK_ROOT 下找不到 sdkmanager，请检查 runner 镜像的 cmdline-tools 布局"
+            exit 1
+          fi
+
+          "$SDKMANAGER" --install "ndk;27.1.12297006"
+
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
 
       - name: Set NDK paths
         run: |

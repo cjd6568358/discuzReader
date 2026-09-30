@@ -36,18 +36,41 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # 显式安装 SDK / NDK，不再隐式依赖 runner 镜像的预装内容。
+      # 不用 android-actions/setup-android@v3：它内部会执行 `sdkmanager tools`，
+      # 而 "tools" 包早已从 SDK 仓库移除，在 ubuntu runner 上必然 "Failed to find package 'tools'"
+      # 并中止整个 job。它提供的 SDK / cmdline-tools / licenses 在 runner 镜像里本来就有。
       # 版本必须与 android/build.gradle 保持一致。
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install SDK / NDK packages
         run: |
-          sdkmanager --install \
+          set -euo pipefail
+          # runner 镜像的 cmdline-tools 目录名可能是 latest 也可能是版本号（如 16.0），
+          # 显式定位，不依赖 PATH 或镜像的具体布局。
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -mindepth 2 -maxdepth 3 -name sdkmanager -type f | head -1)
+          fi
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "::error::在 $SDK_ROOT 下找不到 sdkmanager，请检查 runner 镜像的 cmdline-tools 布局"
+            exit 1
+          fi
+
+          "$SDKMANAGER" --version
+          # 镜像已接受所有 licenses（日志中的 "All SDK package licenses accepted"），
+          # 故这里不加 `yes |` 自动应答 —— 那会让 sdkmanager 正常退出时 yes 收到 SIGPIPE(141)，
+          # 在 set -o pipefail 下反而把整个步骤判为失败。
+          "$SDKMANAGER" --install \
             "platforms;android-35" \
             "build-tools;35.0.0" \
             "ndk;27.1.12297006" \
             "cmake;3.22.1"
+
+          # 显式导出给后续步骤：Gradle 靠它定位 SDK（CI 上无 local.properties），
+          # lexbor 编译步骤靠它拼 NDK 路径。原先由被移除的 action 隐式提供。
+          {
+            echo "ANDROID_HOME=$SDK_ROOT"
+            echo "ANDROID_SDK_ROOT=$SDK_ROOT"
+          } >> "$GITHUB_ENV"
 
       # liblexbor_jni.so 正常应随仓库提供。若缺失（被误删 / .gitignore 误伤 / 从模板重建），
       # 就在这里实时编译，避免一路走到打包阶段才失败。
