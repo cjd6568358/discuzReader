@@ -34,7 +34,7 @@ on:
 concurrency:
   # 同一分支连推两次会取消上一次运行（Android 构建重，没必要都跑完）。
   # ⚠ 被取消的运行可能已经建好 ci-<sha> Release、传了 APK 就停了，
-  #   且不会再补齐（summarize 也不会跑）—— 那个 commit 的 Release 是残缺的。
+  #   且不会再补齐（后面的清单 / 邮件步骤也不会跑）—— 那个 commit 的 Release 是残缺的。
   #   要完整产物，等上一次跑完再推，或对残缺的 commit 手动重跑一次。
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -224,7 +224,7 @@ jobs:
       - name: Publish to GitHub Release
         # 产出永久公开直链，形如：
         #   https://github.com/<owner>/<repo>/releases/download/ci-<sha>/<asset>
-        # summarize job 里的代理清单拼的就是这个地址，所以它是下载链路的最终来源。
+        # 下面生成代理清单的步骤拼的就是这个地址，所以它是下载链路的最终来源。
         #
         # 真正的创建 + 上传在 ensure-release.sh 里，带 5xx 退避重试：
         # GitHub 偶发在 POST /releases 上返回 500，而这时构建已经跑完、
@@ -252,30 +252,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  summarize:
-    # 等 build 跑完再执行。always() 是必须的：不加的话 build 一失败就整片跳过。
-    # 但构建失败时不会走到发信那一步 —— 本次没有 release/清单，
-    # gen-proxy-txt.sh 会打 notice 后不生成文件，send-mail.py 也就不发空邮件。
-    needs: build
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    # 要把 proxy_<sha>.txt 传成 release asset，同样需要写权限。
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      # 与 build job 用同一套算法：同一 commit 必然得到同一个短 sha，
-      # 否则这里会找不到上面那个 release。
-      - name: Compute short sha
-        id: sha
-        run: echo "short=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+      # ── 以下三步都在 build job 内，且都带 if: always() ──────────────
+      # 原本它们排在独立的 summarize job 里（靠 needs: build + if: always()
+      # 保住在构建失败时仍执行）。并进来之后这个语义得手动补上：job 内某个
+      # 步骤失败，后续步骤默认会被跳过，而清单 / 邮件恰恰要在构建失败时也能跑。
+      # 失败时的行为不变 —— 没建 release，gen-proxy-txt.sh 打 notice 后不生成
+      # 文件，send-mail.py 也就不会发空邮件。
 
       - name: Generate proxy download links
+        # 清单文件与 build-lexbor-jni.yml 各自生成、各自发布，互不干扰：
+        # 两个 workflow 独立触发，不该互相等待。
+        #
         # 产物清单由脚本问 GitHub 要（gh release view），不写死 asset 名 ——
         # 改产物命名或增删产物都不用动脚本。
+        if: ${{ always() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -291,9 +281,10 @@ jobs:
         # 文件不存在（build 失败 / 没产物）时跳过，不算失败。
         #
         # 走 ensure-release.sh 而不是裸 gh：同样是图那层 5xx 重试 ——
-        # 上传失败会让 summarize 整个判失败，邮件也就发不出去。
+        # 上传失败会让这个步骤判失败，邮件也就发不出去。
         # 此时 release 必然已存在，脚本只会走「补传 asset」分支；
         # title/notes 仅在该 release 意外缺失时才会用到。
+        if: ${{ always() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ steps.sha.outputs.short }}
@@ -316,6 +307,7 @@ jobs:
         #
         # 文件不存在时脚本自己打 notice 后返回 0，不发空邮件。
         # continue-on-error：邮件只是通知，不该拖累构建结果。
+        if: ${{ always() }}
         continue-on-error: true
         env:
           MAIL_TO: ${{ secrets.MAIL_TO }}

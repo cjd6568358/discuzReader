@@ -141,8 +141,8 @@ jobs:
             "dist/liblexbor_jni_${SHA}_arm64-v8a.so"
 
       - name: Generate proxy download links
-        # 清单文件与 build-apk.yml 的 summarize 各自生成、各自发布，
-        # 互不干扰：两个 workflow 独立触发，不该互相等待。
+        # 清单文件与 build-apk.yml 各自生成、各自发布，互不干扰：
+        # 两个 workflow 独立触发，不该互相等待。
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

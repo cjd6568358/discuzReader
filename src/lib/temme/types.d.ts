@@ -52,22 +52,6 @@ interface CheerioElement {
   data?: string
 }
 
-interface CheerioOptions {
-  withDomLvl1?: boolean
-  normalizeWhitespace?: boolean
-  xmlMode?: boolean
-  decodeEntities?: boolean
-  _useHtmlParser2?: boolean
-}
-
-declare module 'react-native-cheerio' {
-  const cheerio: CheerioStatic & {
-    load(html: string | CheerioElement, options?: CheerioOptions): CheerioStatic
-  }
-
-  export default cheerio
-}
-
 declare module '../lexbor/lexbor-android' {
   interface LexborNode {
     _handle: string

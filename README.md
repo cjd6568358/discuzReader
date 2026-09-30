@@ -96,7 +96,7 @@ lexbor 相关产物分**两层**，理解这一点能避免改错文件：
 
 1. `src\lib\lexbor\lexbor-window.js` 是window端高性能的 HTML 解析引擎包装，提供 cheerio 兼容的 API，并且已经成功通过测试用例
 2. `src\lib\lexbor\lexbor-android.js` 是android端类似lexbor-window.js实现
-3. **`android\app\src\main\jniLibs\arm64-v8a\liblexbor.so` 是 lexbor 的 C 库编译产物**，针对 ARM64 (arm64-v8a) Android 设备的共享库，用于替换 react-native-cheerio。这是**真正参与链接与打包的那一份**，体积 3.44 MB。
+3. **`android\app\src\main\jniLibs\arm64-v8a\liblexbor.so` 是 lexbor 的 C 库编译产物**，针对 ARM64 (arm64-v8a) Android 设备的共享库，它取代了早期的 cheerio 方案，是 HTML 解析的唯一实现。这是**真正参与链接与打包的那一份**，体积 3.44 MB。
    `src\lib\lexbor\arm64-v8a\lib\` 下的 `liblexbor.so` 与 `liblexbor_static.a` **只是 lexbor 上游仓库的备份**（静态库仅供将来改为静态链接时备用）。该目录**不参与构建**，保留是为了日后排查/升级 lexbor，请勿删除，也不要让构建去引用它。该路径下真正在用的是 `include\`（编译 `liblexbor_jni.so` 时的 `-I` 指向它）。
 4. `src\lib\lexbor\docs` 是lexbor的API文档，尤其关注`src\lib\lexbor\docs\modules\selectors.md` 选择器部分
 5. `android\app\src\main\cpp\lexbor_jni.cpp` 是lexbor HTML 解析器的 Android JNI 层，编译后生成 `liblexbor_jni.so`，它依赖 `liblexbor.so`，对外导出 `Java_com_discuzreader_LexborModule_nativeXxx` 系列 JNI 函数，供 Kotlin 层 `System.loadLibrary("lexbor_jni")` 加载调用。

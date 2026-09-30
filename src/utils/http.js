@@ -1,9 +1,8 @@
 import axios from 'axios';
 import iconv from 'iconv-lite';
 import { ToastAndroid } from 'react-native';
-import { storage, userAgent, UTF8ToGBK, decodeHtmlEntity, logout, deepDiff } from './index';
-import temme, { htmlShaking } from '../lib/temme';
-import cheerio from 'react-native-cheerio';
+import { storage, userAgent, UTF8ToGBK, decodeHtmlEntity, logout } from './index';
+import temme from '../lib/temme';
 
 /**
  * HTTP客户端封装
@@ -73,11 +72,6 @@ instance.interceptors.response.use(response => {
         const t1 = Date.now();
         const lexborResult = temme(response.data, response.config.selector);
         console.log('lexbor temme time:', Date.now() - t1, response.config.url);
-        // const t2 = Date.now();
-        // const $ = cheerio.load(htmlShaking(response.data), { decodeEntities: false, _useHtmlParser2: true });
-        // const cheerioResult = temme($, response.config.selector);
-        // console.log('cheerio temme time:', Date.now() - t2, response.config.url);
-        // console.log('cheerio vs lexbor:', deepDiff(cheerioResult, lexborResult));
         response.data = lexborResult
         if (response.data.error) {
             ToastAndroid.show(response.data.error, ToastAndroid.SHORT);

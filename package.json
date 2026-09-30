@@ -25,7 +25,6 @@
     "invariant": "^2.2.4",
     "react": "19.0.0",
     "react-native": "0.79.1",
-    "react-native-cheerio": "^1.0.0-rc.4",
     "react-native-draggable-flatlist": "^4.0.3",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.26.0",
