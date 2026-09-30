@@ -66,7 +66,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "yarn"
 
       - name: Install dependencies
@@ -96,8 +96,8 @@ jobs:
           # 故这里不加 `yes |` 自动应答 —— 那会让 sdkmanager 正常退出时 yes 收到 SIGPIPE(141)，
           # 在 set -o pipefail 下反而把整个步骤判为失败。
           "$SDKMANAGER" --install \
-            "platforms;android-35" \
-            "build-tools;35.0.0" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
             "ndk;27.1.12297006" \
             "cmake;3.22.1"
 
