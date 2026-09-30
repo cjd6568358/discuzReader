@@ -60,8 +60,16 @@ const MessageView = () => {
   useEffect(() => {
     getProfilePage().then(setRightUser).catch(error => {
       console.log(error);
+      // 会话过期时必须跳登录，否则 rightUser 一直是 undefined，
+      // 传给 MessageDetail 后会在渲染 rightUser.avatar 时抛错
+      if (error === 'redirect login') {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      }
     });
-  }, [])
+  }, [navigation])
 
   useFocusEffect(
     useCallback(() => {
@@ -127,7 +135,7 @@ const MessageView = () => {
       await messageAction({ action: 'markunread', msg: userMessages[0] });
       setMessages(prev => {
         const newMessages = [...prev];
-        const index = newMessages.findIndex(item => item.id === latestMessageId);
+        const index = newMessages.findIndex(item => item.id === userMessages[0].id);
         if (index !== -1) {
           newMessages[index].unread = 1;
         }

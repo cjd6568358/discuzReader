@@ -52,8 +52,17 @@ const Profile = () => {
   useEffect(() => {
     getProfilePage().then(res => {
       setPageData(res);
+    }).catch(error => {
+      console.log(error);
+      // 会话过期时 http.js 会 reject 'redirect login'，其它页面都做了处理，这里之前漏了
+      if (error === 'redirect login') {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      }
     })
-  }, [])
+  }, [navigation])
 
   return (
     <SafeAreaView style={styles.container}>

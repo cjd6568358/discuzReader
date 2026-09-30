@@ -91,7 +91,7 @@ const SearchView = ({ route }) => {
       before: before,
       orderby: orderby,
       ascdesc: ascdesc,
-      'srchfid%5B%5D': 'all',
+      'srchfid[]': 'all',
       srchtype: 'title',
       searchsubmit: 'true',
       srchtypeid: '',

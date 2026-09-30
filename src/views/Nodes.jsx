@@ -318,6 +318,18 @@ const NodesView = () => {
         ToastAndroid.show('已删除节点', ToastAndroid.SHORT);
     };
 
+    // 删除的正好是当前选中节点时，必须一并清空 selectedNode，
+    // 否则 baseURL 会一直指向已删除的主机，后续所有请求都会失败。
+    // 这里用 effect 从最新状态推导，而不是写在 handleDelete 里：
+    // handleDelete 被 useCallback([], ...) 捕获成稳定引用，读到的 selectedNode 会是首次渲染的值。
+    useEffect(() => {
+        if (selectedNode && !nodes.some(node => node.url === selectedNode)) {
+            setSelectedNode('');
+            storage.delete('selectedNode');
+            http.defaults.baseURL = undefined;
+        }
+    }, [nodes, selectedNode]);
+
     // 批量测试函数，每次最多测试3个节点，并添加更多延迟以减轻负载
     const handleBatchTest = async (nodeList) => {
         // 如果没有节点，直接返回

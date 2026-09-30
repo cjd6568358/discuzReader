@@ -1,9 +1,15 @@
 name: Build APK and Release
 
+# 每次 push 都构建 APK（校验产物），另外支持 Actions 页面手动触发。
+# 注意：构建 ≠ 发布。只有打出 v* tag 时才会创建 GitHub Release，
+# 否则从分支构建时 GITHUB_REF 是 refs/heads/xxx，会被错误地当成 tag 名建 release。
 on:
   push:
+    branches:
+      - "**"
     tags:
       - "v*"
+  workflow_dispatch:
 
 jobs:
   build:
@@ -30,26 +36,120 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/my-release-key.keystore
+      # 显式安装 SDK / NDK，不再隐式依赖 runner 镜像的预装内容。
+      # 版本必须与 android/build.gradle 保持一致。
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK / NDK packages
+        run: |
+          sdkmanager --install \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.1.12297006" \
+            "cmake;3.22.1"
+
+      # liblexbor_jni.so 正常应随仓库提供。若缺失（被误删 / .gitignore 误伤 / 从模板重建），
+      # 就在这里实时编译，避免一路走到打包阶段才失败。
+      - name: Ensure lexbor JNI library exists
+        run: |
+          set -euo pipefail
+          JNI_SO="android/app/src/main/jniLibs/arm64-v8a/liblexbor_jni.so"
+          LEXBOR_SO="android/app/src/main/jniLibs/arm64-v8a/liblexbor.so"
+
+          # liblexbor.so 是 lexbor C 库的预编译产物，仓库内不含其源码，无法在 CI 重建。
+          if [ ! -f "$LEXBOR_SO" ]; then
+            echo "::error::缺少 $LEXBOR_SO。该文件无源码可重建，请从仓库恢复。"
+            exit 1
+          fi
+
+          if [ -f "$JNI_SO" ]; then
+            echo "已存在，跳过编译："
+            ls -l "$JNI_SO"
+            exit 0
+          fi
+
+          echo "未找到 $JNI_SO，实时编译（命令与 build-lexbor-jni.yml 一致）。"
+          NDK_BIN="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          "$NDK_BIN/aarch64-linux-android24-clang++" \
+            -shared -fPIC \
+            -o "$GITHUB_WORKSPACE/$JNI_SO" \
+            "android/app/src/main/cpp/lexbor_jni.cpp" \
+            "-Isrc/lib/lexbor/arm64-v8a/include" \
+            "-Landroid/app/src/main/jniLibs/arm64-v8a" \
+            -llexbor -llog -std=c++17 -fexceptions -O2
+
+          # 与 build-lexbor-jni.yml 相同的符号校验
+          grep -oP 'external fun \K\w+' \
+            android/app/src/main/java/com/discuzreader/LexborModule.kt \
+            | sed 's/^/Java_com_discuzreader_LexborModule_/' | sort > /tmp/expected.txt
+          nm -D --defined-only "$JNI_SO" \
+            | grep -oP 'Java_com_discuzreader_LexborModule_\w+' | sort -u > /tmp/actual.txt
+          if ! diff -u /tmp/expected.txt /tmp/actual.txt; then
+            echo "::error::实时编译产物的 JNI 符号与 LexborModule.kt 声明不匹配"
+            exit 1
+          fi
+          echo "编译完成并通过符号校验。"
 
       - name: Build APK
-        run: |
-          cd android && ./gradlew assembleRelease \
-            -PMYAPP_RELEASE_STORE_FILE=my-release-key.keystore \
-            -PMYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }} \
-            -PMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEY_STORE_PASSWORD }} \
-            -PMYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+        run: cd android && ./gradlew assembleRelease
 
-      - name: Get tag name
-        id: tag
-        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+      # 校验 APK 的原生库：确认只含 arm64-v8a，且两个 lexbor 库确实被打进去了。
+      # 不断言完整的库清单 —— reanimated / screens / mmkv 等依赖都会各自产出 .so，
+      # 逐个硬编码会在依赖升级时误报失败。
+      - name: Verify APK native libs
+        run: |
+          set -euo pipefail
+          APK=$(ls android/app/build/outputs/apk/release/*.apk)
+          echo "APK: $APK"
+          unzip -l "$APK" | awk '/\.so$/ {print $NF}' | sort > /tmp/apk_libs.txt
+
+          echo "=== APK 内的原生库 ==="
+          cat /tmp/apk_libs.txt
+
+          # 1) 只能有 arm64-v8a，出现其他 ABI 说明 abiFilters 失效
+          if grep -v '^lib/arm64-v8a/' /tmp/apk_libs.txt | grep -q .; then
+            echo "::error::APK 中存在非 arm64-v8a 的原生库："
+            grep -v '^lib/arm64-v8a/' /tmp/apk_libs.txt
+            exit 1
+          fi
+
+          # 2) 两个 lexbor 库必须在（jniLibs 里的东西要被真正打包）
+          for required in lib/arm64-v8a/liblexbor.so lib/arm64-v8a/liblexbor_jni.so; do
+            if ! grep -qx "$required" /tmp/apk_libs.txt; then
+              echo "::error::APK 缺少 $required，请检查 android/app/src/main/jniLibs 是否完整。"
+              exit 1
+            fi
+          done
+
+          echo "校验通过：全部为 arm64-v8a，且 liblexbor.so / liblexbor_jni.so 均已打包。"
+
+      # 仅在 tag 触发时发布 Release；分支 push / 手动触发只构建并保留 artifact。
+      - name: Detect release context
+        id: release
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "tag 触发，将发布 Release：${GITHUB_REF#refs/tags/}"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "$GITHUB_REF 触发，仅构建，不发布 Release。"
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
 
       - name: Upload APK to Release
+        if: steps.release.outputs.is_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag.outputs.version }}
-          name: ${{ steps.tag.outputs.version }}
+          tag_name: ${{ steps.release.outputs.version }}
+          name: ${{ steps.release.outputs.version }}
           files: android/app/build/outputs/apk/release/*.apk
           generate_release_notes: true
         env:

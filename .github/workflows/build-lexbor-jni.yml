@@ -1,0 +1,80 @@
+name: Build lexbor_jni .so
+
+# 单独构建 JNI 层，产出 liblexbor_jni.so（arm64-v8a）。
+# 目的：本地无需安装 NDK，改完 lexbor_jni.cpp 后由 CI 出产物。
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "android/app/src/main/cpp/**"
+      - "android/app/src/main/java/com/discuzreader/LexborModule.kt"
+      - ".github/workflows/build-lexbor-jni.yml"
+
+jobs:
+  build-so:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: sdkmanager --install "ndk;27.1.12297006"
+
+      - name: Set NDK paths
+        run: |
+          echo "NDK_ROOT=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> "$GITHUB_ENV"
+          echo "NDK_BIN=$ANDROID_SDK_ROOT/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_ENV"
+
+      # 与本地文档中的命令等价，仅把 windows-x86_64 换成 linux-x86_64、用 bash 语法调用。
+      # -llog 对应 cpp 里 __android_log_print 的 LOGE。
+      - name: Build liblexbor_jni.so
+        run: |
+          "$NDK_BIN/aarch64-linux-android24-clang++" \
+            -shared -fPIC \
+            -o "$GITHUB_WORKSPACE/android/app/src/main/jniLibs/arm64-v8a/liblexbor_jni.so" \
+            "android/app/src/main/cpp/lexbor_jni.cpp" \
+            "-Isrc/lib/lexbor/arm64-v8a/include" \
+            "-Landroid/app/src/main/jniLibs/arm64-v8a" \
+            -llexbor -llog -std=c++17 -fexceptions -O2
+
+      - name: Verify output
+        run: |
+          SO="android/app/src/main/jniLibs/arm64-v8a/liblexbor_jni.so"
+          echo "=== 产物信息 ==="
+          file "$SO"
+          ls -l "$SO"
+
+          echo
+          echo "=== 链接依赖（应包含 liblexbor.so / liblog.so）==="
+          readelf -d "$SO" | grep -i needed || true
+
+          # 从 Kotlin 的 external fun 声明反推期望的 JNI 符号名，
+          # 再与 .so 实际导出的符号比对。这样新增 native 方法时校验会自动跟上，
+          # 也能立刻发现「改了 cpp 但 .so 没重编」或符号名拼写不一致。
+          echo
+          echo "=== 符号校验 ==="
+          grep -oP 'external fun \K\w+' \
+            android/app/src/main/java/com/discuzreader/LexborModule.kt \
+            | sed 's/^/Java_com_discuzreader_LexborModule_/' | sort > /tmp/expected.txt
+
+          nm -D --defined-only "$SO" \
+            | grep -oP 'Java_com_discuzreader_LexborModule_\w+' | sort -u > /tmp/actual.txt
+
+          echo "期望 $(wc -l < /tmp/expected.txt) 个，实际导出 $(wc -l < /tmp/actual.txt) 个"
+
+          if ! diff -u /tmp/expected.txt /tmp/actual.txt; then
+            echo "::error::JNI 符号与 LexborModule.kt 的 external fun 声明不匹配（见上方 diff，'-' 为缺失，'+' 为多余）"
+            exit 1
+          fi
+          echo "符号校验通过：Kotlin 声明的每个 external fun 都有对应的原生导出。"
+
+      - name: Upload .so
+        uses: actions/upload-artifact@v4
+        with:
+          name: liblexbor_jni-arm64-v8a
+          path: android/app/src/main/jniLibs/arm64-v8a/liblexbor_jni.so
+          if-no-files-found: error

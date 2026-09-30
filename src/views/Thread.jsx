@@ -269,14 +269,15 @@ const Thread = ({ route }) => {
           history = history.filter(item => item.tid !== data.tid)
         }
         const isFirstPage = !data.pagination || data.pagination.current === 1;
+        const firstPost = data.posts?.[0];
         history.unshift({
           tid: data.tid,
           title: data.title,
           href,
-          forum: data.breadcrumb.at(-1),
-          author: isFirstPage ? data.posts[0].author.name : '',
-          thanks: isFirstPage ? data.posts[0].thanks : '',
-          date: isFirstPage ? data.posts[0].date : '',
+          forum: data.breadcrumb?.at(-1),
+          author: isFirstPage ? firstPost?.author?.name : '',
+          thanks: isFirstPage ? firstPost?.thanks : '',
+          date: isFirstPage ? firstPost?.date : '',
           reply: data.pagination?.total || (data.posts.length - 1),
         })
         storage.set('history', JSON.stringify(history))
@@ -291,12 +292,15 @@ const Thread = ({ route }) => {
       }).finally(() => {
         hideLoading();
         resolve();
-        scrollViewRef.current.scrollToOffset({ offset: 0, animated: true });
+        // 加载失败时 pageData 仍为 null，组件会提前 return null，
+        // scrollViewRef.current 也就从未被赋值，这里必须判空，否则必然崩。
+        scrollViewRef.current?.scrollToOffset({ offset: 0, animated: true });
       });
     })
   }, [showLoading, hideLoading, navigation])
 
   const clearCache = useCallback(() => {
+    if (!pageData) return;
     const cacheKey = `thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`;
     delete MMStore.cached[cacheKey];
     setTimeout(() => renderPage(cacheKey), ToastAndroid.SHORT);
@@ -339,7 +343,7 @@ const Thread = ({ route }) => {
       headerTitle: () => <View style={styles.navTitleContainer}>
         <Text style={styles.navTitle} numberOfLines={1} ellipsizeMode="tail" >{pageData.title}</Text>
         <View style={styles.navSubtitle}>
-          {pageData.breadcrumb.slice(1)
+          {pageData.breadcrumb?.slice(1)
             .map((item, i, arr) => <View key={item.name + i} style={styles.navBreadcrumbItem}>
               <Text style={styles.navSubtitleText}>{item.name}</Text>
               {i < arr.length - 1 && <Icon name="chevron-right" size={10} color="#9CA3AF" style={styles.navIcon} />}
@@ -417,7 +421,7 @@ const Thread = ({ route }) => {
     threadAction({ action: 'reply', href: pageData.replyUrl, formhash: pageData.formhash, subject: "", message: postContent }).then(() => {
       ToastAndroid.show('评论成功', ToastAndroid.SHORT);
       setPostContent('');
-      renderPage(`thread-${pageData.tid}-${pageData.pagination.current}-1.html`)
+      renderPage(`thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`)
     })
   }
 
@@ -616,7 +620,7 @@ const Thread = ({ route }) => {
             threadAction({ action: 'reply', href: pageData.replyUrl, formhash: pageData.formhash, subject: "", message: content }).then(() => {
               ToastAndroid.show('回复成功', ToastAndroid.SHORT);
               setReplyTitle('');
-              renderPage(`thread-${pageData.tid}-${pageData.pagination.current}-1.html`)
+              renderPage(`thread-${pageData.tid}-${pageData.pagination?.current || 1}-1.html`)
             })
           } else {
             // 私信

@@ -79,17 +79,25 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.discuzreader"
+    // 原生库的来源只有 android/app/src/main/jniLibs（Gradle 约定目录），其下的 .so 才会进 APK。
+    // 仓库根目录 src/lib/lexbor/arm64-v8a/lib/ 下的 liblexbor.so 与 liblexbor_static.a
+    // 是 lexbor 上游备份，刻意不参与构建：不要把它加进 jniLibs.srcDirs，
+    // 否则同名 liblexbor.so 会出现两份，导致打包冲突或链接到非预期的那一份。
     defaultConfig {
         applicationId "com.discuzreader"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-        def enableSeparateBuildPerCPUArchitecture = true
+        // 本 APP 只针对 arm64-v8a 构建（真机），不考虑其他 ABI。
+        // 打包哪些 ABI 由这里的 abiFilters 决定；原生依赖（reanimated/screens/mmkv）为哪个 ABI
+        // 编译则由 android/gradle.properties 的 reactNativeArchitectures 决定，两者需保持一致。
         ndk {
             abiFilters 'arm64-v8a'
         }
     }
+    // 本 APP 仅供个人使用、不对外分发，debug/release 统一使用仓库内的 debug.keystore 固定签名。
+    // 这样本地和 GitHub Actions 都能直接构建，无需配置任何密钥或 -P 参数。
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -97,26 +105,15 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        release {
-            if (project.hasProperty('MYAPP_RELEASE_STORE_FILE')) {
-                storeFile file(MYAPP_RELEASE_STORE_FILE)
-                storePassword MYAPP_RELEASE_STORE_PASSWORD
-                keyAlias MYAPP_RELEASE_KEY_ALIAS
-                keyPassword MYAPP_RELEASE_KEY_PASSWORD
-            }
-        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            signingConfig signingConfigs.release
         }
     }
 }

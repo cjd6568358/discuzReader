@@ -92,6 +92,11 @@ const LoginView = () => {
             index: 0,
             routes: [{ name: 'Home' }],
           });
+        } else {
+          // 密码错误/需要验证码/被限制登录等：Discuz 会返回完整登录页而非短错误页，
+          // http.js 的短响应分支不会命中，所以这里必须显式兜底，否则遮罩会一直转。
+          ToastAndroid.show('登录失败，请检查用户名或密码', ToastAndroid.LONG);
+          hideLoading();
         }
       } catch (error) {
         console.error('Login failed:', error);
@@ -101,6 +106,12 @@ const LoginView = () => {
       }
     }, (err) => {
       ToastAndroid.show(err, ToastAndroid.SHORT);
+      hideLoading();
+    }).catch(error => {
+      // 上面的 .then(onFulfilled, onRejected) 无法捕获 onFulfilled 内部抛出的异常，
+      // 缺这一层兜底会导致异常逃逸成 unhandled rejection 并且遮罩不消失。
+      console.error('Login error:', error);
+      ToastAndroid.show('登录失败', ToastAndroid.SHORT);
       hideLoading();
     })
   };
