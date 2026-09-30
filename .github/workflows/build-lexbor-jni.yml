@@ -125,31 +125,20 @@ jobs:
              "dist/liblexbor_jni_${SHA}_arm64-v8a.so"
           ls -l dist/
 
-      - name: Publish to GitHub Release (so-<sha>)
+      - name: Publish to GitHub Release
+        # 与 build-apk.yml 同款：创建 + 上传都在 ensure-release.sh 里做，
+        # 带 5xx 退避重试（GitHub 偶发在 POST /releases 上返回 500）。
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ steps.sha.outputs.short }}
         run: |
           set -euo pipefail
-          tag="so-${SHA}"
-          asset="dist/liblexbor_jni_${SHA}_arm64-v8a.so"
-          [ -f "$asset" ] || { echo "::error::找不到待上传产物 $asset"; exit 1; }
-
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "release $tag 已存在，直接补传 asset"
-          else
-            # --target 见 build-apk.yml 的同名说明：必须显式指定，
-            # 否则 tag 会落在默认分支的最新提交上。
-            gh release create "$tag" \
-              --title "lexbor_jni build ${SHA}" \
-              --prerelease \
-              --target "${GITHUB_SHA}" \
-              --notes "$(printf '由 build-lexbor-jni.yml 自动构建。\n\n- commit: %s\n- 触发: %s\n\nasset 为 arm64-v8a 的 liblexbor_jni.so，下载后覆盖到\nandroid/app/src/main/jniLibs/arm64-v8a/ 即可。\n它依赖 liblexbor.so，后者不在此产物内（仓库里已有）。' \
-                "${GITHUB_SHA}" "${GITHUB_EVENT_NAME}")"
-          fi
-
-          gh release upload "$tag" "$asset" --clobber
-          echo "::notice::release $tag 已更新：${asset}"
+          bash .github/scripts/ensure-release.sh \
+            "so-${SHA}" \
+            "lexbor_jni build ${SHA}" \
+            "$(printf '由 build-lexbor-jni.yml 自动构建。\n\n- commit: %s\n- 触发: %s\n\nasset 为 arm64-v8a 的 liblexbor_jni.so，下载后覆盖到\nandroid/app/src/main/jniLibs/arm64-v8a/ 即可。\n它依赖 liblexbor.so，后者不在此产物内（仓库里已有）。' \
+              "${GITHUB_SHA}" "${GITHUB_EVENT_NAME}")" \
+            "dist/liblexbor_jni_${SHA}_arm64-v8a.so"
 
       - name: Generate proxy download links
         # 清单文件与 build-apk.yml 的 summarize 各自生成、各自发布，
@@ -164,6 +153,8 @@ jobs:
             "proxy_${{ steps.sha.outputs.short }}.txt"
 
       - name: Upload manifest to Release
+        # 同 build-apk.yml：走 ensure-release.sh 拿到 5xx 重试。
+        # 此时 release 必然已存在，脚本只会走「补传 asset」分支。
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ steps.sha.outputs.short }}
@@ -174,7 +165,11 @@ jobs:
             echo "::notice::未生成 $file，跳过上传"
             exit 0
           fi
-          gh release upload "so-${SHA}" "$file" --clobber
+          bash .github/scripts/ensure-release.sh \
+            "so-${SHA}" \
+            "lexbor_jni build ${SHA}" \
+            "由 build-lexbor-jni.yml 自动构建。" \
+            "$file"
 
       - name: Send download links by mail
         # 配置缺失 / 清单不存在时脚本自己打 notice 后返回 0。

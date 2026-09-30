@@ -221,41 +221,25 @@ jobs:
           cp "$src" "dist/discuzReader_${SHA}_arm64-v8a_release.apk"
           ls -l dist/
 
-      - name: Publish to GitHub Release (ci-<sha>)
+      - name: Publish to GitHub Release
         # 产出永久公开直链，形如：
         #   https://github.com/<owner>/<repo>/releases/download/ci-<sha>/<asset>
         # summarize job 里的代理清单拼的就是这个地址，所以它是下载链路的最终来源。
         #
-        # tag 用 ci-<commit>：每个 commit 一个 Release，永久归档、互不覆盖。
-        # 因为 tag 里已含 commit，asset 名就不再重复带 commit。
-        #
-        # 本 job 只有一个 matrix 维度（无并发），不需要像多变体构建那样容错 422 竞态。
+        # 真正的创建 + 上传在 ensure-release.sh 里，带 5xx 退避重试：
+        # GitHub 偶发在 POST /releases 上返回 500，而这时构建已经跑完、
+        # artifact 也传了，不该因为一次 5xx 让整个 run 判失败。
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ steps.sha.outputs.short }}
         run: |
           set -euo pipefail
-          tag="ci-${SHA}"
-          asset="dist/discuzReader_${SHA}_arm64-v8a_release.apk"
-          [ -f "$asset" ] || { echo "::error::找不到待上传产物 $asset"; exit 1; }
-
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "release $tag 已存在，直接补传 asset"
-          else
-            # --target 必须显式指定：不指定的话 gh 会把 tag 打在默认分支的
-            #   最新提交上，而不是本次构建的 commit。
-            # --prerelease：CI 产物不该被标成 "Latest release"。
-            gh release create "$tag" \
-              --title "CI build ${SHA}" \
-              --prerelease \
-              --target "${GITHUB_SHA}" \
-              --notes "$(printf '由 build-apk.yml 自动构建。\n\n- commit: %s\n- 触发: %s\n\nasset 为 arm64-v8a 的 release APK（已内嵌 lexbor 原生库）。\nCI 产物未经发布流程验证，请自行核对。' \
-                "${GITHUB_SHA}" "${GITHUB_EVENT_NAME}")"
-          fi
-
-          # --clobber：同 commit 重跑时覆盖同名 asset，保证幂等。
-          gh release upload "$tag" "$asset" --clobber
-          echo "::notice::release $tag 已更新：${asset}"
+          bash .github/scripts/ensure-release.sh \
+            "ci-${SHA}" \
+            "CI build ${SHA}" \
+            "$(printf '由 build-apk.yml 自动构建。\n\n- commit: %s\n- 触发: %s\n\nasset 为 arm64-v8a 的 release APK（已内嵌 lexbor 原生库）。\nCI 产物未经发布流程验证，请自行核对。' \
+              "${GITHUB_SHA}" "${GITHUB_EVENT_NAME}")" \
+            "dist/discuzReader_${SHA}_arm64-v8a_release.apk"
 
       - name: Upload APK to Release
         if: steps.release.outputs.is_release == 'true'
@@ -305,6 +289,11 @@ jobs:
         # 清单本身也作为 asset 放进同一个 release：邮件只是通知渠道，
         # 丢了邮件还能从 Release 页面把它找回来。
         # 文件不存在（build 失败 / 没产物）时跳过，不算失败。
+        #
+        # 走 ensure-release.sh 而不是裸 gh：同样是图那层 5xx 重试 ——
+        # 上传失败会让 summarize 整个判失败，邮件也就发不出去。
+        # 此时 release 必然已存在，脚本只会走「补传 asset」分支；
+        # title/notes 仅在该 release 意外缺失时才会用到。
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ steps.sha.outputs.short }}
@@ -315,7 +304,11 @@ jobs:
             echo "::notice::未生成 $file，跳过上传"
             exit 0
           fi
-          gh release upload "ci-${SHA}" "$file" --clobber
+          bash .github/scripts/ensure-release.sh \
+            "ci-${SHA}" \
+            "CI build ${SHA}" \
+            "由 build-apk.yml 自动构建。" \
+            "$file"
 
       - name: Send download links by mail
         # 正文就是 proxy_<sha>.txt 原文，方便不翻 Release 也能拿到加速地址。
