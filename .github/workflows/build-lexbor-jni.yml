@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 见 build-apk.yml 的同类说明：不用 android-actions/setup-android@v3，
       # 它内部的 `sdkmanager tools` 在 "tools" 包被移除后必然失败。
@@ -87,7 +87,7 @@ jobs:
           echo "符号校验通过：Kotlin 声明的每个 external fun 都有对应的原生导出。"
 
       - name: Upload .so
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: liblexbor_jni-arm64-v8a
           path: android/app/src/main/jniLibs/arm64-v8a/liblexbor_jni.so
