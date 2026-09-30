@@ -70,9 +70,8 @@ instance.interceptors.response.use(response => {
         return Promise.reject('redirect login');
     } else if (response.config.selector) {
         const t1 = Date.now();
-        const lexborResult = temme(response.data, response.config.selector);
+        response.data = temme(response.data, response.config.selector);
         console.log('lexbor temme time:', Date.now() - t1, response.config.url);
-        response.data = lexborResult
         if (response.data.error) {
             ToastAndroid.show(response.data.error, ToastAndroid.SHORT);
             return Promise.reject('not forbidden');
