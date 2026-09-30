@@ -1,0 +1,5 @@
+# .github/scripts/ 下的脚本由 CI 用 bash / python3 直接执行。
+# 本机 core.autocrlf=true，若按 CRLF 检出，会以
+# "bad interpreter: /usr/bin/env bash^M" 失败 —— 这里钉死 LF。
+*.sh text eol=lf
+*.py text eol=lf

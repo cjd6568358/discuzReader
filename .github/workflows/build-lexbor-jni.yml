@@ -2,6 +2,17 @@ name: Build lexbor_jni .so
 
 # 单独构建 JNI 层，产出 liblexbor_jni.so（arm64-v8a）。
 # 目的：本地无需安装 NDK，改完 lexbor_jni.cpp 后由 CI 出产物。
+#
+# 产物分发渠道：
+#   GitHub Release   预发布 so-<sha>（每次一个，永久直链、互不覆盖）。
+#   artifact         同上产物，Actions 页面可直接下（保留原有方式）。
+#   邮件             把「代理加速 + 直连」下载地址清单作为正文发给 MAIL_TO。
+#
+# 为什么单独用 so-<sha> 这个 tag，而不是往 build-apk.yml 的 ci-<sha> 里塞：
+# 两个 workflow 是独立触发的（改 APK 相关文件不会跑这个，反之亦然），
+# 塞进同一个 tag 会让两边互相覆盖 asset、还会各发一封内容重叠的邮件。
+#
+# 邮件配置见 build-apk.yml 文件头，两者共用同一套 vars / secrets。
 on:
   workflow_dispatch:
   push:
@@ -13,10 +24,17 @@ on:
 jobs:
   build-so:
     runs-on: ubuntu-latest
+    # 创建 Release / 上传 asset 需要写权限。
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
+      - name: Compute short sha
+        id: sha
+        run: echo "short=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
 
       # 见 build-apk.yml 的同类说明：不用 android-actions/setup-android@v3，
       # 它内部的 `sdkmanager tools` 在 "tools" 包被移除后必然失败。
@@ -57,6 +75,7 @@ jobs:
 
       - name: Verify output
         run: |
+          set -euo pipefail
           SO="android/app/src/main/jniLibs/arm64-v8a/liblexbor_jni.so"
           echo "=== 产物信息 ==="
           file "$SO"
@@ -92,3 +111,82 @@ jobs:
           name: liblexbor_jni-arm64-v8a
           path: android/app/src/main/jniLibs/arm64-v8a/liblexbor_jni.so
           if-no-files-found: error
+
+      - name: Stage .so with descriptive name
+        # 原始文件名固定是 liblexbor_jni.so，不含任何本次构建的信息。
+        # 复制到 dist/ 并带上 sha，避免不同 commit 的产物在 Release 上无从分辨。
+        # 复制而非移动：原路径要留给上面的 artifact 上传。
+        env:
+          SHA: ${{ steps.sha.outputs.short }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp android/app/src/main/jniLibs/arm64-v8a/liblexbor_jni.so \
+             "dist/liblexbor_jni_${SHA}_arm64-v8a.so"
+          ls -l dist/
+
+      - name: Publish to GitHub Release (so-<sha>)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.sha.outputs.short }}
+        run: |
+          set -euo pipefail
+          tag="so-${SHA}"
+          asset="dist/liblexbor_jni_${SHA}_arm64-v8a.so"
+          [ -f "$asset" ] || { echo "::error::找不到待上传产物 $asset"; exit 1; }
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release $tag 已存在，直接补传 asset"
+          else
+            # --target 见 build-apk.yml 的同名说明：必须显式指定，
+            # 否则 tag 会落在默认分支的最新提交上。
+            gh release create "$tag" \
+              --title "lexbor_jni build ${SHA}" \
+              --prerelease \
+              --target "${GITHUB_SHA}" \
+              --notes "$(printf '由 build-lexbor-jni.yml 自动构建。\n\n- commit: %s\n- 触发: %s\n\nasset 为 arm64-v8a 的 liblexbor_jni.so，下载后覆盖到\nandroid/app/src/main/jniLibs/arm64-v8a/ 即可。\n它依赖 liblexbor.so，后者不在此产物内（仓库里已有）。' \
+                "${GITHUB_SHA}" "${GITHUB_EVENT_NAME}")"
+          fi
+
+          gh release upload "$tag" "$asset" --clobber
+          echo "::notice::release $tag 已更新：${asset}"
+
+      - name: Generate proxy download links
+        # 清单文件与 build-apk.yml 的 summarize 各自生成、各自发布，
+        # 互不干扰：两个 workflow 独立触发，不该互相等待。
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/gen-proxy-txt.sh \
+            "so-${{ steps.sha.outputs.short }}" \
+            "${{ github.repository }}" \
+            "proxy_${{ steps.sha.outputs.short }}.txt"
+
+      - name: Upload manifest to Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.sha.outputs.short }}
+        run: |
+          set -euo pipefail
+          file="proxy_${SHA}.txt"
+          if [ ! -f "$file" ]; then
+            echo "::notice::未生成 $file，跳过上传"
+            exit 0
+          fi
+          gh release upload "so-${SHA}" "$file" --clobber
+
+      - name: Send download links by mail
+        # 配置缺失 / 清单不存在时脚本自己打 notice 后返回 0。
+        # continue-on-error：邮件只是通知，不该拖累构建结果。
+        continue-on-error: true
+        env:
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          MAIL_FROM: ${{ vars.MAIL_FROM }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_BODY_FILE: proxy_${{ steps.sha.outputs.short }}.txt
+          MAIL_SUBJECT: discuzReader liblexbor_jni.so 构建产物 ${{ steps.sha.outputs.short }}
+        run: python3 .github/scripts/send-mail.py

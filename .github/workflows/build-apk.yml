@@ -1,8 +1,28 @@
 name: Build APK and Release
 
 # 每次 push 都构建 APK（校验产物），另外支持 Actions 页面手动触发。
-# 注意：构建 ≠ 发布。只有打出 v* tag 时才会创建 GitHub Release，
-# 否则从分支构建时 GITHUB_REF 是 refs/heads/xxx，会被错误地当成 tag 名建 release。
+#
+# 产物分发渠道：
+#   GitHub Release   预发布 ci-<sha>（每次 commit 一个，永久直链、互不覆盖），
+#                    以及 v* tag 触发的正式 Release。
+#   邮件             构建成功后，把一份「代理加速 + 直连」下载地址清单
+#                    （proxy_<sha>.txt）作为正文发给 MAIL_TO 里的收件人。
+#                    清单本身也作为 asset 放进 ci-<sha>，没收到邮件也能翻 Release。
+#
+# 注意：构建 ≠ 正式发布。只有打出 v* tag 时才会创建正式 Release；
+# ci-<sha> 一律是 --prerelease，不会占 "Latest release"。
+#
+# 邮件配置（仓库 Settings → Secrets and variables → Actions）：
+#   vars.SMTP_HOST          SMTP 服务器，如 smtp.qq.com
+#   vars.SMTP_PORT          可选，默认 465（隐式 SSL）；其它值走 STARTTLS
+#   vars.MAIL_FROM          可选，默认取 SMTP_USERNAME
+#   secrets.MAIL_TO         收件人，多个用逗号分隔
+#   secrets.SMTP_USERNAME   登录用户（通常就是发件邮箱）
+#   secrets.SMTP_PASSWORD   密码 / 授权码 —— 多数邮箱要用「SMTP 授权码」，
+#                           不是网页登录密码，用错会得到 535 认证失败。
+#   任一项缺失时脚本打 notice 后正常返回，不视为构建失败。
+#
+# 代理域名不在这里配：它是 gen-proxy-txt.sh 里的 PROXIES 一行，改脚本即可。
 on:
   push:
     branches:
@@ -11,15 +31,31 @@ on:
       - "v*"
   workflow_dispatch:
 
+concurrency:
+  # 同一分支连推两次会取消上一次运行（Android 构建重，没必要都跑完）。
+  # ⚠ 被取消的运行可能已经建好 ci-<sha> Release、传了 APK 就停了，
+  #   且不会再补齐（summarize 也不会跑）—— 那个 commit 的 Release 是残缺的。
+  #   要完整产物，等上一次跑完再推，或对残缺的 commit 手动重跑一次。
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    # 创建 Release / 上传 asset 需要写权限。GITHUB_TOKEN 默认只读，
+    # 不显式声明会在 gh release create / upload 时得到 403。
     permissions:
       contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
+      # 自己算短 sha，不用第三方 action：少一个供应链依赖，也少一次 tag 解析。
+      # checkout 默认 fetch-depth 1 已含 HEAD，rev-parse 足够。
+      - name: Compute short sha
+        id: sha
+        run: echo "short=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -147,25 +183,79 @@ jobs:
 
           echo "校验通过：全部为 arm64-v8a，且 liblexbor.so / liblexbor_jni.so 均已打包。"
 
-      # 仅在 tag 触发时发布 Release；分支 push / 手动触发只构建并保留 artifact。
-      - name: Detect release context
-        id: release
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            echo "is_release=true" >> "$GITHUB_OUTPUT"
-            echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
-            echo "tag 触发，将发布 Release：${GITHUB_REF#refs/tags/}"
-          else
-            echo "is_release=false" >> "$GITHUB_OUTPUT"
-            echo "$GITHUB_REF 触发，仅构建，不发布 Release。"
-          fi
-
       - name: Upload APK artifact
         uses: actions/upload-artifact@v5
         with:
           name: app-release-apk
           path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      # 仅在 tag 触发时发布正式 Release；分支 push / 手动触发只构建。
+      - name: Detect release context
+        id: release
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "tag 触发，将发布正式 Release：${GITHUB_REF#refs/tags/}"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "$GITHUB_REF 触发，不发布正式 Release。"
+          fi
+
+      - name: Stage APK with descriptive name
+        # Gradle 产出的名字固定是 app-release.apk，不含 commit，直接发布会被
+        # 后续构建的同名文件覆盖（至少从 Release 读者角度看是无从分辨的）。
+        # 这里复制成带 sha 的名字再传。
+        #
+        # 复制而非移动：原路径要留给上面的 artifact 上传。
+        # 落到 dist/ 而不是 build/outputs 里 —— 上面 Verify 步骤的
+        # `ls .../release/*.apk` 一旦匹配到两个文件就会变成多行字符串，
+        # 把 unzip 参数搞坏。
+        env:
+          SHA: ${{ steps.sha.outputs.short }}
+        run: |
+          set -euo pipefail
+          src=$(ls android/app/build/outputs/apk/release/*.apk)
+          mkdir -p dist
+          cp "$src" "dist/discuzReader_${SHA}_arm64-v8a_release.apk"
+          ls -l dist/
+
+      - name: Publish to GitHub Release (ci-<sha>)
+        # 产出永久公开直链，形如：
+        #   https://github.com/<owner>/<repo>/releases/download/ci-<sha>/<asset>
+        # summarize job 里的代理清单拼的就是这个地址，所以它是下载链路的最终来源。
+        #
+        # tag 用 ci-<commit>：每个 commit 一个 Release，永久归档、互不覆盖。
+        # 因为 tag 里已含 commit，asset 名就不再重复带 commit。
+        #
+        # 本 job 只有一个 matrix 维度（无并发），不需要像多变体构建那样容错 422 竞态。
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.sha.outputs.short }}
+        run: |
+          set -euo pipefail
+          tag="ci-${SHA}"
+          asset="dist/discuzReader_${SHA}_arm64-v8a_release.apk"
+          [ -f "$asset" ] || { echo "::error::找不到待上传产物 $asset"; exit 1; }
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release $tag 已存在，直接补传 asset"
+          else
+            # --target 必须显式指定：不指定的话 gh 会把 tag 打在默认分支的
+            #   最新提交上，而不是本次构建的 commit。
+            # --prerelease：CI 产物不该被标成 "Latest release"。
+            gh release create "$tag" \
+              --title "CI build ${SHA}" \
+              --prerelease \
+              --target "${GITHUB_SHA}" \
+              --notes "$(printf '由 build-apk.yml 自动构建。\n\n- commit: %s\n- 触发: %s\n\nasset 为 arm64-v8a 的 release APK（已内嵌 lexbor 原生库）。\nCI 产物未经发布流程验证，请自行核对。' \
+                "${GITHUB_SHA}" "${GITHUB_EVENT_NAME}")"
+          fi
+
+          # --clobber：同 commit 重跑时覆盖同名 asset，保证幂等。
+          gh release upload "$tag" "$asset" --clobber
+          echo "::notice::release $tag 已更新：${asset}"
 
       - name: Upload APK to Release
         if: steps.release.outputs.is_release == 'true'
@@ -177,3 +267,70 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  summarize:
+    # 等 build 跑完再执行。always() 是必须的：不加的话 build 一失败就整片跳过。
+    # 但构建失败时不会走到发信那一步 —— 本次没有 release/清单，
+    # gen-proxy-txt.sh 会打 notice 后不生成文件，send-mail.py 也就不发空邮件。
+    needs: build
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    # 要把 proxy_<sha>.txt 传成 release asset，同样需要写权限。
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # 与 build job 用同一套算法：同一 commit 必然得到同一个短 sha，
+      # 否则这里会找不到上面那个 release。
+      - name: Compute short sha
+        id: sha
+        run: echo "short=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Generate proxy download links
+        # 产物清单由脚本问 GitHub 要（gh release view），不写死 asset 名 ——
+        # 改产物命名或增删产物都不用动脚本。
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/gen-proxy-txt.sh \
+            "ci-${{ steps.sha.outputs.short }}" \
+            "${{ github.repository }}" \
+            "proxy_${{ steps.sha.outputs.short }}.txt"
+
+      - name: Upload manifest to Release
+        # 清单本身也作为 asset 放进同一个 release：邮件只是通知渠道，
+        # 丢了邮件还能从 Release 页面把它找回来。
+        # 文件不存在（build 失败 / 没产物）时跳过，不算失败。
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.sha.outputs.short }}
+        run: |
+          set -euo pipefail
+          file="proxy_${SHA}.txt"
+          if [ ! -f "$file" ]; then
+            echo "::notice::未生成 $file，跳过上传"
+            exit 0
+          fi
+          gh release upload "ci-${SHA}" "$file" --clobber
+
+      - name: Send download links by mail
+        # 正文就是 proxy_<sha>.txt 原文，方便不翻 Release 也能拿到加速地址。
+        # 排在清单上传之后 —— 邮件里说的内容此时确实已经在 Release 上。
+        #
+        # 文件不存在时脚本自己打 notice 后返回 0，不发空邮件。
+        # continue-on-error：邮件只是通知，不该拖累构建结果。
+        continue-on-error: true
+        env:
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          MAIL_FROM: ${{ vars.MAIL_FROM }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_BODY_FILE: proxy_${{ steps.sha.outputs.short }}.txt
+          MAIL_SUBJECT: discuzReader APK 构建产物 ${{ steps.sha.outputs.short }}
+        run: python3 .github/scripts/send-mail.py

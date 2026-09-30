@@ -118,7 +118,15 @@ lexbor 相关产物分**两层**，理解这一点能避免改错文件：
 
 改动 `android/app/src/main/cpp/` 下的文件后，推送到 GitHub 会自动触发 `.github/workflows/build-lexbor-jni.yml`；也可以到 Actions 页面手动 `workflow_dispatch` 触发。
 
-构建完成后在对应 run 的 **Artifacts** 里下载 `liblexbor_jni-arm64-v8a`（即 `liblexbor_jni.so`），覆盖到本仓库的 `android/app/src/main/jniLibs/arm64-v8a/` 即可。
+构建完成后有三种拿到 `liblexbor_jni.so` 的方式：
+
+1. **邮件里的代理链接**（推荐，国内最快）：构建成功后会把一份下载地址清单发到配置的收件箱，正文里每条地址任选一个即可。
+2. **Release 页面**：`so-<commit>` 这个预发布 Release（`<commit>` 是 7 位短 sha），asset 名为 `liblexbor_jni_<commit>_arm64-v8a.so`。
+3. **Actions 的 Artifacts**：`liblexbor_jni-arm64-v8a`（原名，未带 sha，保留是为了兼容旧习惯）。
+
+拿到后覆盖到本仓库的 `android/app/src/main/jniLibs/arm64-v8a/liblexbor_jni.so` 即可。
+
+> 邮件与代理链接的配置见文末「CI 的邮件与代理加速链接」一节。
 
 该 workflow 除了编译，还会：
 1. 用 `readelf -d` 打印链接依赖（应含 `liblexbor.so` 与 `liblog.so`）；
@@ -132,3 +140,40 @@ $ndkBin = "D:\Program Files\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebui
 ```
 
 由Agent自行决定是否需要清除gradlew缓存
+
+### CI 的邮件与代理加速链接
+
+两个 workflow 在构建成功后都会发一封邮件，正文是一份下载地址清单：同一份产物按多个公共代理域名分组，**每组列出一条加速地址**，取需要的那个即可。清单同时会作为 asset 传进对应的 Release，所以邮件丢了也能从 Release 页面找回。
+
+| workflow | 产物 | Release tag |
+| --- | --- | --- |
+| `build-apk.yml` | `discuzReader_<sha>_arm64-v8a_release.apk` | `ci-<sha>` |
+| `build-lexbor-jni.yml` | `liblexbor_jni_<sha>_arm64-v8a.so` | `so-<sha>` |
+
+两者的 `<sha>` 都是 7 位短 commit，各自独立触发、独立发信，不会互相等待也不会重复通知。
+
+> **分支 push 也会建 Release。** `ci-<sha>` / `so-<sha>` 一律是 `--prerelease` 的 CI 归档，用来给代理链接提供永久直链——每个 commit 一个、互不覆盖。打 `v*` tag 时才会另外创建一个正式 Release（沿用原有逻辑）。这些预发布 Release 会随着提交逐渐堆积，需要时可在 Releases 页面批量清理。
+
+#### 需要配置的仓库变量
+
+`Settings → Secrets and variables → Actions`：
+
+| 名称 | 类型 | 说明 |
+| --- | --- | --- |
+| `SMTP_HOST` | vars | SMTP 服务器，如 `smtp.qq.com` |
+| `SMTP_PORT` | vars | 可选，默认 `465`（隐式 SSL）；填其它值则走 STARTTLS |
+| `MAIL_FROM` | vars | 可选，默认取 `SMTP_USERNAME` |
+| `SMTP_USERNAME` | secrets | 登录用户，通常就是发件邮箱 |
+| `SMTP_PASSWORD` | secrets | **SMTP 授权码**，不是网页登录密码；用错会得到 535 认证失败 |
+| `MAIL_TO` | secrets | 收件人，多个用逗号分隔 |
+
+**任一项缺失都不会导致构建失败**：脚本会打一条 notice 说明缺哪项，然后跳过发信。同样地，本次没有产物（构建失败）时不会发空邮件。
+
+代理域名不用配：它就是 `.github/scripts/gen-proxy-txt.sh` 里的 `PROXIES` 一行（`ghfast.top` / `v6.gh-proxy.org` / `hk.gh-proxy.org` / `cdn.gh-proxy.org` / `edgeone.gh-proxy.org`），要增删改那一行即可。这些是公共镜像，可用性会随时间和地域变化，**建议先实测哪个域名能通**。
+
+清单里的链接是 `https://<代理域名>/https://github.com/...` 这种裸串直拼形式，按域名分组、每组列出全部产物。**若某个域名下全部 404，说明该代理不认这种拼接形式，换其它域名即可**——同一份清单里已经给了多个备选。
+
+#### 失败时不发通知
+
+目前只做「构建成功 → 发产物链接」。构建失败不会有邮件（`gen-proxy-txt.sh` 取不到产物就不生成清单，`send-mail.py` 随即跳过），需要失败告警的话是另一件事。
+
