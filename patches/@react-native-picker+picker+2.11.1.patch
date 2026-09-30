@@ -39,15 +39,3 @@ diff --git a/node_modules/@react-native-picker/picker/android/src/main/jni/RNCAn
  };
  
  } // namespace facebook::react
-diff --git a/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNode.h b/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNode.h
---- a/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNode.h
-+++ b/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNode.h
-@@ -28,7 +28,7 @@
- 
-   Point getContentOriginOffset(bool includeTransform) const override;
- 
--  void appendChild(const ShadowNode::Shared &child) override;
-+  void appendChild(const std::shared_ptr<const ShadowNode> &child) override;
- 
-   void layout(LayoutContext layoutContext) override;
- 
