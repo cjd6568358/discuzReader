@@ -8,16 +8,13 @@ import {
   SafeAreaView,
   StatusBar,
   FlatList,
-  Pressable,
-  Vibration
+  Pressable
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Swiper from 'react-native-swiper';
-import SortableModal from '../components/SortableModal';
 import { useLoading } from '../components/Loading';
 import { getHomePage } from '../utils/api';
-import { storage } from '../utils/index';
 
 const IndexView = () => {
   const navigation = useNavigation();
@@ -25,34 +22,13 @@ const IndexView = () => {
   const [pageData, setPageData] = useState(null);
   const [currentSection, setCurrentSection] = useState('');
   const [sections, setSections] = useState([]);
-  const [sortModalVisible, setSortModalVisible] = useState(false);
   useEffect(() => {
     showLoading()
     getHomePage().then(data => {
       console.log(data);
       setPageData(data);
-      let sourceSections = data.sectionList
-      // 从存储中获取已保存的排序，如果没有则使用默认顺序
-      let sortedSections = JSON.parse(storage.getString('sortedSections') || '[]');
-      if (Array.isArray(sortedSections) && sortedSections.length > 0) {
-        for (let i = 0; i < sortedSections.length; i++) {
-          const element = sortedSections[i];
-          const sourceIndex = sourceSections.findIndex(s => s.name === element.name);
-          if (sourceIndex === -1) {
-            sortedSections.splice(i, 1);
-            i--;
-          } else {
-            sourceSections.splice(sourceIndex, 1);
-          }
-        }
-        sortedSections = sortedSections.concat(sourceSections);
-        setSections(sortedSections);
-        setCurrentSection(sortedSections[0].name);
-        handleSortEnd(sortedSections);
-      } else {
-        setSections(data.sectionList);
-        setCurrentSection(data.sectionList[0].name);
-      }
+      setSections(data.sectionList);
+      setCurrentSection(data.sectionList[0].name);
     }).catch(error => {
       console.log(error);
       if (error === 'redirect login') {
@@ -77,24 +53,10 @@ const IndexView = () => {
     })
   }
 
-  // 处理长按打开排序Modal
-  const handleLongPress = () => {
-    Vibration.vibrate(50); // 触觉反馈
-    setSortModalVisible(true);
-  };
-
-  // 处理排序完成，保存排序结果
-  const handleSortEnd = (sortedData) => {
-    setSections(sortedData);
-    storage.set('sortedSections', JSON.stringify(sortedData));
-  };
-
   // 渲染分区按钮
   const renderSection = ({ item }) => (
     <Pressable
       onPress={() => setCurrentSection(item.name)}
-      onLongPress={handleLongPress}
-      delayLongPress={500}
       style={[
         styles.sectionButton,
         currentSection === item.name ? styles.activeSectionButton : styles.inactiveSectionButton
@@ -219,15 +181,6 @@ const IndexView = () => {
             scrollEnabled={false}
           />
         </View>}
-
-        {/* 排序Modal */}
-        <SortableModal
-          visible={sortModalVisible}
-          onClose={() => setSortModalVisible(false)}
-          data={sections}
-          onSortEnd={handleSortEnd}
-          title="分区导航排序"
-        />
       </ScrollView>
     </SafeAreaView>
   );

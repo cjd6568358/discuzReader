@@ -90,7 +90,7 @@ android {
         versionCode 1
         versionName "1.0"
         // 本 APP 只针对 arm64-v8a 构建（真机），不考虑其他 ABI。
-        // 打包哪些 ABI 由这里的 abiFilters 决定；原生依赖（reanimated/screens/mmkv）为哪个 ABI
+        // 打包哪些 ABI 由这里的 abiFilters 决定；原生依赖（screens/mmkv）为哪个 ABI
         // 编译则由 android/gradle.properties 的 reactNativeArchitectures 决定，两者需保持一致。
         ndk {
             abiFilters 'arm64-v8a'
